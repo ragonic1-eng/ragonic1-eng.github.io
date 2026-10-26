@@ -15,12 +15,18 @@ function render(){
  $('dayDate').textContent=`DAY ${day+1} · ${dateLabel(d,{weekday:'long',day:'numeric',month:'long'}).toUpperCase()}`;$('dayTitle').textContent=d.name;$('dayRegion').textContent='⌖ '+d.region;
  $('start').value=fmt(d.start);$('end').value=fmt(d.end);$('planned').textContent=duration(used)+' planned';$('remaining').textContent=free>=0?duration(free)+' of breathing room':duration(-free)+' over your day';$('remaining').className=free<0?'warning':'';
  $('budgetBar').innerHTML=Object.entries(CATS).map(([key,cat])=>{const mins=d.cards.filter(c=>c.category===key).reduce((n,c)=>n+c.duration,0);return `<span title="${cat.label}: ${duration(mins)}" style="width:${mins/Math.max(available,used)*100}%;background:${cat.color}"></span>`}).join('');
- let cursor=d.start;$('timeline').innerHTML=d.cards.map((c,i)=>{const start=cursor;cursor+=c.duration;const cat=CATS[c.category];return `<div class="timeline-row" data-id="${esc(c.id)}" style="--cat:${cat.color}"><div class="time"><button data-action="edit" class="time-edit" aria-label="Change start time for ${esc(c.title)}">${fmt(start)}</button><small>${fmt(cursor)}${cursor>=1440?' +1d':''}</small></div><div class="track"></div><article class="activity" draggable="true" data-id="${esc(c.id)}" tabindex="0" aria-label="${esc(c.title)}. Use arrow buttons to reorder."><div class="card-top"><span class="grip">⠿</span><span class="cat-icon">${cat.icon}</span><div class="card-main"><h3>${esc(c.title)}</h3><span class="category">${cat.label}</span>${c.optional?'<span class="optional-badge">✦ OPTIONAL</span>':''}</div><div class="card-actions"><button data-action="up" title="Move earlier" aria-label="Move earlier" ${i===0?'disabled':''}>↑</button><button data-action="down" title="Move later" aria-label="Move later" ${i===d.cards.length-1?'disabled':''}>↓</button><button data-action="edit" title="Edit activity" aria-label="Edit activity">✎ Edit</button><button data-action="remove" title="Remove activity" aria-label="Remove activity">×</button></div></div><details class="card-details"><summary>Family notes & reminders</summary><p class="card-notes">${esc(c.notes)}</p></details><div class="card-bottom"><div class="duration"><span>◷</span><button data-action="less" aria-label="Reduce duration by 15 minutes">−</button><span>${duration(c.duration)}</span><button data-action="more" aria-label="Increase duration by 15 minutes">＋</button></div><span>${c.estimated?'Estimated duration · editable':'Flexible timing'}</span><button class="branch-add" data-action="branch" aria-label="Add branch">＋ Branch</button><select class="move-select" data-move="${esc(c.id)}" aria-label="Move activity to another day"><option value="">Move to day…</option>${state.days.map((_,j)=>j!==day?`<option value="${j}">${dateLabel(state.days[j],{day:'numeric',month:'short'})} · Day ${j+1}</option>`:'').join('')}</select></div>${renderBranches(c)}</article><button class="insert-here" data-insert="${i+1}" aria-label="Insert activity after ${esc(c.title)}">＋ Add here · ${fmt(cursor)}</button></div>`}).join('') || '<p class="empty">A whole day of possibilities. Add your first activity below.</p>';
+ let cursor=d.start;$('timeline').innerHTML=d.cards.map((c,i)=>{const start=cursor;cursor+=c.duration;const cat=CATS[c.category];return `<div class="timeline-row" data-id="${esc(c.id)}" style="--cat:${cat.color}"><div class="time"><button data-action="edit" class="time-edit" aria-label="Change start time for ${esc(c.title)}">${fmt(start)}</button><small>${fmt(cursor)}${cursor>=1440?' +1d':''}</small></div><div class="track"></div><article class="activity" draggable="true" data-id="${esc(c.id)}" tabindex="0" aria-label="${esc(c.title)}. Use arrow buttons to reorder."><div class="card-top"><span class="grip">⠿</span><span class="cat-icon">${cat.icon}</span><div class="card-main"><h3>${esc(c.title)}</h3><span class="category">${cat.label}</span>${c.optional?'<span class="optional-badge">✦ OPTIONAL</span>':''}</div><div class="card-actions"><button data-action="up" title="Move earlier" aria-label="Move earlier" ${i===0?'disabled':''}>↑</button><button data-action="down" title="Move later" aria-label="Move later" ${i===d.cards.length-1?'disabled':''}>↓</button><button data-action="edit" title="Edit activity" aria-label="Edit activity">✎ Edit</button><button data-action="remove" title="Remove activity" aria-label="Remove activity">×</button></div></div><details class="card-details"><summary>Family notes & reminders</summary><p class="card-notes">${esc(c.notes)}</p></details><div class="card-bottom"><div class="duration"><span>◷</span><button data-action="less" aria-label="Reduce duration by 15 minutes">−</button><span>${duration(c.duration)}</span><button data-action="more" aria-label="Increase duration by 15 minutes">＋</button></div><span>${c.estimated?'Estimated duration · editable':'Flexible timing'}</span><button class="branch-add" data-action="branch" aria-label="Add branch">＋ Branch</button><select class="move-select" data-move="${esc(c.id)}" aria-label="Move activity to another day"><option value="">Move to day…</option>${state.days.map((_,j)=>j!==day?`<option value="${j}">${dateLabel(state.days[j],{day:'numeric',month:'short'})} · Day ${j+1}</option>`:'').join('')}</select></div>${renderBranches(c)}${nextActivityLink(d,i)}</article><button class="insert-here" data-insert="${i+1}" aria-label="Insert activity after ${esc(c.title)}">＋ Add here · ${fmt(cursor)}</button></div>`}).join('') || '<p class="empty">A whole day of possibilities. Add your first activity below.</p>';
  $('undo').disabled=!history.length;renderLibrary();
 }
 function renderLibrary(){const q=$('search').value.toLowerCase();$('filters').innerHTML=[['all','✧ Everything'],...Object.entries(CATS).map(([k,v])=>[k,v.icon+' '+v.label])].map(([k,v])=>`<button data-filter="${k}" aria-pressed="${filter===k}" class="${filter===k?'active':''}">${v}</button>`).join('');
  const cards=original.days.flatMap(d=>d.cards).filter(c=>c.category!=='break').filter(c=>(filter==='all'||filter===c.category)&&(c.title+' '+c.notes).toLowerCase().includes(q));$('libraryCount').textContent=cards.length+' IDEAS';$('library').innerHTML=cards.map(c=>{const cat=CATS[c.category];return `<div class="idea" draggable="true" data-library="${c.id}" style="--cat:${cat.color}"><span class="cat-icon">${cat.icon}</span><div><h3>${esc(c.title)}</h3><small>${cat.label} · ${duration(c.duration)}</small></div><button data-add="${c.id}" aria-label="Add ${esc(c.title)}">＋</button></div>`}).join('')||'<p class="empty">No matching ideas. Try another search.</p>'}
+function nextActivityLink(d,index){const next=d.cards.slice(index+1).find(c=>c.category!=='break');if(!next)return '<p class="next-stop">☾ Last activity of the day</p>';return `<button class="next-stop" data-next="${esc(next.id)}">Up next · ${fmt(slotTime(d,d.cards.indexOf(next)))} · ${esc(next.title)} ↓</button>`}
 function slotTime(d,index){return d.start+d.cards.slice(0,index).reduce((n,c)=>n+c.duration,0)}
+function defaultStart(d){
+ let cursor=d.start;
+ for(const c of d.cards){if(c.category==='break'&&cursor<1440)return cursor;cursor+=c.duration}
+ return cursor<1440?cursor:d.start;
+}
 function openEditor(card,insertIndex){
  editing=card?.id??null;
  $('editorTitle').textContent=card?'Edit your adventure':'A new little adventure';
@@ -28,7 +34,11 @@ function openEditor(card,insertIndex){
  $('activityDay').innerHTML=state.days.map((d,i)=>`<option value="${i}">${dateLabel(d,{weekday:'short',day:'numeric',month:'short'})} · ${esc(d.region)}</option>`).join('');
  $('activityDay').value=day;
  const d=state.days[day],index=card?d.cards.findIndex(c=>c.id===card.id):insertIndex??d.cards.length;
- $('activityStart').value=fmt(slotTime(d,index));
+ const start=card||insertIndex!==undefined?slotTime(d,index):defaultStart(d);
+ $('activityStart').value=fmt(start);
+ if(!card)$('duration').value=Math.min(60,1440-start);
+ $('saveActivity').textContent=card?'Save changes ✦':'Add activity ✦';
+ $('title').setCustomValidity('');
  $('category').innerHTML=Object.entries(CATS).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
  $('category').value=card?.category??'kids';$('notes').value=card?.notes??'';$('optional').checked=card?.optional??false;
  scheduleHint();$('editor').showModal();
@@ -40,8 +50,8 @@ function placement(d,card,start){
  let cursor=d.start;
  for(let i=0;i<cards.length;i++){
   const c=cards[i],end=cursor+c.duration;
-  if(start===cursor){cards.splice(i,0,card);return cards}
-  if(start>cursor&&start<end){
+  if(start===cursor&&c.category!=='break'){cards.splice(i,0,card);return cards}
+  if(start>=cursor&&start<end){
    if(c.category!=='break')throw Error(`This overlaps “${c.title}”, which ends at ${fmt(end)}. Choose ${fmt(end)} or later, or shorten that card first.`);
    const before=start-cursor,after=Math.max(0,end-start-card.duration),pieces=[];
    if(before)pieces.push({...c,duration:before});pieces.push(card);
@@ -54,31 +64,60 @@ function placement(d,card,start){
  cards.push(card);return cards;
 }
 function scheduleHint(){
+ const target=Number($('activityDay').value),d=state.days[target],start=timeval($('activityStart').value),mins=Number($('duration').value);
+ $('scheduleActions').replaceChildren();$('nextActivity').replaceChildren();
+ const choice=$('placeBefore'),selected=choice.value;
+ choice.innerHTML='<option value="">Choose an activity…</option>'+d.cards.filter(c=>c.id!==editing&&c.category!=='break').map(c=>`<option value="${esc(c.id)}">${esc(c.title)}</option>`).join('');
+ choice.value=selected;
  try{
-  const target=Number($('activityDay').value),d=state.days[target],start=timeval($('activityStart').value),mins=Number($('duration').value);
-  if(!Number.isInteger(mins)||mins<1||mins>1440)throw Error('Enter a duration between 1 and 1440 minutes.');
-  const cards=placement(d,{id:editing??'preview',title:'New activity',duration:mins},start),end=start+mins,finish=d.start+total({cards});
-  $('scheduleHint').textContent=`${dateLabel(d,{day:'numeric',month:'short'})} · ${fmt(start)}–${fmt(end)}${end>=1440?' (next day)':''}. `+(finish>d.end?`Day will run ${duration(finish-d.end)} past wrap-up. Shorten or move a card to make room.`:'Fits in your day. Later cards adjust automatically.');
-  $('scheduleHint').classList.toggle('warning',finish>d.end);return true;
- }catch(e){$('scheduleHint').textContent=e.message;$('scheduleHint').classList.add('warning');return false}
+  if(!Number.isInteger(mins)||mins<1||mins>1440)throw Error('How long will you stay? Enter 1–1440 minutes.');
+  const cards=placement(d,{id:editing??'preview',title:$('title').value.trim()||'Your new activity',duration:mins},start),end=start+mins,finish=d.start+total({cards});
+  $('scheduleHint').textContent=`${dateLabel(d,{day:'numeric',month:'short'})} · ${fmt(start)}–${fmt(end)}${end>=1440?' (next day)':''}. `+(finish>d.end?`This puts your day ${duration(finish-d.end)} past wrap-up. You can still save, or shorten the visit.`:'There’s room for this in your day.');
+  $('scheduleHint').classList.toggle('warning',finish>d.end);
+  const i=cards.findIndex(c=>c.id===(editing??'preview')),previous=cards.slice(0,i).findLast(c=>c.category!=='break'),next=cards.slice(i+1).find(c=>c.category!=='break');
+  const line=document.createElement('p');line.className='muted';line.textContent=previous?`After ${previous.title}`:'First activity of the day';$('nextActivity').append(line);
+  const heading=document.createElement('strong');heading.textContent=next?`Up next · ${next.title}`:'Your last activity of the day';$('nextActivity').append(heading);
+  const detail=document.createElement('p');
+  if(next){const nextStart=slotTime({...d,cards},cards.indexOf(next)),gap=nextStart-end;detail.textContent=`${fmt(nextStart)} · ${gap>0?duration(gap)+' of breathing room before it.':'Follows straight after.'} Linked automatically by time.`}
+  else detail.textContent='Add another card later and it will appear here automatically.';
+  $('nextActivity').append(detail);return true;
+ }catch(e){
+  $('scheduleHint').textContent=e.message;$('scheduleHint').classList.add('warning');
+  $('nextActivity').textContent='Choose a free time or a card’s start time to see what comes next.';
+  let cursor=d.start;
+  for(const c of d.cards.filter(c=>c.id!==editing)){
+   const end=cursor+c.duration;
+   if(start>cursor&&start<end&&c.category!=='break'){
+    const button=document.createElement('button');button.type='button';button.textContent=`Start after this activity · ${fmt(end)}`;
+    button.disabled=end>=1440;button.onclick=()=>{$('activityStart').value=fmt(end);scheduleHint()};$('scheduleActions').append(button);break;
+   }cursor=end;
+  }
+  return false;
+ }
 }
-$('activityDay').onchange=()=>{const d=state.days[Number($('activityDay').value)];$('activityStart').value=fmt(d.start+total(d));scheduleHint()};
+$('activityDay').onchange=()=>{const d=state.days[Number($('activityDay').value)];$('activityStart').value=fmt(defaultStart(d));scheduleHint()};
+$('placeBefore').onchange=()=>{
+ const d=state.days[Number($('activityDay').value)],cards=d.cards.filter(c=>c.id!==editing),index=cards.findIndex(c=>c.id===$('placeBefore').value);
+ if(index<0)return;
+ $('activityStart').value=fmt(slotTime({...d,cards},index));scheduleHint();
+};
 $('activityStart').oninput=$('duration').oninput=scheduleHint;
+$('title').oninput=()=>$('title').setCustomValidity('');
 $('jumpLibrary').onclick=()=>{$('search').scrollIntoView({behavior:'smooth',block:'center'});$('search').focus({preventScroll:true})};
 function addLibrary(id,index){const source=original.days.flatMap(d=>d.cards).find(c=>c.id===id);if(!source)return;mutate(()=>state.days[day].cards.splice(index??state.days[day].cards.length,0,{...source,id:uid()}));notify('Added to your day')}
 $('days').onclick=e=>{const el=e.target.closest('[data-day]');if(el){day=Number(el.dataset.day);render()}};
 $('filters').onclick=e=>{const el=e.target.closest('[data-filter]');if(el){filter=el.dataset.filter;renderLibrary()}};$('search').oninput=renderLibrary;
 $('library').onclick=e=>{const el=e.target.closest('[data-add]');if(el)addLibrary(el.dataset.add)};
-$('timeline').onclick=e=>{const branchButton=e.target.closest('[data-branch-action]');if(branchButton){handleBranchAction(branchButton);return}const insert=e.target.closest('[data-insert]');if(insert)return openEditor(null,Number(insert.dataset.insert));const button=e.target.closest('[data-action]'),row=e.target.closest('[data-id]');if(!button||!row)return;const cards=state.days[day].cards,i=cards.findIndex(c=>c.id===row.dataset.id),c=cards[i];if(!c)return;const action=button.dataset.action;if(action==='edit')return openEditor(c);if(action==='branch')return openBranch(c);mutate(()=>{if(action==='remove')cards.splice(i,1);if(action==='less')c.duration=Math.max(5,c.duration-15);if(action==='more')c.duration=Math.min(1440,c.duration+15);if(action==='up'&&i>0)[cards[i],cards[i-1]]=[cards[i-1],cards[i]];if(action==='down'&&i<cards.length-1)[cards[i],cards[i+1]]=[cards[i+1],cards[i]]});if(action==='remove')notify('Activity removed. Undo to bring it back.')};
+$('timeline').onclick=e=>{const next=e.target.closest('[data-next]');if(next){const row=[...document.querySelectorAll('.timeline-row')].find(r=>r.dataset.id===next.dataset.next);row?.scrollIntoView({behavior:'smooth',block:'center'});row?.querySelector('.activity')?.focus({preventScroll:true});return}const branchButton=e.target.closest('[data-branch-action]');if(branchButton){handleBranchAction(branchButton);return}const insert=e.target.closest('[data-insert]');if(insert)return openEditor(null,Number(insert.dataset.insert));const button=e.target.closest('[data-action]'),row=e.target.closest('[data-id]');if(!button||!row)return;const cards=state.days[day].cards,i=cards.findIndex(c=>c.id===row.dataset.id),c=cards[i];if(!c)return;const action=button.dataset.action;if(action==='edit')return openEditor(c);if(action==='branch')return openBranch(c);mutate(()=>{if(action==='remove')cards.splice(i,1);if(action==='less')c.duration=Math.max(5,c.duration-15);if(action==='more')c.duration=Math.min(1440,c.duration+15);if(action==='up'&&i>0)[cards[i],cards[i-1]]=[cards[i-1],cards[i]];if(action==='down'&&i<cards.length-1)[cards[i],cards[i+1]]=[cards[i+1],cards[i]]});if(action==='remove')notify('Activity removed. Undo to bring it back.')};
 $('timeline').onchange=e=>{if(!e.target.matches('[data-move]')||e.target.value==='')return;const id=e.target.dataset.move,target=Number(e.target.value);mutate(()=>{const cards=state.days[day].cards,i=cards.findIndex(c=>c.id===id);state.days[target].cards.push(cards.splice(i,1)[0])});notify('Moved to day '+(target+1))};
 for(const id of ['timeline','library']){$(id).addEventListener('dragstart',e=>{if(e.target.closest('button,input,select')){e.preventDefault();return}const lib=e.target.closest('[data-library]'),card=e.target.closest('.activity');if(!lib&&!card)return;drag=lib?{library:lib.dataset.library}:{id:card.dataset.id,day};e.dataTransfer.setData('text/plain',JSON.stringify(drag));e.dataTransfer.effectAllowed='move';card?.classList.add('dragging')});$(id).addEventListener('dragend',()=>{drag=null;document.querySelectorAll('.dragging,.over').forEach(x=>x.classList.remove('dragging','over'))})}
 $('timeline').ondragover=e=>{e.preventDefault();document.querySelectorAll('.over').forEach(x=>x.classList.remove('over'));e.target.closest('.timeline-row')?.classList.add('over')};$('timeline').ondrop=e=>{e.preventDefault();if(!drag)return;const row=e.target.closest('.timeline-row'),cards=state.days[day].cards;let index=row?cards.findIndex(c=>c.id===row.dataset.id):cards.length;if(drag.library)addLibrary(drag.library,index);else if(drag.id!==row?.dataset.id)mutate(()=>{const src=state.days[drag.day].cards,old=src.findIndex(c=>c.id===drag.id);if(old<0)return;const [card]=src.splice(old,1);if(src===cards&&old<index)index--;cards.splice(index,0,card)});drag=null};
 $('new').onclick=$('addBottom').onclick=()=>openEditor();$('cancel').onclick=()=>$('editor').close();$('form').onsubmit=e=>{
  e.preventDefault();if(!scheduleHint())return;
  const values={title:$('title').value.trim(),category:$('category').value,duration:Number($('duration').value),notes:$('notes').value,optional:$('optional').checked};
- if(!values.title)return;
+ if(!values.title){$('title').setCustomValidity('Give your activity a name.');$('title').reportValidity();return;}
  const target=Number($('activityDay').value),source=state.days.flatMap(d=>d.cards).find(c=>c.id===editing),card={...source,...values,id:editing??uid()};
- const cards=placement(state.days[target],card,timeval($('activityStart').value));
+ let cards;try{cards=placement(state.days[target],card,timeval($('activityStart').value))}catch(e){$('scheduleHint').textContent=e.message;return}
  mutate(()=>{if(editing)for(const d of state.days)d.cards=d.cards.filter(c=>c.id!==editing);state.days[target].cards=cards;day=target});
  $('editor').close();notify('Activity saved · later times updated');
 };
