@@ -16,7 +16,7 @@ with sync_playwright() as p:
  # Description disclosure survives editing duration.
  card=page.locator('.activity').nth(1);card.locator('.card-details summary').click();card.get_by_label('Reduce duration by 15 minutes',exact=True).click();assert page.locator('.activity').nth(1).locator('.card-details').get_attribute('open') is not None
  # Moving to another day offers both navigation and recovery.
- page.locator('.move-select').nth(1).select_option('2');expect(page.locator('#toast')).to_contain_text('Day 3');page.locator('#toast').get_by_role('button',name='View day',exact=True).click();assert page.locator('[data-day="2"]').get_attribute('aria-current')=='date'
+ page.locator('.activity').nth(1).get_by_label('Move card',exact=True).click();page.locator('#moveDay').select_option('2');page.locator('#confirmMove').click();expect(page.locator('#toast')).to_contain_text('Day 3');assert page.locator('[data-day="2"]').get_attribute('aria-current')=='date'
  # Library additions offer a direct route to the new card, as well as Undo.
  page.locator('[data-add]').first.click();expect(page.locator('#toast').get_by_role('button',name='View activity',exact=True)).to_be_visible();page.locator('#toast').get_by_role('button',name='View activity',exact=True).click();assert page.evaluate("document.activeElement.classList.contains('activity')")
  # Branch URL and blank titles get immediate inline solutions without losing details.

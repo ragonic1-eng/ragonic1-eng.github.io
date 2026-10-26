@@ -57,3 +57,9 @@ Buttons give immediate press feedback. Cards animate into their new positions wh
 Activity and reminder forms display inline errors with a suggested correction, preserve entered details, and focus the relevant field. Overlapping activities offer start-before/start-after shortcuts. Invalid imports, day times, and storage failures show actionable messages; errors stay visible until dismissed or replaced. Sharing displays an actual pending state, disables duplicate submissions, and restores a retry button after failure. Loading failures offer a retry and keep editing disabled until a plan loads. Reduced-motion preferences disable application animations; confirmations and highlights still work.
 
 Browser verification is in `tests/feedback.py` and `tests/feedback-failures.py`, using Python Playwright, system Chromium and a local server on port 8000. Checks cover form corrections, confirmation/Undo, focus and expanded details, cross-day and library navigation, native drag, pending sharing and retry, storage failure, failed imports, loading retry, rollback of invalid edits, responsive layouts, and reduced motion.
+
+### Mobile use
+
+The bottom bar keeps **Add activity**, **Now / next**, **Undo**, and save status within reach. Card actions have larger labelled touch targets. Use **Move** to choose a destination day and a position, review the resulting time, and confirm; descriptions and reminders travel with the card. **Earlier / Later** reorders without dragging. Forms keep Save and Cancel outside the scrolling fields and follow available viewport height. Expand **Day timing & budget** to change daily settings.
+
+Mobile touch-flow checks are in `tests/mobile-usability.py`; findings, fixes, and verification limits are recorded in [MOBILE-AUDIT.md](MOBILE-AUDIT.md). Editing descriptions preserves subsequent scheduled times. Past-card fading, time visibility, confirmations, and Undo remain available on mobile.

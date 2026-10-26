@@ -37,9 +37,9 @@
   }
   window.orbitSync={queue(){if(!ready||!room||suppress)return;dirty=true;version++;try{localStorage.setItem('orbit-pending-'+room.id,JSON.stringify({revision,trip:state}))}catch{}status('Saving your changes to the shared trip…');$('saveStatus').textContent='Syncing…';clearTimeout(timer);timer=setTimeout(save,350)}};
   async function poll(){
-    if(!room||busy||conflict||document.hidden||$('editor').open||$('branchEditor').open)return;
+    if(!room||busy||conflict||document.hidden||$('editor').open||$('branchEditor').open||$('moveEditor').open)return;
     if(dirty)return save();busy=true;const pollVersion=version;
-    try{const data=await request('load');if(data.revision!==revision){if($('editor').open||$('branchEditor').open)return;if(dirty||version!==pollVersion){markConflict();return}applyRemote(data)}else status('● Shared trip · up to date')}catch(e){status(e.message)}finally{busy=false}
+    try{const data=await request('load');if(data.revision!==revision){if($('editor').open||$('branchEditor').open||$('moveEditor').open)return;if(dirty||version!==pollVersion){markConflict();return}applyRemote(data)}else status('● Shared trip · up to date')}catch(e){status(e.message)}finally{busy=false}
   }
   $('share').onclick=()=>{if(!ready)return notify('Wait for the trip to finish loading.');$('shareEditor').showModal();$('createShare').hidden=!!room;$('shareLinkArea').hidden=!room;$('shareStatus').textContent=room?'Your private editing link is ready.':'Create a shared copy of the plan currently on this device.';if(room)$('shareLink').value=location.href};
   $('shareClose').onclick=()=>$('shareEditor').close();
@@ -54,6 +54,6 @@
     }
     ready=true;setEditingEnabled(true);setInterval(poll,3000);
   });
-  function setEditingEnabled(enabled){$('timeline').inert=!enabled;$('days').inert=!enabled;$('library').inert=!enabled;for(const id of ['new','addBottom','fit','start','end','undo','import'])$(id).disabled=!enabled}
+  function setEditingEnabled(enabled){$('timeline').inert=!enabled;$('days').inert=!enabled;$('library').inert=!enabled;for(const id of ['new','addBottom','fit','start','end','undo','import','mobileAdd','mobileNow','mobileUndo'])$(id).disabled=!enabled;if(enabled)$('mobileUndo').disabled=!history.length}
   window.addEventListener('beforeunload',e=>{if(room&&dirty){e.preventDefault();e.returnValue=''}});
 })();
