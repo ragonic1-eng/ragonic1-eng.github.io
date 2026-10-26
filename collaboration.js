@@ -22,7 +22,8 @@
     const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);let response,data;
     try{response=await fetch(url,{...options,signal:controller.signal});data=await response.json()}catch{throw Error('Shared server is unavailable. Your edits remain on this device; retry when connected.')}finally{clearTimeout(timeout)}
     if(response.status===409||data?.conflict)return {...data,conflict:true};
-    if(!response.ok||data?.error)throw Error(data?.error??'Sharing is not configured on this host yet.');
+    if(data?.code==='PGRST202')throw Error('The shared database setup is incomplete. Run supabase/setup.sql in the project SQL Editor, then try again.');
+    if(!response.ok||data?.error)throw Error(data?.error??data?.message??'Sharing is not configured on this host yet.');
     return data;
   }
   function applyRemote(data){

@@ -94,3 +94,11 @@ revoke all on function public.orbit_save_trip(uuid,text,bigint,jsonb) from publi
 grant execute on function public.orbit_create_trip(jsonb) to anon,authenticated;
 grant execute on function public.orbit_load_trip(uuid,text) to anon,authenticated;
 grant execute on function public.orbit_save_trip(uuid,text,bigint,jsonb) to anon,authenticated;
+
+-- Refresh PostgREST explicitly, including on projects with delayed schema refresh.
+notify pgrst, 'reload schema';
+
+-- The result should list orbit_create_trip, orbit_load_trip and orbit_save_trip.
+select routine_name from information_schema.routines
+where routine_schema='public' and routine_name in ('orbit_create_trip','orbit_load_trip','orbit_save_trip')
+order by routine_name;
