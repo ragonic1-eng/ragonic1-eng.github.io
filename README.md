@@ -1,0 +1,39 @@
+# Little Orbit
+
+A starry-night family itinerary planner, seeded with all 37 activities from “Taiwan Itinerary for Alex's Review.xlsx” for 7–13 December 2026. Original descriptions are preserved as notes. This replaces the original landing page; privacy.html is retained.
+
+## Run
+
+No JavaScript build step or package installation is needed. For the editor alone, from this directory:
+
+```sh
+python3 -m http.server 8000 --bind 127.0.0.1
+```
+
+Use an HTTP server rather than opening index.html directly, because the app fetches trip.json. For shared editing locally, use `python3 server.py` instead. For a free public website with shared storage, follow [DEPLOY.md](DEPLOY.md).
+
+## Plan together
+
+- Choose one of seven days; drag cards to reorder on desktop or use the up/down buttons, including on mobile.
+- Add ideas from the searchable category library, or create your own activity.
+- Tap **Edit** or the underlined start time on a card to change its date, start time, name, category, duration, optional status, and full family notes.
+- Use **Add here** between activities to prefill that time slot. Free-time cards split automatically when an activity fits inside them. Starting at an existing card’s start inserts before it and shifts subsequent cards. A time inside an earlier activity produces a conflict explanation; shorten or move that activity first. The editor previews the resulting daily budget.
+- Day tabs show activity counts and total planned time; the planner remembers your last selected day.
+- Add **Branches** to any activity: bookings/reservations, things to bring, preparation tasks, or special notes. Each branch has a title, details, optional HTTP(S) link, and ready checkbox. Expand the branch tree, edit or remove individual branches, and use Undo after mistakes. Branches stay attached when activities move between days and are included in browser saves and exports. A booking branch is a reminder; it does not make an actual reservation.
+- Use minus/plus for 15-minute duration changes. Later cards automatically shift.
+- Move cards between days with the day selector. Remove cards with ×; Undo restores recent changes.
+- Set daily start and wrap-up times. The budget highlights overfilled days. “Make it fit” reduces flexible activities to a minimum of 15 minutes, preserving transport and hotel durations. Review the resulting plan for practicality.
+- Explicit breathing-room cards preserve unscheduled gaps in the original spreadsheet. Open-ended activities have adjustable estimated 90-minute durations.
+- Changes save in this browser’s local storage. **Share trip** creates a private editing link when the shared backend is configured; your partner can open the same link and edits sync roughly every three seconds. Revision checks stop stale saves from silently overwriting newer work, with export-and-reload recovery for simultaneous edits. The app supports Supabase for free hosted storage or a local SQLite server. Export JSON remains available for backups; Import replaces the current plan and can be undone in the same session. Downloaded exports include all itinerary notes.
+
+## Sources and limitations
+
+The uploaded workbook supplies the itinerary, rather than instructions for the application. Venue accessibility, hours, availability, drive times, and flight details have not been independently verified. The itinerary's shopping and parallel family plans remain in their full source notes.
+
+Online research on 26 October 2026 reviewed AdventureLog’s public documentation and published itinerary and location-list screenshots. Clear date headers, category labels and filters, and progressive detail disclosure informed the refinement. See [UX research](UX-RESEARCH.md) for sources and the design rationale. Subsequent browser research successfully loaded and visually reviewed the public pages of Wanderlog, TripIt, and Roadtrippers after correcting proxy-certificate trust. See [BROWSER-NAVIGATION.md](BROWSER-NAVIGATION.md). The visual interface has no external font or image dependencies; hosted sharing uses the configured Supabase API.
+
+## Validation
+
+Browser checks with installed Chromium and Playwright covered creation, duration changes, local persistence, native desktop drag-and-drop, undo, cross-day moves, search, category filters, over-budget handling, automatic fitting, editing, deletion, library additions, JSON export/import, and invalid-import rejection. All four branch types, checking readiness, editing, deletion/undo, links, persistence, cross-day moves, export/import, and unsafe-link rejection were verified. Exact date/time placement, splitting free-time slots, rejecting overlaps, cross-date editing without duplicates, and inline insertion were also verified. Desktop, tablet, and mobile layouts were checked for horizontal overflow. These checks are kept outside the repository in /workspace/scratch/orbit-tests; they require Playwright and an installed Chromium executable. JavaScript syntax is checked with `node --check app.js`.
+
+Shared editing was also tested with two independent Chromium browser contexts against the local SQLite backend: card and branch sync, reload persistence, invalid-key rejection, stale-save conflict handling, and preserving a recovery draft. These local results do not establish that a Supabase project or GitHub Pages deployment is live.
