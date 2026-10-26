@@ -63,3 +63,11 @@ Browser verification is in `tests/feedback.py` and `tests/feedback-failures.py`,
 The bottom bar keeps **Add activity**, **Now / next**, **Undo**, and save status within reach. Card actions have larger labelled touch targets. Use **Move** to choose a destination day and a position, review the resulting time, and confirm; descriptions and reminders travel with the card. **Earlier / Later** reorders without dragging. Forms keep Save and Cancel outside the scrolling fields and follow available viewport height. Expand **Day timing & budget** to change daily settings.
 
 Mobile touch-flow checks are in `tests/mobile-usability.py`; findings, fixes, and verification limits are recorded in [MOBILE-AUDIT.md](MOBILE-AUDIT.md). Editing descriptions preserves subsequent scheduled times. Past-card fading, time visibility, confirmations, and Undo remain available on mobile.
+
+### Minimal cards and direct dragging
+
+Cards initially show just the activity name, start/finish times, duration, and a **⠿ Drag** handle. Open **Details & actions** for editing, reminders, duration controls, or the day/position picker. On mobile, **Trip options** contains daily settings, sharing and file actions.
+
+Drag the ⠿ handle with a finger, pen, or mouse to reorder. A line shows the insertion point; hold near the top or bottom edge to scroll farther. Drop onto a day tab to move to that day. Releasing outside a valid destination or cancelling leaves the plan unchanged. Undo restores a completed move. Ordinary card swipes continue to scroll the page. Tap or keyboard-activate the handle to choose a destination without dragging.
+
+The real touchscreen gesture regression check is `tests/compact-touch-drag.py`.

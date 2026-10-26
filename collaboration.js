@@ -27,7 +27,7 @@
     return data;
   }
   function applyRemote(data){
-    validate(data.trip);suppress=true;state=data.trip;revision=data.revision;history=[];persist();render();suppress=false;status('● Shared trip · up to date');$('saveStatus').textContent='● Shared · saved';$('storageMode').textContent='Private shared trip · changes sync between your devices';
+    validate(data.trip);suppress=true;state=data.trip;revision=data.revision;history=[];historyDays=[];persist();render();suppress=false;status('● Shared trip · up to date');$('saveStatus').textContent='● Shared · saved';$('storageMode').textContent='Private shared trip · changes sync between your devices';
   }
   function markConflict(){conflict=true;$('conflictActions').hidden=false;status('Your partner updated this trip while you were editing. Your edits are still here. Export them, then load the latest shared plan.');$('saveStatus').textContent='Changes need review'}
   async function save(){
@@ -37,9 +37,9 @@
   }
   window.orbitSync={queue(){if(!ready||!room||suppress)return;dirty=true;version++;try{localStorage.setItem('orbit-pending-'+room.id,JSON.stringify({revision,trip:state}))}catch{}status('Saving your changes to the shared trip…');$('saveStatus').textContent='Syncing…';clearTimeout(timer);timer=setTimeout(save,350)}};
   async function poll(){
-    if(!room||busy||conflict||document.hidden||$('editor').open||$('branchEditor').open||$('moveEditor').open)return;
+    if(!room||busy||conflict||window.orbitDragging||document.hidden||$('editor').open||$('branchEditor').open||$('moveEditor').open)return;
     if(dirty)return save();busy=true;const pollVersion=version;
-    try{const data=await request('load');if(data.revision!==revision){if($('editor').open||$('branchEditor').open||$('moveEditor').open)return;if(dirty||version!==pollVersion){markConflict();return}applyRemote(data)}else status('● Shared trip · up to date')}catch(e){status(e.message)}finally{busy=false}
+    try{const data=await request('load');if(data.revision!==revision){if(window.orbitDragging||$('editor').open||$('branchEditor').open||$('moveEditor').open)return;if(dirty||version!==pollVersion){markConflict();return}applyRemote(data)}else status('● Shared trip · up to date')}catch(e){status(e.message)}finally{busy=false}
   }
   $('share').onclick=()=>{if(!ready)return notify('Wait for the trip to finish loading.');$('shareEditor').showModal();$('createShare').hidden=!!room;$('shareLinkArea').hidden=!room;$('shareStatus').textContent=room?'Your private editing link is ready.':'Create a shared copy of the plan currently on this device.';if(room)$('shareLink').value=location.href};
   $('shareClose').onclick=()=>$('shareEditor').close();

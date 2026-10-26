@@ -1,3 +1,4 @@
+from ui_helpers import expand_card
 from playwright.sync_api import sync_playwright,expect
 with sync_playwright() as p:
  b=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
@@ -16,6 +17,7 @@ with sync_playwright() as p:
   page.locator('#toast').get_by_role('button',name='Dismiss message').tap()
   # Both time and edit controls are visible, comfortably sized, and work with touch.
   expect(card.locator('.card-timing')).to_contain_text('11:30');expect(card.locator('.timing-duration')).to_have_text('40m')
+  expand_card(card)
   for action in ['edit','move','up','down','remove']:
    box=card.locator(f'.card-actions [data-action="{action}"]').bounding_box();assert box['width']>=44 and box['height']>=44,(width,action,box)
   card.get_by_label('Edit activity',exact=True).evaluate("el=>el.scrollIntoView({block:'center'})");card.get_by_label('Edit activity',exact=True).tap();expect(page.locator('#notes')).to_have_value('Meet at the taxi stand. Bring the stroller.');page.locator('#notes').fill('Updated on mobile');page.locator('#saveActivity').tap();page.locator('#toast').get_by_role('button',name='Dismiss message').tap()
@@ -29,7 +31,7 @@ with sync_playwright() as p:
   # Reorder with touch controls and recover using the always available Undo.
   card.get_by_label('Move later',exact=True).evaluate("el=>el.scrollIntoView({block:'center'})");card.get_by_label('Move later',exact=True).tap();assert page.evaluate("state.days[1].cards[1].title")=='Mobile breakfast';page.locator('#mobileUndo').tap();assert page.evaluate("state.days[1].cards[0].title")=='Mobile breakfast'
   # Move within the same day using the destination picker; no duplicate or lost descriptions.
-  page.locator('#toast').get_by_role('button',name='Dismiss message').tap();card.get_by_label('Move card',exact=True).evaluate("el=>el.scrollIntoView({block:'center'})");card.get_by_label('Move card',exact=True).tap();page.locator('#movePosition').select_option('');page.locator('#confirmMove').tap();assert page.evaluate("state.days[1].cards.at(-1).title")=='Mobile breakfast'
+  page.locator('#toast').get_by_role('button',name='Dismiss message').tap();expand_card(card);card.get_by_label('Move card',exact=True).evaluate("el=>el.scrollIntoView({block:'center'})");card.get_by_label('Move card',exact=True).tap();page.locator('#movePosition').select_option('');page.locator('#confirmMove').tap();assert page.evaluate("state.days[1].cards.at(-1).title")=='Mobile breakfast'
   page.locator('#mobileNow').tap();assert page.evaluate('document.activeElement.classList.contains("activity")')
   # Save remains reachable with a substantially shortened viewport (keyboard approximation).
   page.locator('#mobileAdd').tap();page.set_viewport_size({'width':width,'height':360});page.locator('#title').fill('Keyboard test');box=page.locator('#saveActivity').bounding_box();assert box['y']>=0 and box['y']+box['height']<=361,(width,box);page.locator('#activityCancel').tap();page.set_viewport_size({'width':width,'height':height})
