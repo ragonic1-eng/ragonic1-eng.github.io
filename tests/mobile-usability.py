@@ -1,3 +1,4 @@
+from ui_helpers import open_extras
 from ui_helpers import expand_card
 from playwright.sync_api import sync_playwright,expect
 with sync_playwright() as p:
@@ -12,7 +13,7 @@ with sync_playwright() as p:
   for control in ['saveActivity','activityCancel']:
    box=page.locator('#'+control).bounding_box();assert box['y']>=0 and box['y']+box['height']<=height+1,(width,control,box)
   assert page.locator('#title').evaluate('el=>parseFloat(getComputedStyle(el).fontSize)')>=16
-  page.locator('#title').fill('Mobile breakfast');page.locator('#activityStart').fill('11:30');page.locator('#duration').fill('40');page.locator('#notes').fill('Meet at the taxi stand. Bring the stroller.');page.locator('#saveActivity').tap()
+  page.locator('#title').fill('Mobile breakfast');page.locator('#activityStart').fill('11:30');page.locator('#duration').fill('40');open_extras(page);page.locator('#notes').fill('Meet at the taxi stand. Bring the stroller.');page.locator('#saveActivity').tap()
   expect(page.locator('#editor')).not_to_be_visible();card=page.locator('.activity').filter(has=page.get_by_role('heading',name='Mobile breakfast',exact=True));assert card.count()==1
   page.locator('#toast').get_by_role('button',name='Dismiss message').tap()
   # Both time and edit controls are visible, comfortably sized, and work with touch.
@@ -20,7 +21,7 @@ with sync_playwright() as p:
   expand_card(card)
   for action in ['edit','move','up','down','remove']:
    box=card.locator(f'.card-actions [data-action="{action}"]').bounding_box();assert box['width']>=44 and box['height']>=44,(width,action,box)
-  card.get_by_label('Edit activity',exact=True).evaluate("el=>el.scrollIntoView({block:'center'})");card.get_by_label('Edit activity',exact=True).tap();expect(page.locator('#notes')).to_have_value('Meet at the taxi stand. Bring the stroller.');page.locator('#notes').fill('Updated on mobile');page.locator('#saveActivity').tap();page.locator('#toast').get_by_role('button',name='Dismiss message').tap()
+  card.get_by_label('Edit activity',exact=True).evaluate("el=>el.scrollIntoView({block:'center'})");card.get_by_label('Edit activity',exact=True).tap();expect(page.locator('#notes')).to_have_value('Meet at the taxi stand. Bring the stroller.');open_extras(page);page.locator('#notes').fill('Updated on mobile');page.locator('#saveActivity').tap();page.locator('#toast').get_by_role('button',name='Dismiss message').tap()
   assert page.evaluate("slotTime(state.days[0],state.days[0].cards.findIndex(c=>c.id==='home-to-airport'))")==750
   assert page.evaluate("slotTime(state.days[0],state.days[0].cards.findIndex(c=>c.id==='activity-1-0'))")==945
   # Move to a specific position on a different day; details survive and only one card exists.

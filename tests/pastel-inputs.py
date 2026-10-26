@@ -1,0 +1,26 @@
+from playwright.sync_api import sync_playwright,expect
+from ui_helpers import open_extras,expand_card
+with sync_playwright() as p:
+ b=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox']);page=b.new_page(viewport={'width':390,'height':844},is_mobile=True,has_touch=True);errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+ page.goto('http://127.0.0.1:8000');page.wait_for_selector('.activity');page.emulate_media(reduced_motion='reduce')
+ assert page.evaluate('getComputedStyle(document.documentElement).colorScheme')=='light'
+ footer=page.locator('.mobile-actions').bounding_box()['y'];visible=[card for card in page.locator('.activity').all() if card.bounding_box()['y']>=0 and card.bounding_box()['y']+card.bounding_box()['height']<=footer];assert len(visible)>=4,len(visible)
+ assert page.locator('.activity').first.bounding_box()['height']<=130
+ page.screenshot(path='/tmp/orbit-pastel-overview.png')
+ # Real touch drag: completely opaque preview and a quiet source placeholder.
+ client=page.context.new_cdp_session(page);handle=page.locator('.drag-handle').first.bounding_box();before=page.evaluate('JSON.stringify(state)');x=handle['x']+22;y=handle['y']+22
+ client.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':x,'y':y}]})
+ client.send('Input.dispatchTouchEvent',{'type':'touchMove','touchPoints':[{'x':x,'y':y+70}]});page.evaluate('()=>new Promise(r=>requestAnimationFrame(r))')
+ ghost=page.locator('.sort-ghost');expect(ghost).to_be_visible();assert ghost.evaluate("el=>getComputedStyle(el).opacity")=='1';assert ghost.evaluate("el=>!getComputedStyle(el).backgroundColor.includes('rgba')");assert page.locator('.drag-origin').evaluate("el=>getComputedStyle(el).opacity")=='1';assert page.locator('.drag-origin .card-top').evaluate("el=>getComputedStyle(el).visibility")=='hidden'
+ page.screenshot(path='/tmp/orbit-pastel-drag.png');client.send('Input.dispatchTouchEvent',{'type':'touchCancel','touchPoints':[]});assert page.evaluate('JSON.stringify(state)')==before;page.locator('#toast').get_by_label('Dismiss message').tap()
+ page.locator('#mobileAdd').tap();expect(page.locator('#activityExtras')).not_to_have_attribute('open','');page.locator('#title').fill('Airport drive with the kids');page.locator('#activityStart').fill('12:30');expect(page.locator('#inputTimePreview')).to_contain_text('12:30 PM')
+ page.locator('[data-duration-preset="40"]').tap();assert page.locator('#duration').input_value()=='40';expect(page.locator('#durationWords')).to_contain_text('40 minutes · finishes 1:10 PM');expect(page.locator('[data-duration-preset="40"]')).to_have_attribute('aria-pressed','true')
+ page.locator('[data-duration-preset="90"]').tap();expect(page.locator('#durationWords')).to_contain_text('1 hour 30 minutes');page.locator('#durationMore').tap();assert page.locator('#duration').input_value()=='105';page.locator('#durationLess').tap();assert page.locator('#duration').input_value()=='90'
+ page.locator('#duration').fill('270');expect(page.locator('#durationWords')).to_contain_text('4 hours 30 minutes');page.locator('#duration').fill('0');page.locator('#saveActivity').tap();expect(page.locator('#activityError')).to_contain_text('1 to 1440');assert page.locator('#title').input_value()=='Airport drive with the kids'
+ page.locator('[data-duration-preset="40"]').tap();page.locator('#activityStart').fill('11:30');open_extras(page);page.locator('#notes').fill('My own description: meet by the lift.');page.locator('#category').select_option('travel');page.locator('#saveActivity').tap();expect(page.locator('#editor')).not_to_be_visible();assert page.evaluate("slotTime(state.days[0],state.days[0].cards.findIndex(c=>c.id==='activity-1-0'))")==945
+ page.reload();page.wait_for_selector('.activity');card=page.locator('.activity').filter(has=page.get_by_role('heading',name='Airport drive with the kids',exact=True));expand_card(card);card.get_by_label('Edit activity',exact=True).tap();expect(page.locator('[data-duration-preset="40"]')).to_have_attribute('aria-pressed','true');open_extras(page);expect(page.locator('#notes')).to_have_value('My own description: meet by the lift.');page.locator('#activityCancel').tap()
+ for width,height in [(320,568),(390,844),(430,932),(740,375),(768,1000),(1440,1000)]:
+  page.set_viewport_size({'width':width,'height':height});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),width
+  for timing in page.locator('.card-timing').all():assert timing.evaluate('el=>el.scrollWidth<=el.clientWidth'),width
+ page.set_viewport_size({'width':390,'height':844});page.locator('#mobileAdd').tap();page.locator('#title').fill('Family snack stop');page.locator('#activityStart').fill('11:00');page.locator('[data-duration-preset="30"]').tap();page.screenshot(path='/tmp/orbit-pastel-form.png');page.set_viewport_size({'width':390,'height':360});box=page.locator('#saveActivity').bounding_box();assert box['y']+box['height']<=361;page.locator('#activityCancel').tap()
+ assert not errors,errors;b.close();print('PASS: pastel light theme, four full cards per mobile view, opaque real-touch drag, placeholder, duration presets/stepper/custom input, AM/PM preview, inline correction, editable descriptions and persistence, preserved flight time, responsive layout and reachable footer')

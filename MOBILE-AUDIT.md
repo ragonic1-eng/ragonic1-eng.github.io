@@ -26,3 +26,15 @@ The first audit made individual controls easier to tap, but too many controls an
 Added pointer-based sorting rather than relying on native HTML drag-and-drop for phones. The ⠿ handle has a 44px target and reserves touch gestures for dragging; the rest of the card supports normal page scrolling. A floating card, insertion marker, destination label, edge auto-scroll, and highlighted day tabs make the destination visible. Dropping on a day tab moves the card to that day. Cancelled gestures leave the plan unchanged. Keyboard users can activate the handle to open the existing position/day picker. Shared polling defers remote application while sorting.
 
 `tests/compact-touch-drag.py` uses Chromium touchscreen input to verify sorting, dragging between days, edge auto-scroll, cancelled gestures, Undo, description persistence, and minimal layout. It also checks an ordinary card-content swipe and mouse dragging by the handle. Card heights are checked below 240px for the initial mobile card, with the first activity inside the initial viewport. Earlier mobile editing, validation, failure-recovery, native desktop drag, and live-time checks have been updated to use the Details disclosure and Trip options.
+
+## Pastel theme, denser cards, and easier activity inputs
+
+Replaced the accumulated dark-theme styles with a cohesive light palette: warm cream surfaces, lavender controls, and solid blue, sage, peach, and rose category cards. Important time/title text uses dark colors; key text/background pairs, including faded cards, were checked above 4.5:1 contrast.
+
+The default card now uses an edge control column and a shorter layout, approximately 116px tall for ordinary titles at 390px width. Four complete cards fit in the 390×844 test viewport. Longer titles can grow naturally. Extra actions still open under Details; full time and duration values remain visible.
+
+The touch-drag preview is fully opaque and retains the source category color. The original position uses an opaque dashed placeholder with hidden source text, eliminating overlapping duplicate text. The insertion line remains visible above the floating card.
+
+Activity entry puts name, short date label, native time picker, and duration first. A 15-minute stepper, common-duration presets (including 40 minutes), and editable custom minutes provide multiple easy input paths. Human-readable hours/minutes, an AM/PM confirmation, and the resulting finish time explain the entered values. Optional description, category, and relative placement remain under Description & more. Save and Cancel remain reachable with the keyboard-height approximation.
+
+`tests/pastel-inputs.py` checks card density, opaque real-touch drag, unchanged state after cancellation, duration presets and custom values, AM/PM output, invalid-input correction, description persistence, original flight time preservation, mobile/tablet/desktop layouts, and the action footer. Existing touchscreen sorting, mobile workflow, feedback, storage/network failure, native mouse-drag, and live-clock checks also passed after the redesign. Screenshots of overview, form, and active drag were inspected.

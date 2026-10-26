@@ -15,3 +15,6 @@ def close_options(page):
 
 def open_library(page):
  if page.locator('#ideaCollection').get_attribute('open') is None:page.locator('#ideaCollection>summary').click()
+
+def open_extras(page):
+ if page.locator('#activityExtras').get_attribute('open') is None:page.locator('#activityExtras>summary').click()

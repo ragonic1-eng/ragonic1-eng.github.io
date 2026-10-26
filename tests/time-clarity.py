@@ -1,3 +1,4 @@
+from ui_helpers import open_extras
 from ui_helpers import open_day_settings,close_options
 from playwright.sync_api import sync_playwright
 from datetime import datetime,timezone
@@ -19,7 +20,7 @@ with sync_playwright() as p:
  # Reversible preference remains across reload, and cards remain editable.
  open_day_settings(page);page.locator('#fadePast').uncheck();assert not page.locator('body').evaluate("el=>el.classList.contains('fade-past')")
  page.reload();page.wait_for_selector('.activity');assert not page.locator('#fadePast').is_checked();open_day_settings(page);page.locator('#fadePast').check();close_options(page)
- page.locator('.card-start').first.click();page.locator('#notes').fill('Meet by the taxi stand');page.locator('#saveActivity').click();assert not page.locator('#editor').is_visible()
+ page.locator('.card-start').first.click();open_extras(page);page.locator('#notes').fill('Meet by the taxi stand');page.locator('#saveActivity').click();assert not page.locator('#editor').is_visible()
  # Future dates do not fade merely because their time-of-day passed today.
  page.locator('[data-day="1"]').click();assert page.locator('.time-passed').count()==0
  # Check absolute-date handling for an activity spanning midnight.

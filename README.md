@@ -71,3 +71,9 @@ Cards initially show just the activity name, start/finish times, duration, and a
 Drag the ⠿ handle with a finger, pen, or mouse to reorder. A line shows the insertion point; hold near the top or bottom edge to scroll farther. Drop onto a day tab to move to that day. Releasing outside a valid destination or cancelling leaves the plan unchanged. Undo restores a completed move. Ordinary card swipes continue to scroll the page. Tap or keyboard-activate the handle to choose a destination without dragging.
 
 The real touchscreen gesture regression check is `tests/compact-touch-drag.py`.
+
+### Pastel cards and quick entry
+
+The light family theme uses solid pastel cards and dark, readable text. Cards are shorter while preserving large times and duration. During dragging, the floating card stays opaque; its old position becomes a quiet placeholder.
+
+When adding an activity, choose a common duration, use −15/+15, or enter custom minutes. The form translates durations into hours/minutes and shows the finish time in AM/PM. Add your own description and other optional fields under **Description & more**. The new visual and input regression check is `tests/pastel-inputs.py`.
