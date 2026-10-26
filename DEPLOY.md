@@ -32,3 +32,18 @@ Use `config.json` with `provider: server`. It uses `.local-data/trips.sqlite3`; 
 - Verify an incomplete/wrong key cannot load the trip and stale saves return a conflict.
 
 The local SQLite backend is independently testable. Supabase deployment is a separate verification step, not established by a passing local test.
+
+## Claude Sonnet place research
+
+1. In the existing project's [Edge Function secrets](https://supabase.com/dashboard/project/iqpljuxtjngcisvokjkm/functions/secrets), save `ANTHROPIC_API_KEY`. This key remains in Supabase; never put it in GitHub files, the public config, or a browser field. Enable API billing and web-search access in your Anthropic account.
+2. Create a Supabase personal access token with permission for this project at [account tokens](https://supabase.com/dashboard/account/tokens). Save it as `SUPABASE_ACCESS_TOKEN` in [repository Actions secrets](https://github.com/ragonic1-eng/ragonic1-eng.github.io/settings/secrets/actions). This is a deployment credential, separate from the Claude key. Do not paste either key into chat.
+3. Run/re-run **Deploy Claude place research** in [GitHub Actions](https://github.com/ragonic1-eng/ragonic1-eng.github.io/actions/workflows/research.yml). It installs `supabase/research.sql` through the management API, deploys `research-place`, and checks key readiness. It does not retrieve or print the Claude key.
+4. Open a **private shared trip link**, then Add/Edit → Place → **Research with Claude**. Enter a public venue name and city. Choose a researched result and save the activity. Map search and the bundled catalogue remain available independently.
+
+The edge function uses `claude-sonnet-4-6` with Anthropic's `web_search_20250305` tool (maximum three web searches and 3,000 output tokens per request). It requires the private trip capability, checked against the database, before calling Anthropic. Gateway JWT verification is disabled because this app uses private trip capabilities rather than Supabase Auth; the function performs its own authorization. A public project key or Origin header alone does not authorize a paid lookup.
+
+Private SQL counters enforce at most **10 uncached attempts per trip/day** and **20 for the project/day**, resetting at midnight UTC. Failed provider attempts count toward the limit; there is no automatic paid retry. Results cache for 24 hours, duplicate in-flight queries are rejected, and all requests have timeouts. The limits and cache are persisted in PostgreSQL rather than process memory. Research passes only the query and selected area to Anthropic, never the private trip key, whole itinerary, or other card descriptions. Results include links obtained from web search; missing evidence fails safely instead of inventing a confirmed address or booking link. Model answers still need user review.
+
+`GET /functions/v1/research-place` reports key presence, not proof that the key is valid or billing enabled. Verify a real private-trip request before claiming the AI is live. Optional server secret `ALLOWED_ORIGIN` overrides the default GitHub Pages origin if the site moves.
+
+Tests: `node --test tests/research-backend.mjs`, `python3 tests/research-ui.py` (local static server on port 8000), and `node tests/research-database.mjs` after installing `@electric-sql/pglite` under `/tmp/orbit-research-db-test`. The database test uses a digest stub for capability matching; production uses the existing pgcrypto SHA-256 function.
