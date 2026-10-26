@@ -26,3 +26,15 @@ After fixing Chromium trust for the platform proxy in an approved session, the p
 ## Verification
 
 Installed Chromium with Playwright exercised creation, edits, date/time selection, overlap prevention, free-gap splitting, reorder, cross-day moves, duration adjustment, budget fitting, deletion/undo, search/filter, persistence, exports/imports, and invalid import handling. Viewports: 390, 768, and 1440 pixels. Trip source: all 37 original activities and full notes from the uploaded workbook; the second upload was byte-identical to the first.
+
+## Time-first itinerary refinement · 26 October 2026
+
+Reviewed these public sources through web search and page extraction:
+
+- [Nielsen Norman Group: Visual Hierarchy in UX](https://www.nngroup.com/articles/visual-hierarchy-ux-definition/) recommends making the most important information largest, grouping related details, and reinforcing color with text. Applied a consistent start / finish / duration group above every activity title, with bold tabular numerals and explicit status labels.
+- [W3C: Contrast (Minimum)](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html) explains 4.5:1 contrast for ordinary text and 3:1 for large text, and cautions against faint text. Past cards therefore recede through quieter backgrounds, borders and text colors rather than whole-card opacity. Key past time text (#aeb8ca on #121927) remains readable, and users can disable fading.
+- [TripIt](https://www.tripit.com/web) emphasizes one place for travel details and guidance on what to do next. Applied a selected-day Now / Up next panel with a jump button. This review covered the public page, not the signed-in product or its proprietary behavior.
+
+Behavior: start-inclusive/end-exclusive highlighting; past status begins at the finish time. Full dated timestamps in UTC+8 handle future dates and midnight correctly even when the visitor’s device uses a different timezone. Visible clocks and statuses update every 15 seconds while open and immediately when returning to the tab. Schedule time passing does not assert that an activity was actually completed. No notifications or background tracking are implied.
+
+Verification: Chromium with a simulated trip clock checked exact start/end transitions, an overnight activity, future-day browsing, a device in America/Los_Angeles, fade preference persistence, editing a past card, jump navigation, and layouts from 320 to 1440 pixels. Inspected mobile and desktop screenshots. Regression test: `tests/time-clarity.py` (Python Playwright and system Chromium; serve the repository on localhost:8000).

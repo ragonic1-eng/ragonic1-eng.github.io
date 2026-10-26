@@ -43,3 +43,9 @@ Shared editing was also tested with two independent Chromium browser contexts ag
 The friendlier activity form was verified in Chromium for repeated card creation, midnight defaults, insertion at the start of a gap without shifting the next stop, automatic next-activity previews and navigation, overlap recovery, the place-before shortcut, cross-day editing, reload persistence, and responsive dialogs at 390, 768, and 1440 pixels.
 
 Earlier-day scheduling checks verified preview/save before the configured start, keeping the 15:45 flight, optional free-text descriptions and focused editing, browser persistence, mobile layout, and upgrading the original local schedule without duplicate additions.
+
+### Clear times during the trip
+
+Every card shows large **Meet / start**, **Finish**, and **Duration** values. The Now / Up next panel helps find the selected day’s current or next activity. Current cards stay highlighted; cards whose scheduled finish has passed become visually quieter and show **Time passed**. Toggle **Fade cards after their finish time** to keep all cards bright. Past cards remain readable and editable. This is based on scheduled time, not a completion checklist.
+
+All timeline times and live status use Singapore/Taiwan time (UTC+8), independent of the device timezone. Status refreshes every 15 seconds while the page is open and on return to the tab. Overnight activities use their full dates. Research rationale and sources are in `UX-RESEARCH.md`. The time behavior and responsive UI check is `tests/time-clarity.py`.
