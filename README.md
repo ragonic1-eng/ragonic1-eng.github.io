@@ -77,3 +77,13 @@ The real touchscreen gesture regression check is `tests/compact-touch-drag.py`.
 The light family theme uses solid pastel cards and dark, readable text. Cards are shorter while preserving large times and duration. During dragging, the floating card stays opaque; its old position becomes a quiet placeholder.
 
 When adding an activity, choose a common duration, use −15/+15, or enter custom minutes. The form translates durations into hours/minutes and shows the finish time in AM/PM. Add your own description and other optional fields under **Description & more**. The new visual and input regression check is `tests/pastel-inputs.py`.
+
+## Chinese driver view
+
+The visible **Driver view · 司機** button opens `driver.html` with the current private trip fragment. Create/open a shared trip first, then copy the link inside Driver view to send it to the driver. Without a shared fragment it previews this device's local itinerary and disables copying a misleading live link. The driver page loads the latest server snapshot, polls every three seconds while visible, checks immediately on visibility/online events, and displays the last successful check time. Failed refreshes retain the previous schedule with an explicit stale-data message. It never writes to the shared trip. The link still carries the existing edit credential; this is a viewing interface, not a server-enforced read-only permission.
+
+`driver-zh.json` contains bundled Traditional Chinese names and descriptions for all seed activities and generated breaks. Translations match the actual source text, not card IDs, to prevent showing obsolete translations after edits. Custom activities can supply `driverTitle` and `driverNotes` through Description & more. Untranslated English remains visible and is marked for confirmation; there is no automatic translation service or external language package. Times and order come from the current snapshot.
+
+Shared editing debounces saves by 350 ms and polls every three seconds, with requests capped at 12 seconds. Polling pauses while hidden, dragging, editing, or resolving a conflict. Saves retry after three seconds if disconnected. The database locks the trip row and compares revisions before replacing the snapshot: stale saves are rejected, not merged. Pending drafts are stored locally; loading latest attempts to keep a recovery backup. Successful saves alone do not reload the page.
+
+Validation: `python3 tests/driver-view.py` covers the Chinese fields, local preview, mocked shared reorder/update, stale revision rejection, recovery backup, offline warning/recovery, translation coverage, escaping, and mobile widths.

@@ -54,6 +54,8 @@
     }
     ready=true;setEditingEnabled(true);setInterval(poll,3000);
   });
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&ready)poll()});
+  window.addEventListener('online',()=>{if(ready)poll()});
   function setEditingEnabled(enabled){$('timeline').inert=!enabled;$('days').inert=!enabled;$('library').inert=!enabled;for(const id of ['new','addBottom','fit','start','end','undo','import','mobileAdd','mobileNow','mobileUndo'])$(id).disabled=!enabled;if(enabled)$('mobileUndo').disabled=!history.length}
   window.addEventListener('beforeunload',e=>{if(room&&dirty){e.preventDefault();e.returnValue=''}});
 })();

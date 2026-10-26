@@ -26,3 +26,5 @@ dialog{color:var(--text);background:#fff9fd;border:1px solid #cfc0dc;border-radi
 input,select,textarea{font-weight:500}input::placeholder,textarea::placeholder{font-weight:400}.branch-node>input{width:24px;height:24px}
 
 .sort-marker{z-index:32}.sort-status{z-index:33}
+
+.trip-caption-row{display:flex;align-items:center;justify-content:space-between;gap:10px}.driver-view-link{display:flex;align-items:center;min-height:44px;flex-shrink:0;font-size:12px;font-weight:700;text-decoration:none;padding:6px 10px;border:1px solid #dba5ca;border-radius:12px;background:#f9dcec}.trip-caption-row .trip-caption{font-size:12px}
