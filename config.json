@@ -1,5 +1,5 @@
 {
-  "provider": "server",
-  "supabaseUrl": "",
-  "supabaseKey": ""
+  "provider": "supabase",
+  "supabaseUrl": "https://iqpljuxtjngcisvokjkm.supabase.co",
+  "supabaseKey": "sb_publishable_yCLXTYxPaJzgSl2ROFkasA_YxRZ4ON0"
 }
