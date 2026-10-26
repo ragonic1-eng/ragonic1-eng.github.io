@@ -1,0 +1,258 @@
+[
+  {
+    "id": "flying-cow",
+    "name": "Flying Cow Ranch",
+    "nameZh": "飛牛牧場",
+    "aliases": [
+      "flying cow",
+      "飛牛牧場"
+    ],
+    "address": "苗栗縣通霄鎮南和里166號",
+    "description": "A countryside dairy ranch with animal encounters and family activities.",
+    "descriptionZh": "以牧場動物及親子體驗為主的休閒農場。",
+    "source": "https://www.flyingcow.com.tw/information/index.php?index_id=1",
+    "bookingNote": "Admission ticket; check age concessions.",
+    "bookingNoteZh": "需購買入園門票，請確認兒童優惠。",
+    "bookingUrl": "https://www.flyingcow.com.tw/information/index.php?index_id=1",
+    "bookingLabel": "Admission information",
+    "checked": "2026-10-26"
+  },
+  {
+    "id": "qingjing",
+    "name": "Qingjing Farm · Green Green Grasslands",
+    "nameZh": "清境農場・青青草原",
+    "aliases": [
+      "qingjing farm",
+      "cingjing farm",
+      "青青草原",
+      "清境農場"
+    ],
+    "address": "南投縣仁愛鄉仁和路170號",
+    "description": "Mountain grasslands with sheep and panoramic views.",
+    "descriptionZh": "可欣賞綿羊及山景的高山草原。",
+    "source": "https://www.qingjing-farm.com.tw/grassland/index.php?index_id=24",
+    "bookingNote": "Admission ticket; choose the correct weekday or holiday ticket.",
+    "bookingNoteZh": "需購票，請確認平日或假日票種。",
+    "bookingUrl": "https://qingjing.welcometw.com/store/info/ka3J?lang=zh_TW",
+    "bookingLabel": "Tickets",
+    "checked": "2026-10-26"
+  },
+  {
+    "id": "lucky-art",
+    "name": "Lucky Art Crayon Castle",
+    "nameZh": "蜡藝蠟筆城堡",
+    "aliases": [
+      "lucky art",
+      "蠟藝蠟筆",
+      "蜡藝蠟筆"
+    ],
+    "address": "宜蘭縣蘇澳鎮海山西路500號",
+    "description": "Indoor crayon-making activities and colourful hands-on workshops.",
+    "descriptionZh": "提供蠟筆手作及彩繪體驗的室內觀光工廠。",
+    "source": "https://luckyart.com.tw/art/guide",
+    "bookingNote": "General visitors can buy tickets on arrival; special workshops may need reservations.",
+    "bookingNoteZh": "一般遊客可現場購票，專案課程請另洽預約。",
+    "bookingUrl": "https://luckyart.com.tw/art/guide",
+    "bookingLabel": "Admission information",
+    "checked": "2026-10-26"
+  },
+  {
+    "id": "zhang-mei",
+    "name": "Zhang Mei Ama’s Farm",
+    "nameZh": "張美阿嬤農場",
+    "aliases": [
+      "zhang mei",
+      "張美阿嬤"
+    ],
+    "address": "宜蘭縣三星鄉行健溪一路二段161號",
+    "description": "A family farm offering rural experiences and DIY activities. Confirm the exact farm entrance before travel.",
+    "descriptionZh": "提供農村及手作體驗；出發前請確認農場入口。",
+    "source": "https://zhangmeifarm.com.tw/",
+    "bookingNote": "Check the admission or DIY package for your visit.",
+    "bookingNoteZh": "請確認入園或手作套裝方案。",
+    "bookingUrl": "https://zhangmeifarm.com.tw/服務項目",
+    "bookingLabel": "Admission information",
+    "checked": "2026-10-26"
+  },
+  {
+    "id": "schokolake",
+    "name": "Schokolake · Dahu farm",
+    "nameZh": "巧克力雲莊・大湖園區",
+    "aliases": [
+      "schokolake",
+      "巧克力雲莊",
+      "巧克力澐莊"
+    ],
+    "address": "苗栗縣大湖鄉富興村水尾坪49-2號",
+    "description": "A chocolate-themed farm with DIY experiences, dining and accommodation.",
+    "descriptionZh": "結合巧克力手作、餐飲及住宿的休閒農場。",
+    "source": "https://keid.nat.gov.tw/creativelife/summertrip/ct?id=5",
+    "bookingNote": "Confirm DIY sessions and reservation requirements with the venue.",
+    "bookingNoteZh": "請向園方確認手作場次及預約方式。",
+    "bookingUrl": "https://www.schokolake.com.tw/discover",
+    "bookingLabel": "Visit & reservation information",
+    "checked": "2026-10-26"
+  },
+  {
+    "id": "wooderful",
+    "name": "Wooderful Land · Yulon City",
+    "nameZh": "木育森林・裕隆城",
+    "aliases": [
+      "wooderful",
+      "木育森林"
+    ],
+    "address": "新北市新店區中興路三段70號5樓",
+    "description": "Indoor wooden play experiences and DIY activities inside Yulon City.",
+    "descriptionZh": "裕隆城內的木製遊具及手作體驗空間。",
+    "source": "https://www.wooderfulland.com/Shop/Index?countryId=1",
+    "bookingNote": "Book/check the Yulon City DIY session; confirm the included play access.",
+    "bookingNoteZh": "請選裕隆城場次，確認手作及遊戲體驗內容。",
+    "bookingUrl": "https://booking.wooderfulland.com/",
+    "bookingLabel": "Book a session",
+    "checked": "2026-10-26"
+  },
+  {
+    "id": "monster",
+    "name": "Xitou Monster Village",
+    "nameZh": "溪頭妖怪村",
+    "aliases": [
+      "monster village",
+      "妖怪村"
+    ],
+    "address": "南投縣鹿谷鄉興產路2之3號",
+    "description": "A Japanese-inspired shopping village with monster-themed decorations near Xitou.",
+    "descriptionZh": "溪頭附近的日式妖怪主題商店街。",
+    "source": "https://travel.nantou.gov.tw/attractions/monster-village/",
+    "bookingNote": "Check individual paid experiences; advance booking requirement not confirmed.",
+    "bookingNoteZh": "個別體驗可能收費，是否需預約請另行確認。",
+    "bookingUrl": "",
+    "bookingLabel": "",
+    "checked": "2026-10-26"
+  },
+  {
+    "id": "jolley",
+    "name": "Jolley Hotel",
+    "nameZh": "晴美公寓酒店",
+    "aliases": [
+      "jolley",
+      "晴美公寓"
+    ],
+    "address": "臺北市中山區林森北路568號",
+    "description": "Apartment-style hotel in Taipei with living areas and kitchen facilities.",
+    "descriptionZh": "設有客廳及廚房設備的台北公寓式酒店。",
+    "source": "https://www.taiwanstay.net.tw/TSA/web_page/TSA020200.jsp?hohi_id=2003",
+    "bookingNote": "Accommodation reservation needed; confirm your room and dates.",
+    "bookingNoteZh": "住宿需訂房，請確認日期與房型。",
+    "bookingUrl": "https://www.jolleyhotels.com/",
+    "bookingLabel": "Hotel & reservations",
+    "checked": "2026-10-26"
+  },
+  {
+    "id": "chao",
+    "name": "Chao Motel · Taoyuan",
+    "nameZh": "潮旅館・桃園",
+    "aliases": [
+      "chao motel",
+      "潮旅館"
+    ],
+    "address": "桃園市桃園區大興西路二段69巷12號",
+    "description": "A design-focused hotel in Taoyuan for an overnight stop.",
+    "descriptionZh": "位於桃園的設計風格旅館。",
+    "source": "https://typass.tycg.gov.tw/store/view/98b01b09-133a-44a2-a6cc-aefbf8fd9837",
+    "bookingNote": "Accommodation reservation needed; confirm your room and dates.",
+    "bookingNoteZh": "住宿需訂房，請確認日期與房型。",
+    "bookingUrl": "https://chaomotel.168inn.com.tw/zh-tw",
+    "bookingLabel": "Hotel & reservations",
+    "checked": "2026-10-26"
+  },
+  {
+    "id": "skywalk",
+    "name": "Qingjing Skywalk",
+    "nameZh": "清境高空觀景步道",
+    "aliases": [
+      "qingjing skywalk",
+      "cingjing skywalk",
+      "清境高空"
+    ],
+    "address": "南投縣仁愛鄉仁和路186-3號",
+    "description": "An elevated mountain-view walkway. Agree on the entrance and pickup point with your driver.",
+    "descriptionZh": "高山觀景步道；請與司機約定入口及接送位置。",
+    "source": "https://travel.nantou.gov.tw/attractions/清境高空觀景步道/",
+    "bookingNote": "Check admission and the chosen entrance before visiting.",
+    "bookingNoteZh": "請先確認門票及入場入口。",
+    "bookingUrl": "https://saao.nantou.gov.tw/spots-detail1.htm",
+    "bookingLabel": "Admission information",
+    "checked": "2026-10-26"
+  },
+  {
+    "id": "shilin",
+    "name": "Shilin Night Market",
+    "nameZh": "士林夜市",
+    "aliases": [
+      "shilin night market",
+      "士林夜市"
+    ],
+    "address": "臺北市士林區基河路101號（士林市場）",
+    "description": "Night-market food and shopping around Shilin Market; agree on a specific meeting point.",
+    "descriptionZh": "士林市場周邊的夜市美食及購物街區，請約定明確集合點。",
+    "source": "https://www.tcma.gov.taipei/News_Content.aspx?n=1A4C7120ABFD0F9F&s=80903C918A9F93E3&sms=26C5BF03E7963F4E",
+    "bookingNote": "Food, games and shopping are paid separately.",
+    "bookingNoteZh": "餐飲、遊戲及購物另行付費。",
+    "bookingUrl": "",
+    "bookingLabel": "",
+    "checked": "2026-10-26"
+  },
+  {
+    "id": "tpe-t2",
+    "name": "Taoyuan Airport · Terminal 2",
+    "nameZh": "桃園國際機場・第二航廈",
+    "aliases": [
+      "taoyuan international airport terminal 2",
+      "桃園國際機場第二航廈"
+    ],
+    "address": "桃園市大園區航站南路9號",
+    "description": "International airport terminal. Confirm the airline terminal and pickup zone before travel.",
+    "descriptionZh": "國際機場航廈，請確認航空公司使用航廈及接送區。",
+    "source": "https://www.caa.gov.tw/Article.aspx?a=983&lang=1",
+    "bookingNote": "Flight booking and terminal confirmation are separate from this place.",
+    "bookingNoteZh": "航班訂位及航廈資訊請另行確認。",
+    "bookingUrl": "",
+    "bookingLabel": "",
+    "checked": "2026-10-26"
+  },
+  {
+    "id": "swiss",
+    "name": "Cingjing Swiss Garden",
+    "nameZh": "清境小瑞士花園",
+    "aliases": [
+      "swiss garden",
+      "小瑞士花園"
+    ],
+    "address": "南投縣仁愛鄉定遠新村28號",
+    "description": "A landscaped garden in the Cingjing mountains with seasonal planting and photo spots.",
+    "descriptionZh": "清境山區的景觀花園，有四季植栽及拍照景點。",
+    "source": "https://ntbus.welcometw.com/store/info/PERV?lang=zh_TW",
+    "bookingNote": "Admission ticket; check the current visit information.",
+    "bookingNoteZh": "需購買入園門票，請確認最新入園資訊。",
+    "bookingUrl": "https://www.qingjing-farm.com.tw/spot/ins.php?index_id=25&index_m_id=17",
+    "bookingLabel": "Admission information",
+    "checked": "2026-10-26"
+  },
+  {
+    "id": "plum-lake",
+    "name": "Plum Blossom Lake",
+    "nameZh": "梅花湖",
+    "aliases": [
+      "plum blossom lake",
+      "梅花湖"
+    ],
+    "address": "宜蘭縣冬山鄉得安村大埤路1號",
+    "description": "A lake with walking and cycling routes; nearby shops rent family bicycles.",
+    "descriptionZh": "設有環湖步道，湖畔商店提供親子自行車租借。",
+    "source": "https://travel.yilan.gov.tw/zh-tw/attraction/392/",
+    "bookingNote": "Bicycle and boat rentals have separate charges; check with the operator.",
+    "bookingNoteZh": "自行車及遊船另行收費，請向業者確認。",
+    "bookingUrl": "",
+    "checked": "2026-10-26"
+  }
+]
