@@ -49,3 +49,11 @@ Earlier-day scheduling checks verified preview/save before the configured start,
 Every card shows large **Meet / start**, **Finish**, and **Duration** values. The Now / Up next panel helps find the selected day’s current or next activity. Current cards stay highlighted; cards whose scheduled finish has passed become visually quieter and show **Time passed**. Toggle **Fade cards after their finish time** to keep all cards bright. Past cards remain readable and editable. This is based on scheduled time, not a completion checklist.
 
 All timeline times and live status use Singapore/Taiwan time (UTC+8), independent of the device timezone. Status refreshes every 15 seconds while the page is open and on return to the tab. Overnight activities use their full dates. Research rationale and sources are in `UX-RESEARCH.md`. The time behavior and responsive UI check is `tests/time-clarity.py`.
+
+### Interaction feedback
+
+Buttons give immediate press feedback. Cards animate into their new positions when reordered; additions and edits briefly highlight the affected card. Confirmations describe the change and offer Undo, while library additions and cross-day moves offer a direct jump to the result. Expanded descriptions and keyboard focus survive card updates.
+
+Activity and reminder forms display inline errors with a suggested correction, preserve entered details, and focus the relevant field. Overlapping activities offer start-before/start-after shortcuts. Invalid imports, day times, and storage failures show actionable messages; errors stay visible until dismissed or replaced. Sharing displays an actual pending state, disables duplicate submissions, and restores a retry button after failure. Loading failures offer a retry and keep editing disabled until a plan loads. Reduced-motion preferences disable application animations; confirmations and highlights still work.
+
+Browser verification is in `tests/feedback.py` and `tests/feedback-failures.py`, using Python Playwright, system Chromium and a local server on port 8000. Checks cover form corrections, confirmation/Undo, focus and expanded details, cross-day and library navigation, native drag, pending sharing and retry, storage failure, failed imports, loading retry, rollback of invalid edits, responsive layouts, and reduced motion.
