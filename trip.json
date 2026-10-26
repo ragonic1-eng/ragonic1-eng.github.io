@@ -2,11 +2,31 @@
   "days": [
     {
       "name": "Touchdown, Taiwan",
-      "region": "Taoyuan",
+      "region": "Singapore → Taoyuan",
       "date": "2026-12-07",
-      "start": 945,
+      "start": 750,
       "end": 1425,
       "cards": [
+        {
+          "id": "home-to-airport",
+          "title": "Leave home → Changi Airport",
+          "notes": "",
+          "category": "travel",
+          "duration": 40,
+          "originalStart": 750,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "airport-play-checkin",
+          "title": "Airport check-in & playtime with the kids",
+          "notes": "",
+          "category": "kids",
+          "duration": 155,
+          "originalStart": 790,
+          "optional": false,
+          "estimated": false
+        },
         {
           "id": "activity-1-0",
           "title": "EVA Air BR 216 · Singapore → Taipei",
@@ -433,5 +453,6 @@
         }
       ]
     }
-  ]
+  ],
+  "airportMorningAdded": true
 }

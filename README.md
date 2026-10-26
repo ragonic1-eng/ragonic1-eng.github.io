@@ -1,6 +1,6 @@
 # Little Orbit
 
-A starry-night family itinerary planner, seeded with all 37 activities from “Taiwan Itinerary for Alex's Review.xlsx” for 7–13 December 2026. Original descriptions are preserved as notes. This replaces the original landing page; privacy.html is retained.
+A starry-night family itinerary planner, seeded with all 37 original activities plus the requested airport departure and check-in/playtime from “Taiwan Itinerary for Alex's Review.xlsx” for 7–13 December 2026. Original descriptions are preserved as notes. This replaces the original landing page; privacy.html is retained.
 
 ## Run
 
@@ -18,6 +18,7 @@ Use an HTTP server rather than opening index.html directly, because the app fetc
 - Add ideas from the searchable category library, or create your own activity.
 - Tap **Edit** or the underlined start time on a card to change its date, start time, name, category, duration, optional status, and full family notes.
 - The activity form shows **Up next** automatically from the chosen date, start time, and duration. Each saved card links to its next activity; links update when you reorder, move, or shorten cards. **Place before an activity** fills its start time, while overlap messages offer **Start after this activity** without clearing the form. New activities default to an available gap or a valid same-day time, including after a day runs past midnight.
+- Start an activity at any time of day, including before the current day starts. The day extends earlier automatically; a free-time gap keeps existing activities at their times when the new activity fits. **Add an earlier activity** opens the form above the first card. Descriptions are optional free text near the top of the form, with an edit shortcut on each card. Day 1 includes the requested 12:30–13:10 drive to Changi and check-in/playtime until the original 15:45 flight. Existing local plans receive this addition only when the original first-day starting schedule is intact; shared plans and custom earlier plans are preserved.
 - Use **Add here** between activities to prefill that time slot. Free-time cards split automatically when an activity fits inside them, including at the gap’s exact start. Starting at an existing card’s start inserts before it and shifts subsequent cards. A time inside an earlier activity produces a conflict explanation; shorten or move that activity first. The editor previews the resulting daily budget.
 - Day tabs show activity counts and total planned time; the planner remembers your last selected day.
 - Add **Branches** to any activity: bookings/reservations, things to bring, preparation tasks, or special notes. Each branch has a title, details, optional HTTP(S) link, and ready checkbox. Expand the branch tree, edit or remove individual branches, and use Undo after mistakes. Branches stay attached when activities move between days and are included in browser saves and exports. A booking branch is a reminder; it does not make an actual reservation.
@@ -40,3 +41,5 @@ Browser checks with installed Chromium and Playwright covered creation, duration
 Shared editing was also tested with two independent Chromium browser contexts against the local SQLite backend: card and branch sync, reload persistence, invalid-key rejection, stale-save conflict handling, and preserving a recovery draft. These local results do not establish that a Supabase project or GitHub Pages deployment is live.
 
 The friendlier activity form was verified in Chromium for repeated card creation, midnight defaults, insertion at the start of a gap without shifting the next stop, automatic next-activity previews and navigation, overlap recovery, the place-before shortcut, cross-day editing, reload persistence, and responsive dialogs at 390, 768, and 1440 pixels.
+
+Earlier-day scheduling checks verified preview/save before the configured start, keeping the 15:45 flight, optional free-text descriptions and focused editing, browser persistence, mobile layout, and upgrading the original local schedule without duplicate additions.
