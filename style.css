@@ -267,3 +267,5 @@ body.map-open .orbit-pal{display:none}
 .place-message .problem,.combo-note .problem{margin-top:4px}
 .orbit-card.orbit-error{padding:0;border:0;background:none}
 
+.orbit-pal{transition:translate .18s ease-out}
+@media(prefers-reduced-motion:reduce){.orbit-pal{transition:none}}
