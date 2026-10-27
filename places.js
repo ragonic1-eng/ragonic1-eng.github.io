@@ -79,8 +79,12 @@
   const t=timeout(signal,15000);let approx=null;
   try{
    if(await google()){
-    const data=await googleApi({action:'locate',query:[placeName(name),place.address].filter(Boolean).join(' ').slice(0,200),country:el('placeCountry').value},t.signal).catch(e=>{if(t.signal.aborted)throw e;return null});
-    if(hasPoint(data?.point)){const point={lat:data.point.lat,lon:data.point.lon};pointCache.set(key,point);return point}
+    // Small farms and cafés are often listed on Google under another name (or not at all), but their street address
+    // still pins exactly, so try the name with the address, then the address alone.
+    for(const query of [...new Set([[placeName(name),place.address].filter(Boolean).join(' '),place.address].filter(q=>q&&q.trim().length>3))]){
+     const data=await googleApi({action:'locate',query:query.slice(0,200),country:el('placeCountry').value},t.signal).catch(e=>{if(t.signal.aborted)throw e;return null});
+     if(hasPoint(data?.point)){const point={lat:data.point.lat,lon:data.point.lon};pointCache.set(key,point);return point}
+    }
    }
    for(const q of addressQueries(place.address)){const [hit]=await suggest(q,{limit:1,signal:t.signal,bias:null});if(hit){approx={lat:hit.lat,lon:hit.lon,approx:hit.name};break}}
    let point=null;
