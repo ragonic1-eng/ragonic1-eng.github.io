@@ -83,3 +83,6 @@ test('failures return a short code and log the provider reason without keys',asy
   assert.ok(logged.some(l=>l.includes('InvalidParameter')&&l.includes('HTTP 400 from dashscope-intl.aliyuncs.com')));assert.ok(!logged.join('').includes('test-provider-secret'));assert.ok(!logged.join('').includes(body.roomKey));
  }finally{console.error=original}
 });
+test('keys pasted with spaces or quotes are cleaned before use',async()=>{
+ const {handler,calls}=harness({env:{...secrets,DASHSCOPE_API_KEY:'  "sk-abc123"\n'}});assert.equal((await handler(request())).status,200);assert.equal(calls.find(c=>c.url.includes('dashscope')).options.headers.Authorization,'Bearer sk-abc123');
+});

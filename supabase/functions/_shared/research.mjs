@@ -72,7 +72,7 @@ export function sanitizeEvaluation(result){
  return {evaluation:{verdict,headline:text(headline,200),reasons:asList(data.reasons).filter(r=>typeof r==='string'&&r.trim()).slice(0,3).map(r=>text(r,240)),suggestion:text(typeof data.suggestion==='string'?data.suggestion:asList(data.suggestion)[0]||'',300)}};
 }
 export function createHandler({env,fetcher=fetch,now=()=>Date.now()}) {
- const MODEL=env('QWEN_MODEL')||DEFAULT_MODEL,apiKey=()=>env('DASHSCOPE_API_KEY')||env('QWEN_API_KEY');
+ const MODEL=env('QWEN_MODEL')||DEFAULT_MODEL,apiKey=()=>String(env('DASHSCOPE_API_KEY')||env('QWEN_API_KEY')||'').trim().replace(/^(['"])(.*)\1$/,'$2').trim();
  const origin=env('ALLOWED_ORIGIN')||'https://ragonic1-eng.github.io';
  const cors={'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Headers':'content-type,apikey','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Vary':'Origin','Cache-Control':'no-store','Content-Type':'application/json'};
  const reply=(status,data)=>new Response(JSON.stringify(data),{status,headers:cors});
