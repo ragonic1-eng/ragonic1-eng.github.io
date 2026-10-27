@@ -29,9 +29,102 @@ input,select,textarea{font-weight:500}input::placeholder,textarea::placeholder{f
 
 .trip-caption-row{display:flex;align-items:center;justify-content:space-between;gap:10px}.driver-view-link{display:flex;align-items:center;min-height:44px;flex-shrink:0;font-size:12px;font-weight:700;text-decoration:none;padding:6px 10px;border:1px solid #dba5ca;border-radius:12px;background:#f9dcec}.trip-caption-row .trip-caption{font-size:12px}
 
-/* Place details stay inside disclosures so the schedule remains compact. */
-.place-fields{border:1px solid #dfcce2;background:#fff8fd;border-radius:14px;padding:0 12px;margin:14px 0}.place-fields>summary{min-height:44px;padding:11px 0;font-weight:700}.place-fields[open]{padding-bottom:12px}.place-fields>label{margin-top:12px}.place-search-row{display:flex;gap:8px;margin:8px 0}.place-search-row label{flex:1;margin:0;min-width:0}.place-results{display:grid;gap:8px;margin:8px 0}.place-result{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:4px;background:#fff;overflow-wrap:anywhere}.place-result small,.place-result>span{font-size:12px}.place-result .place-use{color:#684b78;font-weight:700}.place-info{padding:12px;background:#fff;border:1px solid #e4d3e8;border-radius:12px;margin:8px 0;overflow-wrap:anywhere}.place-info>strong{display:block;font-size:15px}.place-secondary{display:block;font-size:12px;color:#676678}.place-info p{font-size:13px;line-height:1.6;margin:6px 0}.place-address{font-weight:650}.place-links{display:flex;gap:8px;flex-wrap:wrap}.place-links a,.place-source a{display:inline-flex;align-items:center;min-height:44px;color:#684b78;font-weight:650;padding:6px 8px;border-radius:9px;background:#f4ecfb;text-decoration:none;font-size:13px}.place-source summary,#placeManual>summary{min-height:44px;padding:10px 0;font-size:13px}.place-source p{font-size:12px;color:#676678}.place-on-card>button{font-size:13px}.place-on-card:has(.place-info){margin-top:10px}.place-fields summary{overflow-wrap:anywhere}#manualPlaceMessage:empty{display:none}#correctPlace[hidden]{display:none}
-
-#placeFinder>label,#placeManual>label{display:flex;flex-direction:column;gap:7px;font-size:14px;font-weight:650;margin:12px 0}#placeFinder>summary{padding:12px 0;min-height:44px;font-size:14px;font-weight:650}.place-fields:not(.has-place) #placeFinder>summary{display:none}.place-fields #correctPlace{margin:0 0 8px}.place-fields .place-info{margin-top:10px}
-
-#placeResearch{background:#f0e2fa;border-color:#c1a0d5;margin:8px 0 0;font-weight:700}.research-help{font-size:12px}.place-source a{max-width:100%;overflow-wrap:anywhere}
+/* Activity editor: three clear steps (where, what & when, fit), each a quiet card. */
+@media(min-width:741px){#editor{width:min(640px,94vw)}}
+.form-step{border:1px solid #eadff0;background:#fff;border-radius:16px;padding:14px;margin:0 0 12px}
+.step-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px}
+.step-head h3{display:flex;align-items:center;gap:8px;margin:0;font-size:16px;color:#54416a;letter-spacing:-.2px}
+.step-number{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#efe3f8;color:#5f4878;font-size:12px;font-weight:800;flex-shrink:0}
+.form-step>label.field{display:flex;flex-direction:column;gap:7px;color:#554b62;font-weight:650;font-size:14px;margin-bottom:14px}
+.form-step .duration-field{margin-bottom:0}
+.area-pick select{min-height:36px;padding:4px 30px 4px 10px;font-size:13px;border-radius:999px;background-color:#faf6fd;width:auto}
+/* Search box with live suggestions */
+.place-finder{position:relative}
+.combo{position:relative}.combo:has(+.place-results:not([hidden])) input{border-color:#9a7ab6}
+.combo-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:19px;color:#7d6a90;pointer-events:none}
+.combo input{padding-left:40px;padding-right:40px;min-height:50px;border-radius:14px;border-color:#c9b9d8}
+.combo-spinner{position:absolute;right:14px;top:50%;width:16px;height:16px;margin-top:-8px;border:2px solid #9a7ab6;border-right-color:transparent;border-radius:50%;animation:busy-spin .7s linear infinite;display:none}
+.is-searching .combo-spinner{display:block}
+.place-results{position:absolute;left:0;right:0;top:56px;z-index:4;margin:0;border:1px solid #ddd0e8;border-radius:14px;background:#fff;box-shadow:0 10px 30px #54426c1f;max-height:min(330px,46dvh);overflow-y:auto;overscroll-behavior:contain;padding:4px}
+.combo-heading{margin:6px 10px 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#7a6c87}
+.place-option{display:flex;align-items:flex-start;gap:10px;width:100%;text-align:left;border:0;border-radius:10px;background:none;padding:9px 10px;min-height:52px}
+.place-option:hover,.place-option[aria-selected=true]{background:#f4ecfb}
+.place-option[aria-selected=true]{outline:2px solid #b597d0;outline-offset:-2px}
+.option-icon{flex-shrink:0;width:22px;text-align:center;color:#8a6dab;font-size:16px;line-height:1.4}
+.option-text{display:flex;flex-direction:column;gap:2px;min-width:0;overflow-wrap:anywhere}
+.option-text strong{font-size:14px;color:#3f3550}.option-text strong span{font-weight:500;color:#6b6077}
+.option-text small{font-size:12px;color:#6d6478;line-height:1.4}
+.ask-orbit{border-top:1px dashed #e2d4ee;margin-top:2px}.manual-option strong{color:#5b5368}.ask-orbit strong{color:#6a4c86}
+.place-message:empty{display:none}.place-message{margin-top:8px}
+.place-manual{margin-top:8px}.place-manual>summary{min-height:44px;padding:10px 0;font-size:13px;color:#6c557d;font-weight:600}
+.place-manual>label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:650;margin:10px 0;color:#554b62}
+#manualPlaceMessage:empty{display:none}
+.map-credit{font-size:11px;color:#81788b;margin-top:4px}.map-credit a{color:inherit}
+/* Selected place */
+.selected-place{border:1px solid #e1d1ec;border-radius:14px;background:#fffbfe;overflow:hidden}
+.selected-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 6px 6px 12px;background:#f8f0fc;border-bottom:1px solid #eee2f5}
+.selected-label{font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.5px;color:#7a6491}
+.selected-tools{display:flex;gap:4px}.selected-tools button{min-height:40px;padding:6px 11px;font-size:13px;background:#fff}
+.selected-place .place-info{border:0;border-radius:0;margin:0;background:none}
+.selected-actions{display:flex;flex-wrap:wrap;gap:8px;padding:0 12px 12px}.selected-actions button{font-size:13px;min-height:42px}
+.place-fields.has-place .place-finder:not([hidden]){margin-bottom:12px}
+/* Place details (editor, timeline cards and driver view) */
+.place-info{padding:12px;background:#fff;border:1px solid #e4d3e8;border-radius:12px;margin:8px 0;overflow-wrap:anywhere}
+.place-title strong{display:block;font-size:16px;color:#3f3550}.place-secondary{display:block;font-size:13px;color:#676678}
+.place-description{font-size:14px;line-height:1.55;margin:6px 0 10px;color:#4a4458}
+.place-facts{display:grid;gap:8px;margin:0 0 10px}
+.place-fact{display:grid;grid-template-columns:minmax(96px,auto) 1fr;gap:10px;font-size:13px;line-height:1.5}
+.place-fact dt{color:#6f6480;font-weight:650}.place-fact dd{margin:0;color:#3f3a4a}.place-address{font-weight:650}
+.place-links{display:flex;gap:8px;flex-wrap:wrap}
+.place-links a,.place-source a{display:inline-flex;align-items:center;min-height:44px;color:#684b78;font-weight:650;padding:6px 11px;border-radius:10px;background:#f4ecfb;text-decoration:none;font-size:13px;max-width:100%;overflow-wrap:anywhere}
+.place-links a.maps-button{background:#e7f1ff;color:#1f4f8f;border:1px solid #bcd3f2}
+.place-source summary{min-height:44px;padding:10px 0;font-size:13px;color:#6c557d}.place-source p{font-size:12px;color:#676678}
+.place-info p{margin:6px 0}
+.place-on-card>button{font-size:13px}.place-on-card:has(.place-info){margin-top:10px}
+/* Fit panel: schedule, travel legs and Orbit's verdict */
+.fit-step .schedule-hint{margin-top:0}
+.journey-empty{font-size:13px;color:var(--muted);margin:4px 0}
+.legs{list-style:none;margin:6px 0 4px;padding:0;position:relative}
+.legs:before{content:'';position:absolute;left:13px;top:18px;bottom:18px;border-left:2px dotted #cdb9de}
+.leg{display:flex;align-items:flex-start;gap:10px;padding:7px 0;position:relative}
+.leg>div{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.leg strong{font-size:14px;color:#433a52;overflow-wrap:anywhere}
+.leg-dir{position:relative;z-index:1;display:inline-grid;place-items:center;width:28px;height:28px;flex-shrink:0;border-radius:50%;background:#fff;border:1px solid #d9c8e7;color:#6c557d;font-size:13px}
+.leg-here .leg-dir{background:#f5cce6;border-color:#dba5ca;color:#6a3d5d;font-size:10px}
+.leg-detail{font-size:12.5px;color:#625a6e;line-height:1.45}
+.leg.is-loading .leg-detail{animation:pulse 1.2s ease-in-out infinite}
+.leg-link{align-self:center;flex-shrink:0;font-size:12px;font-weight:650;color:#1f4f8f;text-decoration:none;padding:8px 10px;border-radius:9px;background:#eef5ff;min-height:36px;display:inline-flex;align-items:center}
+.fit{align-self:flex-start;font-size:12px;font-weight:700;border-radius:999px;padding:3px 9px}
+.fit-ok{background:#e5f4df;color:#3d6a32}.fit-tight{background:#fff1d6;color:#8a5b12}.fit-short{background:#ffe3dc;color:#9a3b29}
+.journey-summary{border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.5;margin:4px 0 8px}.journey-summary p{margin:0}.journey-summary p+p{margin-top:6px}.journey-summary.is-short{background:#ffeee9;border:1px solid #f0c3b5;color:#7d3526}.journey-summary.is-tight{background:#fff4df;border:1px solid #ecd2a2;color:#6f4b10}.journey-summary.is-ok{background:#eef7e9;border:1px solid #cfe3c4;color:#3d6a32}.journey-fixes{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.journey-note{font-size:12px;opacity:.85;margin-top:6px!important}.drive-chip{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #cfe0c6;color:#3d5a33;border-radius:999px;padding:2px 4px 2px 10px;font-size:12.5px;font-weight:650}.drive-chip button{min-height:30px;width:30px;padding:0;border-radius:50%;border:0;background:#eef5ea;font-size:12px}.journey-fixes button{font-size:13px;min-height:40px;background:#fff;border-color:#e2b4a6;color:#7d3526;font-weight:650}
+.orbit-advice:empty{display:none}.orbit-advice{margin:10px 0}
+.orbit-button{background:#f0e2fa;border-color:#c1a0d5;color:#5a3f73;font-weight:700}
+.orbit-note{font-size:13px;color:#6b5a7c;background:#f7f1fc;border-radius:12px;padding:10px 12px;margin:0}
+.orbit-card{border:1px solid #dcc9ec;background:#fbf7ff;border-radius:14px;padding:12px}
+.orbit-card ul{margin:6px 0;padding-left:18px;font-size:13px;line-height:1.5}
+.orbit-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 4px}
+.verdict{font-size:12px;font-weight:800;border-radius:999px;padding:3px 10px;background:#ece3f5;color:#5b4473}
+.verdict-good .verdict{background:#e5f4df;color:#3d6a32}.verdict-tight .verdict{background:#fff1d6;color:#8a5b12}.verdict-not_recommended .verdict{background:#ffe3dc;color:#9a3b29}
+.orbit-by{font-size:11px;color:#8a7a99;font-weight:700}
+.orbit-headline{font-size:14px;font-weight:650;margin:4px 0;color:#3f3550}
+.orbit-suggestion{font-size:13px;margin:6px 0}
+.orbit-stale{font-size:12px;color:#8a5b12;margin:8px 0 6px}.orbit-card.is-stale{border-style:dashed}
+.orbit-error p{margin:0 0 8px;font-size:13px;color:#883f31}
+/* Loading screen while Orbit or the map is working */
+#editor form{position:relative}
+.orbit-loading{position:absolute;inset:0;z-index:5;display:grid;place-items:center;padding:20px;background:#fff9fdf7;backdrop-filter:blur(4px)}
+.orbit-loading-card{width:min(380px,100%);text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px}
+.orbit-loading-card>strong{font-size:17px;color:#54416a;overflow-wrap:anywhere}
+.orbit-spinner{position:relative;width:64px;height:64px;border-radius:50%;border:2px solid #eadcf5}
+.orbit-spinner:before{content:'✦';position:absolute;inset:0;display:grid;place-items:center;color:#a07cc0;font-size:22px}
+.orbit-spinner span{position:absolute;inset:-2px;border-radius:50%;animation:busy-spin 1.4s linear infinite}
+.orbit-spinner span:after{content:'';position:absolute;top:-5px;left:50%;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:#e59cc9;box-shadow:0 0 0 3px #fff}
+.orbit-steps{list-style:none;margin:0;padding:0;display:grid;gap:8px;text-align:left;width:100%}
+.orbit-steps li{display:flex;align-items:center;gap:10px;font-size:14px;color:#8a8194}
+.step-mark{width:20px;height:20px;flex-shrink:0;border-radius:50%;border:2px solid #d9cbe5;display:inline-grid;place-items:center;font-size:11px}
+.orbit-steps [data-state=active]{color:#45395a;font-weight:650}.orbit-steps [data-state=active] .step-mark{border-color:#9a7ab6;border-right-color:transparent;animation:busy-spin .8s linear infinite}
+.orbit-steps [data-state=done]{color:#4f6b46}.orbit-steps [data-state=done] .step-mark{background:#dff0d8;border-color:#9cc78c}.orbit-steps [data-state=done] .step-mark:after{content:'✓';color:#3d6a32}
+.orbit-steps [data-state=skipped] .step-mark:after{content:'–'}.orbit-steps [data-state=failed]{color:#9a3b29}.orbit-steps [data-state=failed] .step-mark{border-color:#e0a596}.orbit-steps [data-state=failed] .step-mark:after{content:'!'}
+#orbitSkip{font-size:13px;background:#fff}
+@keyframes pulse{50%{opacity:.45}}
+@media(max-width:420px){.place-fact{grid-template-columns:1fr;gap:1px}.form-step{padding:12px}.step-head h3{font-size:15px}.leg-link{padding:6px 8px}}

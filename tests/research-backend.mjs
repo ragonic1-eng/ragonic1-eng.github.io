@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createHandler,sanitizeResearch} from '../supabase/functions/_shared/research.mjs';
+import {createHandler,sanitizeResearch,cleanPlan} from '../supabase/functions/_shared/research.mjs';
 const source='https://venue.example/visit';
 const place={name:'Example farm',nameZh:'示範農場',address:'1 Farm Road',description:'A family farm.',descriptionZh:'親子農場。',source,bookingUrl:source,bookingNote:'Tickets available on arrival.',bookingNoteZh:'可現場購票。'};
 const qwen=(places,results=[{index:1,url:source,title:'Venue visitor information'}])=>({output:{choices:[{finish_reason:'stop',message:{role:'assistant',content:'```json\n'+JSON.stringify({places})+'\n```'}}],search_info:{search_results:results}}});
@@ -34,7 +34,7 @@ test('unsupported source URLs reject results; unresearched booking links are rem
  assert.throws(()=>sanitizeResearch(qwen([{...place,source:'https://invented.example'}])));
  assert.equal(sanitizeResearch(qwen([{...place,bookingUrl:'javascript:alert(1)'}])).places[0].bookingUrl,'');
  const byRef=sanitizeResearch(qwen([{...place,source:'ref_1',bookingUrl:'[ref_9]'}]));assert.equal(byRef.places[0].source,source);assert.equal(byRef.places[0].bookingUrl,'');
- const xTools=sanitizeResearch({output:{choices:[{message:{content:JSON.stringify({places:[place]})}}]},usage:{x_tools:{search:{search_results:[{url:source,title:'Venue'}]}}}});assert.equal(xTools.places[0].research,'Qwen');
+ const xTools=sanitizeResearch({output:{choices:[{message:{content:JSON.stringify({places:[place]})}}]},usage:{x_tools:{search:{search_results:[{url:source,title:'Venue'}]}}}});assert.equal(xTools.places[0].research,'Orbit');
 });
 test('QWEN_API_KEY, model and region overrides are honored',async()=>{
  const {handler,calls}=harness({env:{...secrets,DASHSCOPE_API_KEY:undefined,QWEN_API_KEY:'alt-key',QWEN_MODEL:'qwen-max',QWEN_BASE_URL:'https://dashscope.aliyuncs.com/'}});assert.equal((await handler(request())).status,200);
@@ -43,4 +43,21 @@ test('QWEN_API_KEY, model and region overrides are honored',async()=>{
 test('provider failure cleans pending reservation and never leaks provider errors or keys',async()=>{
  for(const status of [401,429,500]){const {handler,calls}=harness({providerStatus:status});const r=await handler(request());assert.equal(r.status,503);assert.equal(JSON.parse(calls.at(-1).options.body).p_result,null);assert.ok(!(await r.text()).includes('test-provider-secret'))}
  const {handler}=harness({providerError:true});assert.ok(!(await(await handler(request())).text()).includes('test-provider-secret'));
+});
+test('research keeps opening hours and tolerates omitted optional fields',()=>{
+ const {bookingNoteZh,...partial}=place;const r=sanitizeResearch(qwen([{...partial,openingHours:'Daily 09:00–17:00'}]));assert.equal(r.places[0].openingHours,'Daily 09:00–17:00');assert.equal(r.places[0].bookingNoteZh,'');assert.equal(r.places[0].openingHoursZh,'');
+});
+const plan={place:{name:'Example farm',address:'1 Farm Road',openingHours:'Daily 09:00–17:00'},date:'2026-12-08',start:'14:00',end:'15:30',previous:{title:'Hotel checkout',place:'Chao Motels',leaveAt:'13:00',travelMinutes:25,km:14.2},next:{title:'Dinner',place:'Night market',startsAt:'17:00',travelMinutes:70,km:60,estimated:true}};
+const evalReply=obj=>({output:{choices:[{finish_reason:'stop',message:{content:JSON.stringify(obj)}}]}});
+test('plan checks send only the cleaned neighbouring stops, skip web search, and return a bounded verdict',async()=>{
+ const {handler,calls}=harness({providerContent:evalReply({verdict:'tight',headline:'Doable, but leave on time.',reasons:['70 min drive to dinner','x'.repeat(900)],suggestion:'Shorten the visit by 15 minutes.'})});
+ const r=await handler(request({roomId:body.roomId,roomKey:body.roomKey,action:'evaluate',plan:{...plan,secret:'leak',notes:'private'}}));assert.equal(r.status,200);const data=await r.json();
+ assert.equal(data.evaluation.verdict,'tight');assert.equal(data.evaluation.reasons.length,2);assert.ok(data.evaluation.reasons[1].length<=240);
+ const sent=JSON.parse(calls.find(c=>c.url.includes('dashscope')).options.body);assert.equal(sent.parameters.enable_search,undefined);const content=sent.input.messages[1].content;assert.ok(!content.includes('leak')&&!content.includes('private')&&!content.includes(body.roomKey));assert.equal(JSON.parse(content).next.travelMinutes,70);
+ assert.equal(JSON.parse(calls.at(-1).options.body).p_result.evaluation.verdict,'tight');
+});
+test('plan checks reject incomplete plans before any paid call and refuse invalid verdicts',async()=>{
+ const {handler,calls}=harness();assert.equal((await handler(request({roomId:body.roomId,roomKey:body.roomKey,action:'evaluate',plan:{place:{name:'X'}}}))).status,400);assert.equal(calls.length,0);
+ assert.equal(cleanPlan({...plan,start:'25:00'}),null);assert.equal(cleanPlan({...plan,previous:{travelMinutes:-4}}).previous.travelMinutes,null);
+ const bad=harness({providerContent:evalReply({verdict:'perfect',headline:'Yes'})});const r=await bad.handler(request({roomId:body.roomId,roomKey:body.roomKey,action:'evaluate',plan}));assert.equal(r.status,503);assert.match((await r.json()).error,/could not check/);
 });

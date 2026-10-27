@@ -1,4 +1,4 @@
-name: Deploy Qwen place research
+name: Deploy Orbit place research
 on:
   workflow_dispatch:
   push:
@@ -11,7 +11,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: qwen-place-research
+  group: orbit-place-research
   cancel-in-progress: false
 jobs:
   deploy:
@@ -58,7 +58,7 @@ jobs:
             try:
               with urllib.request.urlopen(url, timeout=15) as response: status = json.load(response)
               if status.get('available') is True:
-                print('Qwen function is deployed (model ' + str(status.get('model')) + ') and its API key is configured. Live provider research still needs a private-trip request.')
+                print('Orbit (Qwen) function is deployed (model ' + str(status.get('model')) + ') and its API key is configured. Live provider research still needs a private-trip request.')
                 break
               raise RuntimeError('DASHSCOPE_API_KEY is missing from Supabase Edge Function secrets')
             except Exception:

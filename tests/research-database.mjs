@@ -19,10 +19,12 @@ assert.equal((await claim(ids[0],key,hash(1))).claimed,true);
 assert.equal((await claim(ids[0],key,hash(1))).status,409);
 await db.query('select orbit_finish_research($1,$2,$3)',[ids[0],hash(1),JSON.stringify({places:[],message:'No match'})]);
 assert.equal((await claim(ids[0],key,hash(1))).cached,true);
-for(let n=2;n<=10;n++)assert.equal((await claim(ids[0],key,hash(n))).claimed,true);
-assert.equal((await claim(ids[0],key,hash(11))).status,429);
+for(let n=2;n<=30;n++)assert.equal((await claim(ids[0],key,hash(n))).claimed,true);
+assert.equal((await claim(ids[0],key,hash(31))).status,429);
 assert.equal((await claim(ids[0],key,hash(1))).cached,true);
-for(let n=1;n<=10;n++)assert.equal((await claim(ids[1],key,hash(n))).claimed,true);
+// Plan checks are cached as evaluation objects.
+await db.query('select orbit_finish_research($1,$2,$3)',[ids[0],hash(2),JSON.stringify({evaluation:{verdict:'good'}})]);assert.equal((await claim(ids[0],key,hash(2))).result.evaluation.verdict,'good');
+for(let n=1;n<=30;n++)assert.equal((await claim(ids[1],key,hash(n))).claimed,true);
 assert.equal((await claim(ids[2],key,hash(1))).status,429);
 await db.exec('set role anon');
 await assert.rejects(()=>db.query('select orbit_claim_research($1,$2,$3)',[ids[0],key,hash(1)]),/permission denied/);
