@@ -104,10 +104,10 @@ export function createHandler({env,fetcher=fetch,now=()=>Date.now()}) {
    if(claim.error)return reply(claim.status||503,{error:claim.error});
    if(claim.cached)return reply(200,{...claim.result,cached:true});if(claim.claimed!==true)throw Error('BACKEND');claimed=true;
    const modelRequest=evaluate?{model:MODEL,input:{messages:[{role:'system',content:EVAL_SYSTEM},{role:'user',content:JSON.stringify(plan)}]},parameters:{result_format:'message',max_tokens:700}}:{model:MODEL,input:{messages:[{role:'system',content:SYSTEM},{role:'user',content:JSON.stringify({placeQuery:query,area:body.country==='tw'?'Taiwan':body.country==='sg'?'Singapore':'Worldwide',researchDate:new Date(now()).toISOString().slice(0,10)})}]},parameters:{result_format:'message',max_tokens:3000,enable_search:true,search_options:{forced_search:true,enable_source:true,enable_citation:true,citation_format:'[ref_<number>]',search_strategy:'max'}}};
-   // Accept the host alone or a URL copied from Alibaba's docs with an API path on the end.
-   const base=(env('QWEN_BASE_URL')||DEFAULT_BASE).trim().replace(/\/+$/,'').replace(/\/(compatible-mode|api)\/v1$/,'');
+   // DashScope's native API lives at the host root, so keep only the origin of whatever was pasted (e.g. ".../compatible-mode/v1").
+   const base=(()=>{try{const u=new URL((env('QWEN_BASE_URL')||DEFAULT_BASE).trim());return u.protocol==='https:'?u.origin:DEFAULT_BASE}catch{return DEFAULT_BASE}})();
    const response=await fetcher(base+'/api/v1/services/aigc/text-generation/generation',{method:'POST',headers:{Authorization:'Bearer '+apiKey(),'Content-Type':'application/json'},body:JSON.stringify(modelRequest),signal:AbortSignal.timeout(45000)});
-   if(!response.ok){const e=Error(response.status===429?'PROVIDER_LIMIT':response.status===401||response.status===403?'PROVIDER_AUTH':'PROVIDER');e.detail='HTTP '+response.status+' '+(await response.text().catch(()=>'')).slice(0,300);throw e}
+   if(!response.ok){const e=Error(response.status===429?'PROVIDER_LIMIT':response.status===401||response.status===403?'PROVIDER_AUTH':'PROVIDER');e.detail='HTTP '+response.status+' from '+new URL(base).host+' '+(await response.text().catch(()=>'')).slice(0,300);throw e}
    const result=await response.json();if(result?.output?.choices?.[0]?.finish_reason==='length'){const e=Error('INCOMPLETE');e.detail=replyText(result).slice(0,300);throw e}
    const output=evaluate?sanitizeEvaluation(result):sanitizeResearch(result);
    await rpc('orbit_finish_research',{p_id:roomId,p_hash:hash,p_result:output});claimed=false;

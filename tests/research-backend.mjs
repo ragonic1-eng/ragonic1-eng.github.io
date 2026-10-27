@@ -62,7 +62,7 @@ test('plan checks reject incomplete plans before any paid call and refuse invali
  const bad=harness({providerContent:evalReply({verdict:'perfect',headline:'Yes'})});const r=await bad.handler(request({roomId:body.roomId,roomKey:body.roomKey,action:'evaluate',plan}));assert.equal(r.status,503);assert.match((await r.json()).error,/could not check/);
 });
 test('QWEN_BASE_URL copied with an API path still reaches the native endpoint',async()=>{
- for(const value of ['https://dashscope.aliyuncs.com/compatible-mode/v1','https://dashscope.aliyuncs.com/api/v1/',' https://dashscope.aliyuncs.com ']){const {handler,calls}=harness({env:{...secrets,QWEN_BASE_URL:value}});assert.equal((await handler(request())).status,200);assert.equal(calls.find(c=>c.url.includes('dashscope')).url,'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation')}
+ for(const value of ['https://dashscope.aliyuncs.com/compatible-mode/v1','https://dashscope.aliyuncs.com/api/v1/',' https://dashscope.aliyuncs.com ','https://dashscope.aliyuncs.com/v1']){const {handler,calls}=harness({env:{...secrets,QWEN_BASE_URL:value}});assert.equal((await handler(request())).status,200);assert.equal(calls.find(c=>c.url.includes('dashscope')).url,'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation')}
 });
 test('research returns bounded planning hints for the activity form',()=>{
  const r=sanitizeResearch(qwen([{...place,category:'food',visitMinutes:100,tips:'Go early to avoid queues.'}]));assert.deepEqual(r.places[0].planning,{category:'food',visitMinutes:105,tips:'Go early to avoid queues.',tipsZh:''});
@@ -80,6 +80,6 @@ test('failures return a short code and log the provider reason without keys',asy
  try{
   const {handler}=harness({providerStatus:400,providerContent:{code:'InvalidParameter',message:'bad model test-provider-secret'}});
   const r=await handler(request());const data=await r.json();assert.equal(r.status,503);assert.equal(data.code,'PROVIDER');assert.ok(!JSON.stringify(data).includes('InvalidParameter'));
-  assert.ok(logged.some(l=>l.includes('InvalidParameter')&&l.includes('HTTP 400')));assert.ok(!logged.join('').includes('test-provider-secret'));assert.ok(!logged.join('').includes(body.roomKey));
+  assert.ok(logged.some(l=>l.includes('InvalidParameter')&&l.includes('HTTP 400 from dashscope-intl.aliyuncs.com')));assert.ok(!logged.join('').includes('test-provider-secret'));assert.ok(!logged.join('').includes(body.roomKey));
  }finally{console.error=original}
 });
