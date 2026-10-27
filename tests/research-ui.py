@@ -18,7 +18,7 @@ with sync_playwright() as p:
   page.evaluate("openEditor()");page.locator('#activityDay').select_option('5')
   if time:page.locator('#activityStart').fill(time);page.locator('#activityStart').dispatch_event('input')
  # Without a private shared link, Orbit explains the prerequisite and sends nothing.
- open_at();page.locator('#placeQuery').fill('Taipei 101');expect(page.locator('[data-ask-orbit]')).to_contain_text('Ask Orbit');page.locator('[data-ask-orbit]').click();expect(page.locator('#placeMessage')).to_contain_text('private shared trip link');assert not calls
+ open_at();page.locator('#placeQuery').fill('Taipei 101');expect(page.locator('[data-ask-orbit]')).to_contain_text('Ask Orbit');page.locator('[data-ask-orbit]').click();expect(page.locator('#placeMessage')).to_be_visible();expect(page.locator('#placeMessage')).to_contain_text('shared trip');expect(page.locator('#placeResults')).to_be_hidden();expect(page.locator('#orbitStatus')).to_be_visible();assert not calls
  page.locator('#activityCancel').click();page.evaluate("window.history.replaceState(null,'','/#room=11111111-1111-1111-1111-111111111111&key='+'a'.repeat(64))")
  # Choosing a map result researches it and checks the plan behind a loading screen, sending only what each step needs.
  open_at();page.locator('#title').fill('');page.locator('#placeQuery').fill('Taipei 101');expect(page.locator('[data-place-result]')).to_have_count(1);page.locator('[data-place-result]').click()
@@ -37,7 +37,7 @@ with sync_playwright() as p:
  open_at();page.locator('#placeQuery').fill('Taipei 101');expect(page.locator('[data-place-result]')).to_have_count(1);page.locator('[data-place-result]').click();expect(page.locator('#placeMessage')).to_contain_text('Daily research limit');expect(page.locator('#placeSelected')).to_contain_text('Taipei 101');expect(page.locator('#researchPlace')).to_be_visible();expect(page.locator('#saveActivity')).to_be_enabled();page.locator('#activityCancel').click()
  # Skip stops waiting; a late response after skipping or closing never changes the form.
  ctx.unroute('**/functions/v1/research-place');pending=[];ctx.route('**/functions/v1/research-place',lambda r:pending.append(r))
- open_at();page.locator('#placeQuery').fill('Taipei 101');expect(page.locator('[data-place-result]')).to_have_count(1);page.locator('[data-place-result]').click();expect(page.locator('#orbitLoading')).to_be_visible();expect(page.locator('#orbitSteps [data-state=active]')).to_contain_text('Orbit is finding')
+ open_at();page.locator('#placeQuery').fill('Taipei 101');expect(page.locator('[data-place-result]')).to_have_count(1);page.locator('[data-place-result]').click();expect(page.locator('#orbitLoading')).to_be_visible();expect(page.locator('#orbitSteps [data-state=active]')).to_contain_text('Orbit is searching the web')
  page.locator('#orbitSkip').click();expect(page.locator('#form')).not_to_have_attribute('aria-busy','true');expect(page.locator('#placeMessage')).to_contain_text('Skipped')
  for r in pending:
   try:r.fulfill(json={'places':[{**place,'name':'Late result'}]})
@@ -59,6 +59,15 @@ with sync_playwright() as p:
  expect(page.locator('#placeSelected .place-unverified')).to_be_visible();expect(page.locator('#placeSelected .place-address')).not_to_contain_text('AI guessed');expect(page.locator('#placeSelected')).to_contain_text('Daily 10:00–21:00');expect(page.locator('#placeSelected')).to_contain_text('A city landmark');assert page.locator('#driverTitle').input_value()=='台北101'
  page.locator('#saveActivity').click();assert page.evaluate("state.days[5].cards.find(c=>c.place?.verified===false).place.lat")>0
  ctx.unroute('**/functions/v1/research-place');ctx.route('**/functions/v1/research-place',respond)
+ # Find with Orbit shows the loading screen at once, and "nothing found" is visible rather than hidden behind the list.
+ ctx.unroute('**/functions/v1/research-place');held=[];ctx.route('**/functions/v1/research-place',lambda r:held.append(r))
+ open_at(None);page.locator('#placeQuery').fill('紅色琉璃瓦草莓園');expect(page.locator('[data-ask-orbit]')).to_be_visible();page.locator('[data-ask-orbit]').click()
+ expect(page.locator('#orbitLoading')).to_be_visible(timeout=200);expect(page.locator('#orbitSteps')).to_contain_text('up to a minute')
+ page.wait_for_function('n=>true',arg=None);held[0].fulfill(json={'places':[],'message':'Orbit didn’t recognise this place.'});expect(page.locator('#orbitLoading')).to_be_hidden()
+ expect(page.locator('#placeResults')).to_be_hidden();expect(page.locator('#placeMessage')).to_be_visible();expect(page.locator('#placeMessage')).to_contain_text('didn’t recognise')
+ # A message while the list is open appears inside the list.
+ page.evaluate("()=>{document.getElementById('placeQuery').value='Taipei 101';document.getElementById('placeQuery').dispatchEvent(new Event('input'))}");expect(page.locator('[data-place-result]')).to_have_count(1)
+ page.locator('#activityCancel').click();ctx.unroute('**/functions/v1/research-place');ctx.route('**/functions/v1/research-place',respond)
  # Mobile layout during loading and after a verdict.
  ctx.unroute('**/functions/v1/research-place');ctx.route('**/functions/v1/research-place',respond)
  for width in [320,390,430,740]:
