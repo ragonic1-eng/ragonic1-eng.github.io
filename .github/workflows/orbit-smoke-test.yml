@@ -63,7 +63,7 @@ jobs:
           import datetime, urllib.error
           clean = lambda v: ' '.join(str(v).replace(token, '[redacted]').split())[:900]
           now = datetime.datetime.now(datetime.timezone.utc)
-          sql = "select timestamp, source, event_message from logs where event_message like '%orbit%' order by timestamp desc limit 8"
+          sql = "select timestamp, source, event_message from logs where event_message like '%\"orbit\":%' order by timestamp desc limit 8"
           url = f"https://api.supabase.com/v1/projects/{os.environ['SUPABASE_PROJECT_REF']}/analytics/endpoints/logs?" + urllib.parse.urlencode({'sql': sql, 'iso_timestamp_start': (now - datetime.timedelta(hours=3)).strftime('%Y-%m-%dT%H:%M:%S.000Z'), 'iso_timestamp_end': now.strftime('%Y-%m-%dT%H:%M:%S.000Z')})
           try:
             request = urllib.request.Request(url, headers={'Authorization': 'Bearer ' + token, 'User-Agent': 'little-orbit-check/1.0'})
