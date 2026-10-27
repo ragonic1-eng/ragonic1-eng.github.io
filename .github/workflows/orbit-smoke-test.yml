@@ -70,7 +70,7 @@ jobs:
             with urllib.request.urlopen(request, timeout=30) as response: data = json.load(response)
             rows = data.get('result') or []
             if data.get('error'): print('::warning title=Log query::' + clean(data['error']))
-            for row in rows: print('::warning title=Orbit log::' + clean(row.get('event_message')))
+            for row in rows: print('::warning title=Orbit log::' + clean(str(row.get('timestamp')) + ' ' + str(row.get('event_message'))))
             if not rows: print('::notice title=Orbit log::No Orbit errors logged in the last 3 hours.')
           except urllib.error.HTTPError as e: print('::warning title=Log query::HTTP ' + str(e.code) + ' ' + clean(e.read().decode('utf-8', 'replace')))
           except Exception as e: print('::warning title=Log query::' + type(e).__name__ + ' ' + clean(e))
