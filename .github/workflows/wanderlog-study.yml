@@ -1,0 +1,44 @@
+name: Wanderlog study (temporary)
+on:
+  push:
+    branches: [diag/wanderlog-study]
+permissions:
+  contents: write
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install playwright==1.48.0 && python -m playwright install --with-deps chromium
+      - name: Capture the shared trip
+        run: |
+          mkdir -p study
+          python3 - <<'PY'
+          import json
+          from playwright.sync_api import sync_playwright
+          URL = 'https://wanderlog.com/plan/mfoajketjzbjhkke/trip-to-taiwan/shared'
+          with sync_playwright() as p:
+            b = p.chromium.launch()
+            for name, vp, mobile in [('desktop', {'width': 1440, 'height': 900}, False), ('mobile', {'width': 390, 'height': 844}, True)]:
+              ctx = b.new_context(viewport=vp, is_mobile=mobile, has_touch=mobile, locale='en-US', user_agent=None if not mobile else 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1')
+              pg = ctx.new_page()
+              try: pg.goto(URL, wait_until='networkidle', timeout=90000)
+              except Exception as e: print('goto', e)
+              pg.wait_for_timeout(6000)
+              pg.screenshot(path=f'study/{name}-0.png')
+              # Scroll the main scrollable pane in steps to see the itinerary.
+              for i in range(1, 7):
+                pg.evaluate("""() => { const els=[...document.querySelectorAll('*')].filter(e=>{const s=getComputedStyle(e);return /(auto|scroll)/.test(s.overflowY)&&e.scrollHeight>e.clientHeight+50}).sort((a,b)=>b.clientHeight*b.clientWidth-a.clientHeight*a.clientWidth); (els[0]||document.scrollingElement).scrollBy(0, innerHeight*0.85); }""")
+                pg.wait_for_timeout(1500)
+                pg.screenshot(path=f'study/{name}-{i}.png')
+              text = pg.evaluate("() => document.body.innerText")
+              open(f'study/{name}-text.txt', 'w').write(text[:60000])
+              outline = pg.evaluate("""() => [...document.querySelectorAll('h1,h2,h3,h4,button,[role=tab],a')].slice(0,400).map(e=>e.tagName+': '+(e.innerText||e.getAttribute('aria-label')||'').trim().replace(/\\s+/g,' ').slice(0,80)).filter(s=>s.length>4)""")
+              open(f'study/{name}-outline.txt', 'w').write('\n'.join(outline))
+              ctx.close()
+            b.close()
+          PY
+      - name: Save to this branch
+        run: |
+          git config user.name "github-actions[bot]"; git config user.email "41898+github-actions[bot]@users.noreply.github.com"
+          git add study && git commit -m "Wanderlog study captures" && git push
