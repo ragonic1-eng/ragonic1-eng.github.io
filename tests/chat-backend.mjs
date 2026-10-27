@@ -40,7 +40,7 @@ test('proposed changes are filtered to valid operations on real cards',async()=>
  assert.deepEqual(reply.changes.map(c=>c.op),['add','move','update']);assert.equal(reply.changes[0].place.googleUrl,undefined);assert.equal(reply.changeSummary,'Tidy up');
 });
 test('trip and messages are trimmed and must end with a question',()=>{
- const t=cleanTrip(trip);assert.equal(t.days[1].cards[0].notes.length,160);assert.equal(t.selectedDay,1);
+ const t=cleanTrip(trip);assert.equal(t.days[1].label,'Day 2 · Tue 8 Dec');assert.equal(cleanReply({text:'Nice spot [1]. Rated well [12].'},t).text,'Nice spot. Rated well.');assert.equal(t.days[1].cards[0].notes.length,160);assert.equal(t.selectedDay,1);
  assert.equal(cleanMessages([{role:'assistant',text:'hi'}]),null);
  assert.deepEqual(cleanMessages([{role:'assistant',text:'hi'},{role:'user',text:'a'},{role:'user',text:'b'}]),[{role:'user',content:'a\n\nb'}]);
 });
