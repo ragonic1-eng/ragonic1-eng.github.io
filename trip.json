@@ -80,337 +80,704 @@
       ]
     },
     {
-      "name": "Little explorers",
-      "region": "Miaoli → Cingjing",
+      "name": "Strawberries, swans & the mountains",
+      "region": "Taoyuan → Dahu → Puli → Cingjing",
       "date": "2026-12-08",
-      "start": 510,
+      "start": 555,
       "end": 1320,
       "cards": [
         {
-          "id": "activity-2-0",
-          "title": "Road trip to Miaoli",
-          "notes": "🚗 Morning Transit: Check out of Taoyuan, load suitcases into the van trunk, and drive 1.5 hours south to Miaoli.",
+          "id": "v2-8-depart",
+          "title": "Depart 潮旅館 (Taoyuan) → Dahu",
+          "notes": "Drive to the strawberry farm in Dahu, Miaoli.",
           "category": "travel",
-          "duration": 120,
-          "originalStart": 510,
-          "optional": false,
-          "estimated": false
-        },
-        {
-          "id": "activity-2-1",
-          "title": "Flying Cow Ranch",
-          "notes": "🐄 Activity 1: Flying Cow Ranch (飛牛牧場). A flat pasture paradise. The 6yo can feed calves milk bottles, pet sheep, and run on the grass safely.",
-          "category": "kids",
           "duration": 90,
-          "originalStart": 630,
           "optional": false,
-          "estimated": false
+          "originalStart": 555,
+          "driverTitle": "從桃園潮旅館出發，前往苗栗大湖",
+          "driverNotes": "開車前往苗栗大湖的草莓園。"
         },
         {
-          "id": "activity-2-2",
-          "title": "Lunch at Flying Cow Ranch",
-          "notes": "🍽️ Lunch: Flying Cow Ranch Restaurant. Enjoy a spacious family lunch inside the ranch eatery (fresh milk hot pots and kid-friendly fried chicken baskets).",
-          "category": "food",
-          "duration": 60,
-          "originalStart": 720,
-          "optional": false,
-          "estimated": false
-        },
-        {
-          "id": "activity-2-3",
-          "title": "Mountain-bound · nap time",
-          "notes": "🚗 Afternoon Transit: Drive 2 hours toward the Nantou mountain base. (The kids take their mandatory afternoon car nap here).",
-          "category": "travel",
-          "duration": 120,
-          "originalStart": 810,
-          "optional": false,
-          "estimated": false
-        },
-        {
-          "id": "activity-2-4",
-          "title": "Matsubayashi Monster Village",
-          "notes": "👺 Activity 2: Matsubayashi Monster Village (妖怪村). A completely flat, stroller-friendly Japanese-themed fairytale walking avenue filled with red lanterns, cute cartoon monster statues, and floating bubble shows. Grab warm local charcoal egg tarts for the kids.",
+          "id": "v2-8-strawberry",
+          "title": "紅色琉璃瓦草莓園 & SUHU Café (Dahu) · strawberries & lunch",
+          "notes": "Single lunch stop.\n• Snip fresh strawberries at waist/eye level on clean, elevated racks.\n• Sit down for lunch, strawberry waffles and drinks at the café.",
           "category": "kids",
-          "duration": 90,
-          "originalStart": 930,
-          "optional": false,
-          "estimated": false
-        },
-        {
-          "id": "activity-2-5",
-          "title": "Up to the Cingjing peaks",
-          "notes": "🚗 Mountain Highway Climb: Drive 2.5 hours up the winding highway to the Cingjing peaks.",
-          "category": "travel",
           "duration": 150,
-          "originalStart": 1020,
           "optional": false,
-          "estimated": false
+          "originalStart": 645,
+          "driverTitle": "紅色琉璃瓦草莓園 & SUHU Café（大湖）",
+          "driverNotes": "採草莓並在咖啡廳用午餐"
         },
         {
-          "id": "activity-2-6",
-          "title": "Mountain resort & hot pot",
-          "notes": "🏨 Resort Check-In & 🍽️ Dinner: Check into your Cingjing mountain resort. Bundle the kids in thick winter jackets and head to Chun Da Di Hot Pot for a warm, nourishing mountain hot pot to combat the freezing evening alpine air.",
-          "category": "hotel",
-          "duration": 90,
-          "originalStart": 1170,
+          "id": "v2-8-schokolake",
+          "title": "Schokolake Country House (Dahu)",
+          "notes": "Feed swans and ducks by the pond (pellet dispensers on site), walk the gardens, and pick up chocolate treats.",
+          "category": "kids",
+          "duration": 60,
           "optional": false,
-          "estimated": true
+          "originalStart": 795,
+          "driverTitle": "巧克力雲莊（大湖）",
+          "place": {
+            "id": "schokolake",
+            "name": "Schokolake · Dahu farm",
+            "nameZh": "巧克力雲莊・大湖園區",
+            "address": "苗栗縣大湖鄉富興村水尾坪49-2號",
+            "description": "A chocolate-themed farm with DIY experiences, dining and accommodation.",
+            "descriptionZh": "結合巧克力手作、餐飲及住宿的休閒農場。",
+            "source": "https://keid.nat.gov.tw/creativelife/summertrip/ct?id=5",
+            "bookingNote": "Confirm DIY sessions and reservation requirements with the venue.",
+            "bookingNoteZh": "請向園方確認手作場次及預約方式。",
+            "bookingUrl": "https://www.schokolake.com.tw/discover",
+            "bookingLabel": "Visit & reservation information",
+            "checked": "2026-10-26"
+          },
+          "driverNotes": "在池塘邊餵天鵝和鴨子（現場有飼料機），逛花園，買巧克力。"
+        },
+        {
+          "id": "v2-8-to-puli",
+          "title": "Drive Dahu → Puli (~1 h)",
+          "notes": "Freeway 3 → Freeway 6 directly into Puli.",
+          "category": "travel",
+          "duration": 60,
+          "optional": false,
+          "originalStart": 855,
+          "driverTitle": "大湖 → 埔里（國道3號轉國道6號，約1小時）",
+          "driverNotes": "走國道3號轉國道6號，直接到埔里。"
+        },
+        {
+          "id": "v2-8-brewery",
+          "title": "Puli Brewery (埔里酒廠)",
+          "notes": "For adults: sample and pick up Jing Oak barrel-aged plum liqueur or Sun Moon Lake black tea plum wine.\nFor kids: non-alcoholic Shaoxing brown sugar ice pops and sweet plum vinegar slushies at the courtyard plaza.",
+          "category": "shopping",
+          "duration": 35,
+          "optional": false,
+          "originalStart": 915,
+          "driverTitle": "埔里酒廠",
+          "driverNotes": "大人：試飲並購買梅酒或日月潭紅茶梅酒。小孩：中庭廣場的黑糖冰棒、梅子醋冰沙（無酒精）。"
+        },
+        {
+          "id": "v2-8-bakery",
+          "title": "Feeling 18 Bakery (18度C 生吐司)",
+          "notes": "3 minutes down the road: grab a fresh loaf of Japanese raw milk bread for car snacks and hotel backup.",
+          "category": "food",
+          "duration": 30,
+          "optional": false,
+          "originalStart": 950,
+          "driverTitle": "18度C 生吐司（埔里）",
+          "driverNotes": "在附近（約3分鐘），買日式生吐司當車上點心。"
+        },
+        {
+          "id": "v2-8-to-cingjing",
+          "title": "Drive up to Cingjing (Highway 14A, ~50 min)",
+          "notes": "Scenic climb up Highway 14A.",
+          "category": "travel",
+          "duration": 50,
+          "optional": false,
+          "originalStart": 980,
+          "driverTitle": "埔里 → 清境（台14甲線，約50分鐘）",
+          "driverNotes": "沿台14甲線上山。"
+        },
+        {
+          "id": "v2-8-checkin",
+          "title": "Check in · 清境豪斯登堡 (Huis Ten Bosch)",
+          "notes": "Check in comfortably in daylight.",
+          "category": "hotel",
+          "duration": 65,
+          "optional": false,
+          "originalStart": 1030,
+          "driverTitle": "清境豪斯登堡 入住",
+          "driverNotes": "趁天亮前入住。"
+        },
+        {
+          "id": "v2-8-hotpot",
+          "title": "Hot pot dinner · 春大地火鍋城",
+          "notes": "Cozy hot pot dinner down the road.",
+          "category": "food",
+          "duration": 90,
+          "optional": false,
+          "originalStart": 1095,
+          "driverTitle": "春大地火鍋城 晚餐",
+          "driverNotes": "在附近吃火鍋晚餐。"
         }
       ]
     },
     {
-      "name": "Above the clouds",
+      "name": "Sheep, horses & Lu Mama",
       "region": "Cingjing",
       "date": "2026-12-09",
-      "start": 540,
+      "start": 495,
       "end": 1320,
       "cards": [
         {
-          "id": "activity-3-0",
-          "title": "Qingjing Farm · meet the sheep",
-          "notes": "🐑 Activity 1: Qingjing Farm (Green Green Grasslands). Catch the early morning open-air sheep shearing show and walk among the mountain sheep. (Parent Note: Ensure the kids wear hats and gloves; the December morning wind on the slopes is biting).",
-          "category": "kids",
-          "duration": 150,
-          "originalStart": 540,
+          "id": "v2-9-breakfast",
+          "title": "Leisurely breakfast at the hotel",
+          "notes": "",
+          "category": "food",
+          "duration": 45,
           "optional": false,
-          "estimated": false
+          "originalStart": 495,
+          "driverTitle": "清境豪斯登堡 早餐"
         },
         {
-          "id": "activity-3-1",
-          "title": "Qingjing Skywalk",
-          "notes": "🌉 Activity 2: Qingjing Skywalk. Walk along a spectacular, wide steel boardwalk that is 100% flat and double-stroller friendly for stunning mountain photos.",
+          "id": "v2-9-farm",
+          "title": "Qingjing Farm · Green Green Grasslands",
+          "notes": "Enter from the North Gate; stroller downhill walk; feed the free-roaming sheep.",
+          "category": "kids",
+          "duration": 90,
+          "optional": false,
+          "originalStart": 540,
+          "driverTitle": "清境農場 青青草原",
+          "driverNotes": "從北門入園，推嬰兒車往下坡走",
+          "place": {
+            "id": "qingjing",
+            "name": "Qingjing Farm · Green Green Grasslands",
+            "nameZh": "清境農場・青青草原",
+            "address": "南投縣仁愛鄉仁和路170號",
+            "description": "Mountain grasslands with sheep and panoramic views.",
+            "descriptionZh": "可欣賞綿羊及山景的高山草原。",
+            "source": "https://www.qingjing-farm.com.tw/grassland/index.php?index_id=24",
+            "bookingNote": "Admission ticket; choose the correct weekday or holiday ticket.",
+            "bookingNoteZh": "需購票，請確認平日或假日票種。",
+            "bookingUrl": "https://qingjing.welcometw.com/store/info/ka3J?lang=zh_TW",
+            "bookingLabel": "Tickets",
+            "checked": "2026-10-26"
+          }
+        },
+        {
+          "id": "v2-9-horse",
+          "title": "Guanshan Pasture (觀山牧區) · horse show",
+          "notes": "Catch the 10:45 daily equestrian acrobatic horse show.",
           "category": "kids",
           "duration": 60,
-          "originalStart": 690,
           "optional": false,
-          "estimated": false
+          "originalStart": 630,
+          "driverTitle": "觀山牧區（10:45 馬術秀）",
+          "driverNotes": "觀看每天10:45的馬術表演。"
         },
         {
-          "id": "activity-3-2",
-          "title": "Inako Valley View Restaurant",
-          "notes": "🍽️ Lunch: Inako Valley View Restaurant. Panoramic mountain valley seating specializing in succulent local Taiwanese roasted whole chicken.",
-          "category": "food",
-          "duration": 90,
-          "originalStart": 780,
-          "optional": false,
-          "estimated": false
-        },
-        {
-          "id": "activity-3-3",
-          "title": "Cingjing Swiss Garden",
-          "notes": "🌷 Activity 3: Cingjing Swiss Garden. A flat, quiet, beautifully manicured flower park with wide paths perfect for a 2yo and 6yo to stretch their legs safely.",
+          "id": "v2-9-skywalk",
+          "title": "Qingjing Skywalk (清境高空觀景步道)",
+          "notes": "Elevated, barrier-protected mountain boardwalk; stroll down smoothly.",
           "category": "kids",
-          "duration": 90,
-          "originalStart": 900,
+          "duration": 60,
           "optional": false,
-          "estimated": false
+          "originalStart": 690,
+          "driverTitle": "清境高空觀景步道",
+          "place": {
+            "id": "skywalk",
+            "name": "Qingjing Skywalk",
+            "nameZh": "清境高空觀景步道",
+            "address": "南投縣仁愛鄉仁和路186-3號",
+            "description": "An elevated mountain-view walkway. Agree on the entrance and pickup point with your driver.",
+            "descriptionZh": "高山觀景步道；請與司機約定入口及接送位置。",
+            "source": "https://travel.nantou.gov.tw/attractions/清境高空觀景步道/",
+            "bookingNote": "Check admission and the chosen entrance before visiting.",
+            "bookingNoteZh": "請先確認門票及入場入口。",
+            "bookingUrl": "https://saao.nantou.gov.tw/spots-detail1.htm",
+            "bookingLabel": "Admission information",
+            "checked": "2026-10-26"
+          },
+          "driverNotes": "有護欄的高空步道，慢慢往下走。"
         },
         {
-          "id": "activity-3-4",
-          "title": "Dinner at Carton King",
-          "notes": "🍽️ Dinner: Cingjing Carton King Restaurant (紙箱王). A whimsical indoor theme restaurant where the tables, chairs, and plates are made of ultra-sturdy cardboard. Flat, highly spacious, and an absolute hit for a 6yo.",
+          "id": "v2-9-inako",
+          "title": "Lunch · Inako Valley View Restaurant (伊拿谷景觀餐廳)",
+          "notes": "Signature crispy kiln-roasted chicken, sweet highland cabbage, scenic valley view.",
+          "category": "food",
+          "duration": 105,
+          "optional": false,
+          "originalStart": 750,
+          "driverTitle": "伊拿谷景觀餐廳 午餐",
+          "driverNotes": "招牌窯烤雞、高山高麗菜，可欣賞山谷景色。"
+        },
+        {
+          "id": "v2-9-rest",
+          "title": "Hotel rest · back to Huis Ten Bosch",
+          "notes": "Let the 2-year-old nap and everyone warm up.",
+          "category": "hotel",
+          "duration": 75,
+          "optional": false,
+          "originalStart": 855,
+          "driverTitle": "回清境豪斯登堡休息",
+          "driverNotes": "讓兩歲孩子午睡、大家休息取暖。"
+        },
+        {
+          "id": "v2-9-swiss",
+          "title": "Small Swiss Garden & Carton King Creative Park",
+          "notes": "Lakeside garden stroll, cardboard exhibits, and the cardboard mini train ride for the kids.",
+          "category": "kids",
+          "duration": 105,
+          "optional": false,
+          "originalStart": 960,
+          "driverTitle": "清境小瑞士花園 & 紙箱王創意園區",
+          "place": {
+            "id": "swiss",
+            "name": "Cingjing Swiss Garden",
+            "nameZh": "清境小瑞士花園",
+            "address": "南投縣仁愛鄉定遠新村28號",
+            "description": "A landscaped garden in the Cingjing mountains with seasonal planting and photo spots.",
+            "descriptionZh": "清境山區的景觀花園，有四季植栽及拍照景點。",
+            "source": "https://ntbus.welcometw.com/store/info/PERV?lang=zh_TW",
+            "bookingNote": "Admission ticket; check the current visit information.",
+            "bookingNoteZh": "需購買入園門票，請確認最新入園資訊。",
+            "bookingUrl": "https://www.qingjing-farm.com.tw/spot/ins.php?index_id=25&index_m_id=17",
+            "bookingLabel": "Admission information",
+            "checked": "2026-10-26"
+          },
+          "driverNotes": "湖畔花園散步、紙箱展覽，小朋友坐紙箱小火車。"
+        },
+        {
+          "id": "v2-9-lumama",
+          "title": "Dinner · Lu Mama Yunnan Restaurant (魯媽媽雲南擺夷料理)",
+          "notes": "Pork mince cabbage wraps, mountain angelica pork rib soup, Yunnan mountain omelette. Reserve ahead — tables fill fast.",
           "category": "food",
           "duration": 90,
-          "originalStart": 1080,
           "optional": false,
-          "estimated": false
+          "originalStart": 1065,
+          "driverTitle": "魯媽媽雲南擺夷料理 晚餐",
+          "driverNotes": "需事先訂位",
+          "branches": [
+            {
+              "id": "v2-b-lumama",
+              "type": "booking",
+              "title": "Reserve a table at Lu Mama",
+              "notes": "Tables fill fast.",
+              "url": "",
+              "done": false
+            }
+          ]
+        },
+        {
+          "id": "v2-9-evening",
+          "title": "Back to the hotel for a restful evening",
+          "notes": "",
+          "category": "hotel",
+          "duration": 45,
+          "optional": false,
+          "originalStart": 1155,
+          "driverTitle": "回清境豪斯登堡"
         }
       ]
     },
     {
-      "name": "Sweet little detours",
-      "region": "Miaoli → Yilan",
+      "name": "Ducklings, kumquats & roast chicken",
+      "region": "Cingjing → Sanxia → Jiaoxi → Luodong",
       "date": "2026-12-10",
       "start": 510,
       "end": 1320,
       "cards": [
         {
-          "id": "activity-4-0",
-          "title": "Down the mountain to Miaoli",
-          "notes": "🚗 Drive Down Mountain: Check out of Cingjing and drive 2.5 hours down the mountain roads back to the Miaoli valley.",
-          "category": "travel",
-          "duration": 150,
-          "originalStart": 510,
-          "optional": false,
-          "estimated": false
-        },
-        {
-          "id": "activity-4-1",
-          "title": "Winter strawberry picking",
-          "notes": "🍓 Activity 1: Winter Strawberry Picking. Pick fresh winter strawberries right off the local vines with the kids.",
-          "category": "kids",
-          "duration": 90,
-          "originalStart": 660,
-          "optional": false,
-          "estimated": false
-        },
-        {
-          "id": "activity-4-2",
-          "title": "Schokolake · chocolate DIY & lunch",
-          "notes": "🍫 Activity 2 & 🍽️ Lunch: Schokolake Country House. Head inside the factory grounds for child-friendly DIY chocolate assembly workshops. Enjoy a relaxed, air-conditioned lunch right inside the Schokolake Cafe (pastas and light family meals).",
+          "id": "v2-10-breakfast",
+          "title": "Breakfast in the room · 清境豪斯登堡",
+          "notes": "Breakfast delivered to your room.",
           "category": "food",
-          "duration": 90,
-          "originalStart": 750,
+          "duration": 45,
           "optional": false,
-          "estimated": false
+          "originalStart": 510,
+          "driverTitle": "清境豪斯登堡 早餐",
+          "driverNotes": "早餐送到房間。"
         },
         {
-          "id": "activity-4-3",
-          "title": "Road trip to Yilan · nap time",
-          "notes": "🚗 Highway Run: Drive directly east through the national highway tunnels straight into Yilan (2 hours). Skip Taipei completely. (Kids take their afternoon car nap).",
+          "id": "v2-10-depart",
+          "title": "Depart Cingjing → Guanxi Service Area",
+          "notes": "Descent via Provincial Highway 14.",
           "category": "travel",
-          "duration": 120,
-          "originalStart": 840,
+          "duration": 90,
           "optional": false,
-          "estimated": false
+          "originalStart": 555,
+          "driverTitle": "從清境出發（台14線下山）→ 關西服務區",
+          "driverNotes": "沿台14線下山。"
         },
         {
-          "id": "activity-4-4",
-          "title": "Yilan villa · settle in",
-          "notes": "🏨 Yilan Resort Check-In: Check into your spacious 2-Bedroom Yilan Minsu or Hot Spring Villa. Your helper unpacks into her private bedroom, and your family settles into the master room.",
+          "id": "v2-10-guanxi",
+          "title": "Pit stop · Guanxi Service Area (關西服務區)",
+          "notes": "Quick 20-minute stop: Hakka-themed displays, toddler-friendly restrooms and outdoor green space.",
+          "category": "travel",
+          "duration": 20,
+          "optional": false,
+          "originalStart": 645,
+          "driverTitle": "關西服務區 休息20分鐘",
+          "driverNotes": "休息約20分鐘：客家主題展示、親子廁所和戶外草地。"
+        },
+        {
+          "id": "v2-10-to-sanxia",
+          "title": "Drive to Sanxia",
+          "notes": "",
+          "category": "travel",
+          "duration": 50,
+          "optional": false,
+          "originalStart": 665,
+          "driverTitle": "關西服務區 → 三峽老街"
+        },
+        {
+          "id": "v2-10-sanxia",
+          "title": "Lunch · Sanxia Old Street (三峽老街)",
+          "notes": "Classic Taiwanese lunch (noodles, minced pork rice), then freshly baked golden croissant buns (jin niu jiao) for the road.",
+          "category": "food",
+          "duration": 95,
+          "optional": false,
+          "originalStart": 715,
+          "driverTitle": "三峽老街 午餐",
+          "driverNotes": "台灣小吃午餐（麵、滷肉飯），再買金牛角麵包路上吃。"
+        },
+        {
+          "id": "v2-10-to-yilan",
+          "title": "Drive to Yilan (Hsuehshan Tunnel, ~50 min)",
+          "notes": "Freeway 3 → National Freeway 5 through the Hsuehshan Tunnel.",
+          "category": "travel",
+          "duration": 60,
+          "optional": false,
+          "originalStart": 810,
+          "driverTitle": "三峽 → 宜蘭（國道3號轉國道5號雪山隧道）",
+          "driverNotes": "走國道3號轉國道5號，經雪山隧道到宜蘭。"
+        },
+        {
+          "id": "v2-10-duck",
+          "title": "Jia Niao Duck Farm (甲鳥園) · Jiaoxi",
+          "notes": "Gently hold fluffy day-old ducklings, feed ducks at the pond, and enjoy duck-egg waffles.",
+          "category": "kids",
+          "duration": 60,
+          "optional": false,
+          "originalStart": 870,
+          "driverTitle": "甲鳥園（礁溪）",
+          "driverNotes": "抱小鴨、在池塘餵鴨，吃鴨蛋鬆餅。"
+        },
+        {
+          "id": "v2-10-kumquat",
+          "title": "Agrioz Cafe · 橘之鄉蜜餞形象館",
+          "notes": "8 minutes down the road in north Yilan City. The 6-year-old makes 15-minute candied kumquat jars; photos at the two-storey fairytale table and chairs; citrus teas.",
+          "category": "shopping",
+          "duration": 75,
+          "optional": false,
+          "originalStart": 930,
+          "driverTitle": "橘之鄉蜜餞形象館",
+          "driverNotes": "位於宜蘭市北邊，約8分鐘車程。六歲孩子做金桔蜜餞DIY（約15分鐘），拍照、喝柑橘茶。"
+        },
+        {
+          "id": "v2-10-wengyao",
+          "title": "Dinner · Weng Yao Chicken Jiaoxi (甕窯雞 礁溪總店)",
+          "notes": "Crisp-skin wood-fired roast chicken, fresh mountain greens and mild bamboo shoot soup.",
+          "category": "food",
+          "duration": 75,
+          "optional": false,
+          "originalStart": 1005,
+          "driverTitle": "甕窯雞 礁溪總店 晚餐",
+          "driverNotes": "窯烤雞、山蔬、竹筍湯。"
+        },
+        {
+          "id": "v2-10-to-luodong",
+          "title": "Drive south to Luodong (~20 min)",
+          "notes": "",
+          "category": "travel",
+          "duration": 25,
+          "optional": false,
+          "originalStart": 1080,
+          "driverTitle": "礁溪 → 羅東"
+        },
+        {
+          "id": "v2-10-homestay",
+          "title": "Check in · Have Fun Kids Homestay (玩聚親子旅宿)",
+          "notes": "Unpack, unwind, and let the kids discover their private in-room slide and ball pit.",
+          "category": "hotel",
+          "duration": 35,
+          "optional": false,
+          "originalStart": 1105,
+          "driverTitle": "玩聚親子旅宿 入住",
+          "driverNotes": "入住，房間內有溜滑梯和球池。"
+        },
+        {
+          "id": "v2-10-evening",
+          "title": "Evening at the homestay",
+          "notes": "Default: cozy evening in; the toddler gets an early bedtime and the 6-year-old plays safely in the room.\nOptional: if everyone has energy, a 12-minute stroll (or 3-minute drive) to Luodong Night Market for fruit skewers, dragon fruit juice or an egg pancake.",
           "category": "hotel",
           "duration": 90,
-          "originalStart": 990,
           "optional": false,
-          "estimated": false
-        },
-        {
-          "id": "activity-4-5",
-          "title": "Luodong roast chicken dinner",
-          "notes": "🍽️ Dinner: Luodong Classic Brick-Oven Roasted Chicken. Dine at a massive, retro-themed indoor family restaurant specializing in wood-fired crispy roast chicken. Optional stroller stroll through the wide avenues of Luodong Night Market afterward.",
-          "category": "food",
-          "duration": 90,
-          "originalStart": 1110,
-          "optional": false,
-          "estimated": true
+          "originalStart": 1140,
+          "driverTitle": "玩聚親子旅宿 休息（可選：羅東夜市）",
+          "driverNotes": "預設在民宿休息，兩歲孩子早點睡。可選：若大家還有體力，步行約12分鐘（或開車3分鐘）到羅東夜市。"
         }
       ]
     },
     {
-      "name": "Made for little hands",
-      "region": "Yilan",
+      "name": "Capybaras, goats & night market",
+      "region": "Luodong · Sanxing · Dongshan · Su’ao",
       "date": "2026-12-11",
-      "start": 570,
+      "start": 420,
       "end": 1320,
       "cards": [
         {
-          "id": "activity-5-0",
-          "title": "Zhang Mei Ama’s Farm",
-          "notes": "🦫 Activity 1: Zhang Mei Ama’s Farm (張美阿嬤農場). Spotlessly clean, flat, and paved pasture zones. The kids can feed gentle capybaras, giant tortoises, and sika deer.",
-          "category": "kids",
-          "duration": 150,
-          "originalStart": 570,
-          "optional": false,
-          "estimated": false
-        },
-        {
-          "id": "activity-5-1",
-          "title": "Lunch at Shu Lan Restaurant",
-          "notes": "🍽️ Lunch: Shu Lan Restaurant (宜蘭蜀蘭餐廳). Traditional, non-greasy Taiwanese comfort plates and family-style noodle dishes right down the street from the farms.",
+          "id": "v2-11-breakfast",
+          "title": "Breakfast in the room · Have Fun Homestay",
+          "notes": "Breakfast delivered directly to your room.",
           "category": "food",
-          "duration": 75,
-          "originalStart": 750,
+          "duration": 95,
           "optional": false,
-          "estimated": false
+          "originalStart": 420,
+          "driverTitle": "玩聚親子旅宿 早餐",
+          "driverNotes": "早餐送到房間。"
         },
         {
-          "id": "activity-5-2",
-          "title": "Plum Blossom Lake · family cycling",
-          "notes": "🚴‍♂️ [⭐ OPTIONAL BACKUP] Activity 2: Plum Blossom Lake (梅花湖). Rent a 4-wheeled covered canopy family pedal surrey. You, your husband, the helper, and the kids sit together out of the sun and pedal around the flat water path. (If the kids are fussy or it rains, skip this and drive straight to the factory).",
-          "category": "kids",
-          "duration": 60,
-          "originalStart": 825,
-          "optional": true,
-          "estimated": false
-        },
-        {
-          "id": "activity-5-3",
-          "title": "Lucky Art Crayon Factory",
-          "notes": "🖍️ Activity 3: Lucky Art Crayon Factory (蠟藝蠟筆城堡). A massive indoor crayon castle. Features 4 interactive DIY stations where the kids make their own custom markers and crayons to take home. Perfect for a chilly December afternoon.",
-          "category": "kids",
-          "duration": 105,
-          "originalStart": 915,
+          "id": "v2-11-to-sanxing",
+          "title": "Drive west to Sanxing (~20 min)",
+          "notes": "",
+          "category": "travel",
+          "duration": 25,
           "optional": false,
-          "estimated": false
+          "originalStart": 515,
+          "driverTitle": "羅東 → 三星"
         },
         {
-          "id": "activity-5-4",
-          "title": "Jiaoxi dinner & hot springs",
-          "notes": "🏨 🍽️ Dinner: Jiaoxi Hot Spring Town Local Eats. Return to your Yilan resort zone for local hot spring noodle bowls and fresh fruit cuts, followed by a relaxing private hot spring bath.",
+          "id": "v2-11-zhangmei",
+          "title": "Zhang Mei Ama’s Farm (張美阿嬤農場)",
+          "notes": "Gates open: feed calm capybaras, dwarf deer and fluffy sheep in peaceful Japanese garden courtyards. Complimentary scallion pancakes at the exit.",
+          "category": "kids",
+          "duration": 120,
+          "optional": false,
+          "originalStart": 540,
+          "driverTitle": "張美阿嬤農場",
+          "place": {
+            "id": "zhang-mei",
+            "name": "Zhang Mei Ama’s Farm",
+            "nameZh": "張美阿嬤農場",
+            "address": "宜蘭縣三星鄉行健溪一路二段161號",
+            "description": "A family farm offering rural experiences and DIY activities. Confirm the exact farm entrance before travel.",
+            "descriptionZh": "提供農村及手作體驗；出發前請確認農場入口。",
+            "source": "https://zhangmeifarm.com.tw/",
+            "bookingNote": "Check the admission or DIY package for your visit.",
+            "bookingNoteZh": "請確認入園或手作套裝方案。",
+            "bookingUrl": "https://zhangmeifarm.com.tw/服務項目",
+            "bookingLabel": "Admission information",
+            "checked": "2026-10-26"
+          },
+          "driverNotes": "餵水豚、小鹿和綿羊，出口有免費蔥油餅。"
+        },
+        {
+          "id": "v2-11-to-lunch",
+          "title": "Drive to lunch (~10 min)",
+          "notes": "",
+          "category": "travel",
+          "duration": 15,
+          "optional": false,
+          "originalStart": 660,
+          "driverTitle": "前往三崙餐廳"
+        },
+        {
+          "id": "v2-11-sanlun",
+          "title": "Lunch · Sān Lùn Restaurant (三崙)",
+          "notes": "Relaxed, air-conditioned sit-down meal with family-friendly set plates, waffles and drinks.",
           "category": "food",
           "duration": 90,
-          "originalStart": 1110,
           "optional": false,
-          "estimated": true
+          "originalStart": 675,
+          "driverTitle": "三崙 午餐",
+          "driverNotes": "有冷氣的餐廳，親子套餐、鬆餅和飲料。"
+        },
+        {
+          "id": "v2-11-to-dongshan",
+          "title": "Drive east to Dongshan (~10 min)",
+          "notes": "",
+          "category": "travel",
+          "duration": 15,
+          "optional": false,
+          "originalStart": 765,
+          "driverTitle": "前往冬山"
+        },
+        {
+          "id": "v2-11-goat",
+          "title": "E-Long Goat Farm (宜農牧場)",
+          "notes": "The toddler highlight: bottle-feed piglets and kid goats, feed carrots to bunnies and guinea pigs, and enjoy goat-milk ice cream.",
+          "category": "kids",
+          "duration": 90,
+          "optional": false,
+          "originalStart": 780,
+          "driverTitle": "宜農牧場（冬山）",
+          "driverNotes": "餵小豬和小羊喝奶、餵兔子和天竺鼠紅蘿蔔，吃羊奶冰淇淋。"
+        },
+        {
+          "id": "v2-11-to-suao",
+          "title": "Drive south to Su’ao (~15 min)",
+          "notes": "",
+          "category": "travel",
+          "duration": 15,
+          "optional": false,
+          "originalStart": 870,
+          "driverTitle": "冬山 → 蘇澳"
+        },
+        {
+          "id": "v2-11-taxi",
+          "title": "Taxi Museum (計程車博物館) · Su’ao",
+          "notes": "Indoor fun: electric bumper cars, classic pedal cars, and fold souvenir 3D paper taxi tickets.",
+          "category": "kids",
+          "duration": 75,
+          "optional": false,
+          "originalStart": 885,
+          "driverTitle": "計程車博物館（蘇澳）",
+          "driverNotes": "室內：電動碰碰車、古董踏板車、紙模型計程車票。"
+        },
+        {
+          "id": "v2-11-back",
+          "title": "Drive back to Luodong (~15 min)",
+          "notes": "",
+          "category": "travel",
+          "duration": 15,
+          "optional": false,
+          "originalStart": 960,
+          "driverTitle": "蘇澳 → 羅東"
+        },
+        {
+          "id": "v2-11-nap",
+          "title": "Homestay downtime & nap",
+          "notes": "1.5 hours of calm recovery: the 2-year-old naps, the 6-year-old plays on the slides, parents recharge.",
+          "category": "hotel",
+          "duration": 90,
+          "optional": false,
+          "originalStart": 975,
+          "driverTitle": "玩聚親子旅宿 休息",
+          "driverNotes": "休息約1.5小時：兩歲孩子午睡，大人休息。"
+        },
+        {
+          "id": "v2-11-nightmarket",
+          "title": "Dinner · Luodong Night Market (羅東夜市)",
+          "notes": "Arriving at 17:45 beats the dense 19:30 weekend crowds, keeping walkways clear for strollers.\nTop picks: Sanxing scallion pork skewers, flaky scallion pancakes, steam-fried buns, sweet-potato balls, fresh watermelon juice.\nTip: eat along the open Zhongshan Park perimeter, or take food back to the homestay.",
+          "category": "food",
+          "duration": 105,
+          "optional": false,
+          "originalStart": 1065,
+          "driverTitle": "羅東夜市 晚餐",
+          "driverNotes": "17:45到達可避開19:30的人潮，推嬰兒車比較方便。可在中山公園周邊吃，或外帶回民宿。"
         }
       ]
     },
     {
-      "name": "A little city magic",
-      "region": "Taipei",
+      "name": "Boutiques, wooden toys & Shilin",
+      "region": "Luodong → Taipei",
       "date": "2026-12-12",
       "start": 510,
       "end": 1320,
       "cards": [
         {
-          "id": "activity-6-0",
-          "title": "Early drive to Taipei",
-          "notes": "🚗 Morning Transit: Check out early from Yilan. Driving early beats the heavy weekend rush of Taipei locals heading back through the tunnel.",
+          "id": "v2-12-depart",
+          "title": "Drive Luodong → Taipei (Freeway 5)",
+          "notes": "Leave early to beat the midday Hsuehshan Tunnel jams.",
           "category": "travel",
-          "duration": 60,
-          "originalStart": 510,
-          "optional": false,
-          "estimated": false
-        },
-        {
-          "id": "activity-6-1",
-          "title": "Wooderful Life Indoor Playground",
-          "notes": "🌲 Activity 1: Wooderful Life Indoor Playground (Xindian). Arrive at Yulon City Mall right at opening. The kids spend 2 full hours jumping, sliding, and playing inside the elite indoor wooden forest playground.",
-          "category": "kids",
-          "duration": 120,
-          "originalStart": 585,
-          "optional": false,
-          "estimated": false
-        },
-        {
-          "id": "activity-6-2",
-          "title": "Lunch at LOCOFOOD",
-          "notes": "🍽️ Lunch: LOCOFOOD Longjiang Picnic Store (樂口福). Feast on hot, crispy iron-skillet pork and cheese danbing rolls with a safe buffer before the kitchen shuts at 02:00 PM.",
-          "category": "food",
           "duration": 75,
-          "originalStart": 735,
           "optional": false,
-          "estimated": false
+          "originalStart": 510,
+          "driverTitle": "羅東 → 台北（國道5號）",
+          "driverNotes": "提早出發，避開雪山隧道中午塞車。"
         },
         {
-          "id": "activity-6-3",
-          "title": "Zhongshan · shopping & stroller naps",
-          "notes": "🛍️ Activity 2: The Double-Stroller Crash & Split-Team Shopping Loop. (Heavy lunch + heavy play = both kids crash out completely cold in the double stroller).\n• Shopping Team (You + Helper): Spend 3 hours browsing local premium fashion labels (Queen Shop, Meier.Q, Mouggan) along Chifeng Street in the car-free Zhongshan Linear Park.\n• Chill Team (Husband): Pushes the sleeping kids to Melange Café next door for strawberry waffles and tea. When the kids wake up around 03:30 PM, he moves them to the car-free Linear Park Playground right outside the café doors so the 6yo can climb the grass hills safely. (Rain backup: He rolls the stroller down the elevator into the flat, warm indoor R79 Underground Book Street).",
+          "id": "v2-12-locofood",
+          "title": "Brunch · LOCOFOOD 樂口福",
+          "notes": "Crispy iron-skillet rolled egg pancakes (danbing), hash browns and iced milk teas before the midday rush.",
+          "category": "food",
+          "duration": 60,
+          "optional": false,
+          "originalStart": 585,
+          "driverTitle": "樂口福 早午餐",
+          "driverNotes": "鐵板蛋餅、薯餅、冰奶茶。"
+        },
+        {
+          "id": "v2-12-boutiques",
+          "title": "Zhongxiao Dunhua boutiques (Lane 161 / Hutong)",
+          "notes": "~8-minute drive.\nFor you: independent fashion boutiques, Korean apparel and jewellery studios around Lane 161 (Hutong), Lane 177 and Lane 181.\nFor husband & kids: Lilliane Bakery or COFFEE LAW for pastries and drinks, with outdoor play and benches at Liugong Park.",
           "category": "shopping",
           "duration": 180,
-          "originalStart": 810,
           "optional": false,
-          "estimated": false
+          "originalStart": 645,
+          "driverTitle": "忠孝敦化 巷弄商圈（161巷）",
+          "driverNotes": "車程約8分鐘。媽媽逛161巷（胡同）、177巷、181巷的服飾和飾品店；爸爸和孩子在附近麵包店、咖啡店或六宮公園休息。"
         },
         {
-          "id": "activity-6-4",
-          "title": "Jolley Hotel · check-in",
-          "notes": "🏨 Taipei Hotel Check-In: Check into Jolley Hotel (or your chosen 2-Bedroom setup). Drop off your boutique shopping bags and freshen up.",
+          "id": "v2-12-to-huashan",
+          "title": "Regroup and drive to Huashan 1914 (~7 min)",
+          "notes": "",
+          "category": "travel",
+          "duration": 15,
+          "optional": false,
+          "originalStart": 825,
+          "driverTitle": "前往華山1914文化創意產業園區"
+        },
+        {
+          "id": "v2-12-wooderful",
+          "title": "Wooderful life · Huashan 1914",
+          "notes": "Dedicated 2-hour indoor session: interactive wooden games, gravity marble runs, balance bridges and music box displays.",
+          "category": "kids",
+          "duration": 120,
+          "optional": false,
+          "originalStart": 840,
+          "driverTitle": "Wooderful life（華山1914）",
+          "driverNotes": "約兩小時室內遊玩：木製遊戲、彈珠台、平衡橋、音樂盒。"
+        },
+        {
+          "id": "v2-12-to-hotel",
+          "title": "Drive to the Taipei hotel",
+          "notes": "",
+          "category": "travel",
+          "duration": 15,
+          "optional": false,
+          "originalStart": 960,
+          "driverTitle": "前往晴美公寓酒店"
+        },
+        {
+          "id": "v2-12-hotel",
+          "title": "Check in · Jolley Hotel · rest & toddler nap",
+          "notes": "1-hour rest and nap window for the toddler.",
           "category": "hotel",
           "duration": 60,
-          "originalStart": 1020,
           "optional": false,
-          "estimated": false
+          "originalStart": 975,
+          "driverTitle": "晴美公寓酒店 入住休息",
+          "place": {
+            "id": "jolley",
+            "name": "Jolley Hotel",
+            "nameZh": "晴美公寓酒店",
+            "address": "臺北市中山區林森北路568號",
+            "description": "Apartment-style hotel in Taipei with living areas and kitchen facilities.",
+            "descriptionZh": "設有客廳及廚房設備的台北公寓式酒店。",
+            "source": "https://www.taiwanstay.net.tw/TSA/web_page/TSA020200.jsp?hohi_id=2003",
+            "bookingNote": "Accommodation reservation needed; confirm your room and dates.",
+            "bookingNoteZh": "住宿需訂房，請確認日期與房型。",
+            "bookingUrl": "https://www.jolleyhotels.com/",
+            "bookingLabel": "Hotel & reservations",
+            "checked": "2026-10-26"
+          },
+          "driverNotes": "休息約1小時，讓兩歲孩子午睡。"
         },
         {
-          "id": "activity-6-5",
-          "title": "Shilin Night Market finale",
-          "notes": "🍽️ Dinner & Sights: Shilin Night Market Grand Finale. Head straight down into the spacious, air-conditioned Shilin Underground Food Court for a comfortable sit-down dinner of traditional beef noodles and bubble tea. Head upstairs afterward so the 6yo can play the carnival pinball games to end the holiday!",
-          "category": "food",
-          "duration": 90,
-          "originalStart": 1110,
+          "id": "v2-12-to-shilin",
+          "title": "Drive to Shilin Night Market",
+          "notes": "",
+          "category": "travel",
+          "duration": 30,
           "optional": false,
-          "estimated": true
+          "originalStart": 1035,
+          "driverTitle": "前往士林夜市"
+        },
+        {
+          "id": "v2-12-shilin",
+          "title": "Dinner · Shilin Night Market (士林夜市)",
+          "notes": "Early arrival allows smooth stroller navigation before peak crowds. Stroll the carnival game stalls (pinball, balloon darts) and enjoy a street-food dinner.",
+          "category": "food",
+          "duration": 120,
+          "optional": false,
+          "originalStart": 1065,
+          "driverTitle": "士林夜市 晚餐",
+          "place": {
+            "id": "shilin",
+            "name": "Shilin Night Market",
+            "nameZh": "士林夜市",
+            "address": "臺北市士林區基河路101號（士林市場）",
+            "description": "Night-market food and shopping around Shilin Market; agree on a specific meeting point.",
+            "descriptionZh": "士林市場周邊的夜市美食及購物街區，請約定明確集合點。",
+            "source": "https://www.tcma.gov.taipei/News_Content.aspx?n=1A4C7120ABFD0F9F&s=80903C918A9F93E3&sms=26C5BF03E7963F4E",
+            "bookingNote": "Food, games and shopping are paid separately.",
+            "bookingNoteZh": "餐飲、遊戲及購物另行付費。",
+            "bookingUrl": "",
+            "bookingLabel": "",
+            "checked": "2026-10-26"
+          },
+          "driverNotes": "早點到，人少比較好推嬰兒車。逛遊戲攤位、吃小吃當晚餐。"
         }
       ]
     },
@@ -454,5 +821,17 @@
       ]
     }
   ],
-  "airportMorningAdded": true
+  "airportMorningAdded": true,
+  "scheduleVersion": 2,
+  "scheduleUpdate": {
+    "version": 2,
+    "dates": [
+      "2026-12-08",
+      "2026-12-09",
+      "2026-12-10",
+      "2026-12-11",
+      "2026-12-12"
+    ],
+    "label": "8–12 Dec"
+  }
 }

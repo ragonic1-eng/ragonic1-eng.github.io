@@ -62,6 +62,7 @@ function validateActivityForm(){
 function dateLabel(d,opts){return new Date(d.date+'T12:00:00').toLocaleDateString('en-SG',opts)}
 function render(){
  try{localStorage.setItem('little-orbit-day',String(day))}catch{}
+ scheduleUpdateBanner();
  $('days').innerHTML=state.days.map((d,i)=>`<button class="day-tab ${i===day?'active':''}" data-day="${i}" aria-current="${i===day?'date':'false'}"><span>DAY ${i+1} · ${dateLabel(d,{weekday:'short'}).toUpperCase()}</span><b>${dateLabel(d,{day:'numeric',month:'short'})}</b><small>${esc(d.region)}</small><span class="day-count">${d.cards.filter(c=>c.category!=='break').length} activities · ${duration(total(d))}</span></button>`).join('');
  const d=state.days[day], used=total(d), available=d.end-d.start, free=available-used;
  $('budgetSummary').textContent=fmt(d.start)+'–'+fmt(d.end)+' · '+duration(used)+' planned';
@@ -200,6 +201,21 @@ $('timeline').innerHTML='<p class="empty" role="status">Loading your itinerary�
 document.addEventListener('orbit-ready',()=>{for(const id of ['new','addBottom','fit','start','end','import','export','share','mobileAdd','mobileNow'])$(id).disabled=false});
 (async()=>{try{const response=await fetch('trip.json');if(!response.ok)throw Error();original=await response.json();for(const d of original.days){const cards=[];let cursor=d.start;for(const c of d.cards){if(c.originalStart>cursor)cards.push({id:'gap-'+c.id,title:'A little breathing room',category:'break',duration:c.originalStart-cursor,notes:'Unscheduled time from the original itinerary. Use it for a snack, rest, or getting to the next stop.',optional:false});cards.push(c);cursor=c.originalStart+c.duration}d.cards=cards}state=structuredClone(original);try{const selected=Number(localStorage.getItem('little-orbit-day'));if(Number.isInteger(selected)&&selected>=0&&selected<7)day=selected;const saved=localStorage.getItem('little-orbit-v1');if(saved){const parsed=JSON.parse(saved);validate(parsed);state=parsed;if(!location.hash&&addAirportMorning(state))persist()}}catch{notify('Saved trip could not be read. Original itinerary loaded.')}render();document.dispatchEvent(new Event('orbit-ready'))}catch{$('timeline').innerHTML='<div class="empty" role="alert"><p>We couldn’t load your itinerary. Check your connection, then try again. Your saved plan is still on this device.</p><button type="button" id="retryTrip">Try loading again</button></div>';$('retryTrip').onclick=()=>location.reload()}})();
 
+// A newer bundled schedule (trip.json scheduleUpdate) is offered once per trip. Applying replaces only the listed days,
+// syncs to a shared trip like any edit, and can be undone.
+function scheduleUpdateBanner(){
+ const box=$('scheduleUpdate'),u=original?.scheduleUpdate;let dismissed=false;
+ try{dismissed=sessionStorage.getItem('little-orbit-update-dismissed')===String(u?.version)}catch{}
+ if(!u||!state||(state.scheduleVersion||1)>=u.version||dismissed){box.hidden=true;return}
+ box.hidden=false;box.innerHTML=`<p><strong>Your new schedule for ${esc(u.label)} is ready.</strong> Applying replaces those days with the updated plan${/room=/.test(location.hash)?' for everyone using this shared trip':''}. Other days stay as they are, and you can undo.</p><div class="schedule-update-actions"><button type="button" class="primary" id="applySchedule">Apply new schedule</button><button type="button" id="dismissSchedule">Not now</button></div>`;
+ $('applySchedule').onclick=()=>{
+  const first=state.days.findIndex(d=>d.date===u.dates[0]);
+  if(!mutate(()=>{for(const date of u.dates){const i=state.days.findIndex(d=>d.date===date),fresh=original.days.find(d=>d.date===date);if(i>=0&&fresh)state.days[i]=structuredClone(fresh)}state.scheduleVersion=u.version}))return;
+  if(first>=0&&day!==first){day=first;render()}
+  notify(`Updated ${u.label} to your new schedule.`,{actions:[{label:'Undo',run:undoChange}]});
+ };
+ $('dismissSchedule').onclick=()=>{try{sessionStorage.setItem('little-orbit-update-dismissed',String(u.version))}catch{}box.hidden=true};
+}
 function addAirportMorning(s){
  if(s.airportMorningAdded)return false;
  const d=s.days.find(d=>d.date==='2026-12-07');

@@ -25,7 +25,7 @@ with sync_playwright() as p:
   assert page.evaluate("slotTime(state.days[0],state.days[0].cards.findIndex(c=>c.id==='home-to-airport'))")==750
   assert page.evaluate("slotTime(state.days[0],state.days[0].cards.findIndex(c=>c.id==='activity-1-0'))")==945
   # Move to a specific position on a different day; details survive and only one card exists.
-  card.get_by_label('Move card',exact=True).evaluate("el=>el.scrollIntoView({block:'center'})");card.get_by_label('Move card',exact=True).tap();page.locator('#moveDay').select_option('1');next_id=page.evaluate('state.days[1].cards[0].id');page.locator('#movePosition').select_option(next_id);expect(page.locator('#movePreview')).to_contain_text('08:30–09:10')
+  card.get_by_label('Move card',exact=True).evaluate("el=>el.scrollIntoView({block:'center'})");card.get_by_label('Move card',exact=True).tap();page.locator('#moveDay').select_option('1');next_id=page.evaluate('state.days[1].cards[0].id');page.locator('#movePosition').select_option(next_id);expect(page.locator('#movePreview')).to_contain_text('09:15–09:55')
   box=page.locator('#confirmMove').bounding_box();assert box['y']+box['height']<=height+1
   page.locator('#confirmMove').tap();expect(page.locator('#moveEditor')).not_to_be_visible();assert page.locator('[data-day="1"]').get_attribute('aria-current')=='date';assert page.evaluate("state.days.flatMap(d=>d.cards).filter(c=>c.title==='Mobile breakfast').length")==1
   assert page.evaluate("state.days[1].cards[0].notes")=='Updated on mobile';page.locator('#toast').get_by_role('button',name='Dismiss message').tap()
