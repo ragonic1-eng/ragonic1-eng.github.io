@@ -183,7 +183,7 @@ body.map-open .map-toggle{display:none}
 .orbit-pal:hover{border-color:#b9a0d6}.orbit-pal:focus-visible{outline:3px solid #9b7fc2;outline-offset:3px}
 .orbit-pal .orbit-mascot{width:100%;height:100%;display:block}
 .orbit-pal-hint{position:absolute;right:70px;bottom:18px;white-space:nowrap;background:#463f66;color:#fff;font-size:13px;font-weight:700;padding:6px 11px;border-radius:12px 12px 2px 12px;box-shadow:0 4px 12px #463f6640}
-.mascot-eyes{animation:orbit-blink 5s infinite;transform-origin:32px 33px}
+.mascot-eyes{animation:orbit-blink 5s infinite;transform-origin:32px 31.5px}
 @keyframes orbit-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 @keyframes orbit-blink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.15)}}
 @media(prefers-reduced-motion:reduce){.orbit-pal,.mascot-eyes,.orbit-dots i{animation:none}}
