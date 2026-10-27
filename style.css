@@ -231,3 +231,39 @@ body.map-open .orbit-pal{display:none}
 .orbit-memory-list button{min-height:30px;padding:2px 9px;font-size:12px;border-radius:8px;margin-left:auto}
 .orbit-memory-error{flex-basis:100%;color:#a43a3a;font-weight:600}
 .orbit-memory-note{margin:8px 0 0;font-size:12.5px;color:#7d7487}
+/* Calmer, more compact layout: one time line per card, quiet labels, rarely used actions folded away. */
+/* Tall enough that the drag handle (top right) and the details toggle (bottom right) never overlap. */
+.activity{min-height:96px;padding:10px 58px 10px 12px}
+.card-timing{align-items:baseline;gap:6px;flex-wrap:wrap}
+.card-timing>div{display:flex;align-items:baseline;gap:4px}
+.card-timing .timing-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.card-start{font-size:24px;line-height:1.25;letter-spacing:-.6px;min-height:0}.card-timing strong{font-size:17px;line-height:1.25;color:#5d5869;font-weight:750}
+.card-timing>div:nth-child(2)::before{content:'–';color:#8a7f96;font-weight:700;margin-right:2px}
+.card-timing .timing-duration{font-size:12.5px;line-height:1.7;font-weight:750;letter-spacing:0;padding:0 9px;border-radius:999px;background:#ffffffc0;color:#5b4a75;margin-left:4px}
+.card-top{margin-top:2px}.card-main h3{font-size:15.5px;line-height:1.35;margin:0}
+.drag-handle{width:40px;min-width:40px;height:40px;min-height:40px;top:9px;right:9px;border-color:#d4cade}
+.drag-handle>small{display:none}.drag-handle>span{font-size:20px}
+.activity-more>summary{width:46px;min-height:40px;right:6px;bottom:4px;font-size:0}
+.activity-more>summary::before{font-size:20px;margin:0}
+.activity-more[open]{margin:10px -46px 0 0}
+.activity-more[open]>summary{font-size:13px}
+.card-primary{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 4px}
+.card-primary button{min-height:44px;font-size:13.5px;background:#fff;color:#59466d}
+.text-button{min-height:36px;padding:4px 2px;border:0;background:none;color:#6a4f8f;font-weight:700;text-decoration:underline;text-underline-offset:3px}
+.card-more{margin:8px 0;border-top:1px solid #d9d1e2;padding-top:4px}
+.card-more>summary{min-height:40px;display:flex;align-items:center;font-size:13px;font-weight:700;color:#665176;cursor:pointer}
+.card-more .card-bottom{border-top:0;padding-top:0}
+.drag-guide{display:flex;align-items:center;gap:6px;font-size:12px}.drag-guide[hidden]{display:none}
+.drag-guide button{min-height:32px;min-width:32px;padding:2px 6px;border:0;background:none;color:#8a7f96}
+.orbit-status{font-size:13px}
+@media(max-width:740px){.activity{padding:9px 54px 9px 11px}}
+/* Orbit's "Ask me" bubble sits above the dog so it never covers the Map button. */
+.orbit-pal-hint{right:0;bottom:72px;border-radius:12px 12px 2px 12px}
+@media(max-width:740px){.orbit-pal-hint{right:0;bottom:64px}}
+/* Problems: what happened, why, and what to do. */
+.problem{display:flex;flex-direction:column;gap:3px;padding:10px 12px;border-radius:12px;background:#fff4f2;border:1px solid #f0c9c1;color:#5b3a33;font-size:13.5px;line-height:1.45}
+.problem>strong{color:#8a3a2c;font-size:14px}.problem p{margin:0}.problem-label{font-weight:750;color:#8a3a2c}
+.problem-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}.problem-actions button{min-height:40px;padding:6px 12px;background:#fff;border-color:#e3b9b0;color:#7a3527;font-weight:700}
+.orbit-failed{background:none;border:0;padding:0;max-width:92%}
+.place-message .problem,.combo-note .problem{margin-top:4px}
+.orbit-card.orbit-error{padding:0;border:0;background:none}

@@ -1,6 +1,9 @@
 def expand_card(card):
  details=card.locator('.activity-more')
  if details.get_attribute('open') is None:details.locator('summary').first.click()
+ # Reordering, length and day moves sit in a nested "More" fold.
+ more=card.locator('.card-more')
+ if more.count() and more.get_attribute('open') is None:more.locator('summary').first.click()
 
 def open_options(page):
  options=page.locator('.trip-options')

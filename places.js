@@ -43,8 +43,8 @@
   const [config,app]=await Promise.all([settings(),fetch('config.json',{signal,cache:'no-cache'}).then(r=>r.json())]);
   if(!config.googleUrl||app.provider!=='supabase'||!config.googleUrl.startsWith(app.supabaseUrl.replace(/\/$/,'')+'/functions/v1/'))throw Error('off');
   const response=await fetch(config.googleUrl,{method:payload?'POST':'GET',headers:{apikey:app.supabaseKey,...(payload?{'Content-Type':'application/json'}:{})},body:payload?JSON.stringify(payload):undefined,signal,referrerPolicy:'no-referrer'});
-  let data;try{data=await response.json()}catch{throw Error('Google Maps search is unavailable right now.')}
-  if(!response.ok){const e=Error(typeof data.error==='string'?data.error:'Google Maps search is unavailable right now.');e.code=data.code;throw e}
+  let data;try{data=await response.json()}catch{throw Object.assign(Error('Google Maps search is unavailable right now.'),{code:'GOOGLE'})}
+  if(!response.ok)throw Problems.fromResponse(response,data,'Google Maps search is unavailable right now.');
   return data;
  }
  // Checked once per page load; a missing key (or no backend) means the free map is used instead.
@@ -118,12 +118,15 @@
   try{
    const [config,app]=await Promise.all([settings(),fetch('config.json',{signal:t.signal,cache:'no-cache'}).then(r=>r.json())]);
    if(!config.researchUrl||app.provider!=='supabase'||!config.researchUrl.startsWith(app.supabaseUrl.replace(/\/$/,'')+'/functions/v1/'))throw Error('Orbit is not configured for this trip. Map search still works.');
-   const response=await fetch(config.researchUrl,{method:'POST',headers:{'Content-Type':'application/json',apikey:app.supabaseKey},body:JSON.stringify({...payload,roomId,roomKey}),signal:t.signal,referrerPolicy:'no-referrer'});
-   let data;try{data=await response.json()}catch{throw Error('Orbit is temporarily unavailable. Try again shortly.')}
-   if(response.status===404)throw Error('Orbit is awaiting backend setup. Map suggestions still work.');
-   if(!response.ok)throw Error((typeof data.error==='string'?data.error:'Orbit is unavailable right now.')+(typeof data.code==='string'&&/^[A-Z_]{2,30}$/.test(data.code)?` (code: ${data.code})`:''));
-   return data;
-  }catch(e){if(signal?.aborted)throw Error('Skipped.');throw e.name==='AbortError'?Error('Orbit took too long. Try again later.'):e.message==='Failed to fetch'?Error('Cannot reach Orbit. Check your connection.'):e}
+   // Short-lived failures (busy AI, network blip) are retried once before anything is shown.
+   return await Problems.withRetry(async()=>{
+    const response=await fetch(config.researchUrl,{method:'POST',headers:{'Content-Type':'application/json',apikey:app.supabaseKey},body:JSON.stringify({...payload,roomId,roomKey}),signal:t.signal,referrerPolicy:'no-referrer'});
+    let data;try{data=await response.json()}catch{throw Object.assign(Error('Orbit is temporarily unavailable.'),{code:'UNEXPECTED'})}
+    if(response.status===404)throw Object.assign(Error('Orbit is awaiting backend setup. Map suggestions still work.'),{code:'NOT_CONFIGURED'});
+    if(!response.ok)throw Problems.fromResponse(response,data,'Orbit is unavailable right now.');
+    return data;
+   });
+  }catch(e){if(signal?.aborted)throw Error('Skipped.');throw e.name==='AbortError'?Object.assign(Error('Orbit took too long.'),{code:'TIMEOUT'}):e.message==='Failed to fetch'?Object.assign(Error('Couldn’t reach Orbit.'),{code:'NETWORK'}):e}
   finally{t.done()}
  }
  const researchQuery=p=>[p.nameZh||p.name,p.address].filter(Boolean).join(', ').slice(0,200);
@@ -150,10 +153,15 @@
  // --- Suggestions list (combobox). ---
  function setBusy(on){el('placeFinder').classList.toggle('is-searching',on)}
  // Messages also appear at the top of an open suggestion list, which would otherwise cover them.
- function message(text){
-  el('placeMessage').textContent=text;const list=el('placeResults');list.querySelector('.combo-note')?.remove();
-  if(text&&!list.hidden)list.insertAdjacentHTML('afterbegin',`<p class="combo-note" role="status">${escape(text)}</p>`);
+ // A message, optionally with a problem explained (what happened, why, what to do) and a Try again button.
+ let retryAction=null;
+ function message(text,problem,{fallback,retry}={}){
+  const p=problem&&Problems.describe(problem,fallback),list=el('placeResults');retryAction=p?.retry&&retry?retry:null;
+  const block=p?Problems.html(p,retryAction?'<button type="button" data-place-retry>Try again</button>':''):'';
+  el('placeMessage').innerHTML=(text?`<span>${escape(text)}</span>`:'')+block;list.querySelector('.combo-note')?.remove();
+  if((text||block)&&!list.hidden)list.insertAdjacentHTML('afterbegin',`<div class="combo-note" role="status">${text?escape(text):''}${block}</div>`);
  }
+ document.addEventListener('click',e=>{if(e.target.closest('[data-place-retry]')&&retryAction){const run=retryAction;retryAction=null;message('');run()}});
  function closeList(){el('placeResults').hidden=true;el('placeQuery').setAttribute('aria-expanded','false');el('placeQuery').removeAttribute('aria-activedescendant');active=-1}
  function renderOptions(list,heading=''){
   options=list;active=-1;const q=el('placeQuery').value.trim();
@@ -202,7 +210,7 @@
   typing=setTimeout(async()=>{
    controller=new AbortController();const t=timeout(controller.signal,8000);
    try{const remote=await search(q,t.signal);lastSearchGoogle=await google();if(token!==generation)return;remoteCache.set(key,remote);if(remoteCache.size>40)remoteCache.delete(remoteCache.keys().next().value);renderOptions(merge(local,remote,q));noExactMatch(q)}
-   catch(e){if(token===generation&&!controller.signal.aborted)message(e.message==='off'?'':e.code==='GOOGLE_AUTH'||/limit/i.test(e.message)?e.message:'Map suggestions are unavailable right now. Press Enter to find it with Orbit, or enter the details yourself.')}
+   catch(e){if(token===generation&&!controller.signal.aborted)message('',e.message==='off'?null:e,{fallback:'Map suggestions are unavailable right now.',retry:onType})}
    finally{t.done();if(token===generation)setBusy(false)}
   },350);
  }
@@ -253,7 +261,7 @@
    if(fromGoogleSearch){
     step('google','active');
     try{const found=await googleDetails(draft,signal);if(found){const {planning:more,...facts}=found;draft={...facts};point=hasPoint(draft)?{lat:draft.lat,lon:draft.lon}:null;if(el('title').value.trim()===autoTitle){el('title').value=draft.name;autoTitle=draft.name}preview();autofill(draft,more||{})}step('google',found?'done':'failed')}
-    catch(e){if(signal.aborted)throw e;notes.push(e.message);step('google','failed')}
+    catch(e){if(signal.aborted)throw e;notes.push(e);step('google','failed')}
    }else{step('locate','active');point=await locate(draft,signal);if(point)Object.assign(draft,point);step('locate',point?'done':'skipped')}
    step('travel','active');await updateJourney(signal);step('travel','done');
    if(steps.some(s=>s.id==='research')){
@@ -261,12 +269,12 @@
     try{const data=await orbit({query:researchQuery(draft),country:el('placeCountry').value},signal,110000);const best=Array.isArray(data.places)?data.places.find(valid):null;if(best){const {planning:found,...facts}=best;draft=mergeResearch(draft,facts);preview();autofill(draft,found||{});
      // The address Orbit found can pin a place the map didn't know by name.
      if(!point&&draft.address&&(point=await locate(draft,signal))){Object.assign(draft,point);preview();await updateJourney(signal)}}else notes.push(String(data.message||'Orbit couldn’t confirm details with sources.'));step('research',best?'done':'skipped')}
-    catch(e){if(signal.aborted)throw e;notes.push(e.message);step('research','failed')}
+    catch(e){if(signal.aborted)throw e;notes.push(e);step('research','failed')}
    }
-   if(!point)notes.push('Couldn’t pin it on the map, so travel times are unavailable.');
+   if(!point)notes.push('Couldn’t pin it on the map, so travel times are unavailable. To fix: tap “Edit details” and add the street address, or choose the place from the Google suggestions.');
    if(steps.some(s=>s.id==='check')){step('check','active');await checkPlan(signal);step('check',advice&&!advice.error?'done':'failed')}
   }catch{notes.push('Skipped. You can run Research with Orbit any time.')}
-  finally{if(flow===current){flow=null;hideLoading();preview();renderJourney();renderAdvice();message(notes.join(' '))}}
+  finally{if(flow===current){flow=null;hideLoading();preview();renderJourney();renderAdvice();message(notes.filter(n=>typeof n==='string').join(' '),notes.find(n=>n instanceof Error),{retry:draft?()=>choose(draft):null})}}
  }
  async function askOrbit(){
   const q=el('placeQuery').value.trim();if(q.length<2){message('Type a place name first.');return}
@@ -274,7 +282,7 @@
   ++generation;controller?.abort();clearTimeout(typing);setBusy(false);closeList();
   flow?.abort();const current=flow=new AbortController();showLoading('Researching “'+q+'”…',[{id:'research',label:'Orbit is searching the web — this can take up to a minute'}],{now:true});step('research','active');
   try{const data=await orbit({query:q,country:el('placeCountry').value},current.signal,110000);const found=(Array.isArray(data.places)?data.places:[]).filter(valid);if(flow!==current)return;if(found.length){renderOptions(found,'Orbit found');message((data.cached?'Recent research · ':'')+'Choose the right place.')}else{closeList();message(String(data.message||'Orbit couldn’t find this place. Add the town (e.g. “大湖”) or enter it yourself.'))}}
-  catch(e){if(flow===current){closeList();message(e.message)}}
+  catch(e){if(flow===current){closeList();message('',e,{fallback:'Orbit couldn’t search for this place.',retry:askOrbit})}}
   finally{if(flow===current){flow=null;hideLoading();el('placeQuery').focus({preventScroll:true})}}
  }
 
@@ -355,7 +363,7 @@
  async function checkPlan(signal){
   const request=plan();if(!request)return;const key=JSON.stringify(request);
   try{const data=await orbit({action:'evaluate',plan:request},signal,30000);if(!data.evaluation)throw Error('Orbit couldn’t check this plan.');advice={key,...data.evaluation}}
-  catch(e){if(signal?.aborted)throw e;advice={key,error:e.message}}
+  catch(e){if(signal?.aborted)throw e;advice={key,error:e.message,problem:Problems.describe(e,'Orbit couldn’t check this plan.')}}
   renderAdvice();
  }
  async function recheck(){
@@ -368,7 +376,7 @@
   if(!shared()){box.innerHTML='<p class="orbit-note"><span aria-hidden="true">✦</span> Open your private shared trip link to let Orbit research places and check whether they fit your day.</p>';return}
   const stale=advice&&advice.key!==planKey(),labels={good:'Looks good',tight:'Tight but doable',not_recommended:'Not recommended'};
   if(!advice){box.innerHTML='<button type="button" class="orbit-button" data-orbit-check>✦ Ask Orbit if this fits</button>';return}
-  if(advice.error){box.innerHTML=`<div class="orbit-card orbit-error"><p>${escape(advice.error)}</p><button type="button" class="orbit-button" data-orbit-check>Try again</button></div>`;return}
+  if(advice.error){box.innerHTML=`<div class="orbit-card orbit-error">${Problems.html(advice.problem||{title:advice.error},'<button type="button" class="orbit-button" data-orbit-check>Try again</button>')}</div>`;return}
   box.innerHTML=`<div class="orbit-card verdict-${escape(advice.verdict)}${stale?' is-stale':''}"><p class="orbit-head"><span class="verdict">${escape(labels[advice.verdict]||'Orbit’s view')}</span><span class="orbit-by">✦ Orbit</span></p><p class="orbit-headline">${escape(advice.headline)}</p>${advice.reasons?.length?`<ul>${advice.reasons.map(r=>`<li>${escape(r)}</li>`).join('')}</ul>`:''}${advice.suggestion?`<p class="orbit-suggestion"><strong>Try:</strong> ${escape(advice.suggestion)}</p>`:''}${stale?'<p class="orbit-stale">You changed the time or place since Orbit checked.</p><button type="button" class="orbit-button" data-orbit-check>Re-check with Orbit</button>':''}<p class="field-help">AI suggestion — use your own judgement.</p></div>`;
  }
  el('orbitTurnOn').onclick=()=>{el('editor').close();document.getElementById('share').click()};
