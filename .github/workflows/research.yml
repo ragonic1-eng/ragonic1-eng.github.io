@@ -43,6 +43,8 @@ jobs:
               if response.status != 200: raise RuntimeError('Migration did not succeed')
             print('Research schema installed')
           except urllib.error.HTTPError as e:
+            detail = e.read().decode('utf-8', 'replace').replace(os.environ['SUPABASE_ACCESS_TOKEN'], '[redacted]')
+            print('Supabase schema diagnostic: ' + detail[:1200])
             raise SystemExit('Supabase schema deployment failed with HTTP ' + str(e.code) + '. Check project permissions and the existing shared-trip setup.')
           PY
       - name: Deploy secured edge function
