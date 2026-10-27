@@ -6,6 +6,8 @@ export const LIMITS={autocomplete:300,details:30,locate:150};
 const API='https://places.googleapis.com/v1/';
 const DETAIL_FIELDS='id,displayName,formattedAddress,location,googleMapsUri,regularOpeningHours.weekdayDescriptions,websiteUri,nationalPhoneNumber,rating,userRatingCount,businessStatus,primaryType,editorialSummary,photos';
 const REGIONS={tw:'tw',sg:'sg'};
+// Seasonal places (a strawberry farm that "Opens 14 Nov") are "future opening" to Google and are left out of search
+// unless asked for, so every search includes them.
 const CATEGORY={restaurant:'food',cafe:'food',coffee_shop:'food',bakery:'food',fast_food_restaurant:'food',ice_cream_shop:'food',food_court:'food',dessert_shop:'food',meal_takeaway:'food',lodging:'hotel',hotel:'hotel',resort_hotel:'hotel',bed_and_breakfast:'hotel',guest_house:'hotel',hostel:'hotel',shopping_mall:'shopping',department_store:'shopping',market:'shopping',supermarket:'shopping',store:'shopping',gift_shop:'shopping',train_station:'travel',airport:'travel',bus_station:'travel',transit_station:'travel',zoo:'kids',amusement_park:'kids',aquarium:'kids',playground:'kids',park:'kids',museum:'kids',farm:'kids',tourist_attraction:'kids',national_park:'kids',water_park:'kids'};
 const text=(v,max=300)=>typeof v==='string'?v.replace(/[\u0000-\u001f]/g,' ').trim().slice(0,max):'';
 const https=v=>{try{const u=new URL(v);return u.protocol==='https:'&&!u.username&&!u.password?u.href:''}catch{return ''}};
@@ -73,7 +75,7 @@ export function createGoogleHandler({env,fetcher=fetch,now=()=>Date.now()}){
   const k='locate|'+region+'|'+query.normalize('NFKC').toLowerCase(),hit=await cached(k);if(hit&&'point' in hit)return {...hit,cached:true};
   if(!await allow('locate'))return {status:429,error:'Today’s Google Maps limit is used up.'};
   // IDs-only text search, then the cheapest details (location and address) for the best match.
-  const found=await google('places:searchText',{method:'POST',fields:'places.id',body:{textQuery:query,regionCode:region,languageCode:'zh-TW',pageSize:1,...(bias(near)?{locationBias:bias(near)}:{})}});
+  const found=await google('places:searchText',{method:'POST',fields:'places.id',body:{textQuery:query,regionCode:region,languageCode:'zh-TW',pageSize:1,includeFutureOpeningBusinesses:true,...(bias(near)?{locationBias:bias(near)}:{})}});
   const id=placeId(found?.places?.[0]?.id);let point=null;
   if(id){const d=await google('places/'+encodeURIComponent(id),{fields:'id,location,formattedAddress',query:{languageCode:'zh-TW',regionCode:region}});const lat=Number(d?.location?.latitude),lon=Number(d?.location?.longitude);if(Number.isFinite(lat)&&Number.isFinite(lon))point={lat,lon,googleId:id,address:text(d.formattedAddress)}}
   await remember(k,{point});return {point};
@@ -94,7 +96,7 @@ export function createGoogleHandler({env,fetcher=fetch,now=()=>Date.now()}){
    if(action==='autocomplete'){
     const input=text(body.input,120);if(input.length<2)return reply(400,{error:'Type at least 2 characters.'});
     if(!await allow('autocomplete'))return reply(429,{error:'Today’s Google Maps search limit is used up. Try again tomorrow or enter the place yourself.'});
-    const data=await google('places:autocomplete',{method:'POST',body:{input,sessionToken:token(body.sessionToken),languageCode:/[㐀-鿿]/.test(input)?'zh-TW':'en',...(region?{includedRegionCodes:[region]}:{}),...(bias(body.near)?{locationBias:bias(body.near)}:{})}});
+    const data=await google('places:autocomplete',{method:'POST',body:{input,sessionToken:token(body.sessionToken),includeFutureOpeningBusinesses:true,languageCode:/[㐀-鿿]/.test(input)?'zh-TW':'en',...(region?{includedRegionCodes:[region]}:{}),...(bias(body.near)?{locationBias:bias(body.near)}:{})}});
     const suggestions=(data?.suggestions||[]).map(s=>s.placePrediction).filter(p=>placeId(p?.placeId)).slice(0,6).map(p=>({placeId:p.placeId,name:text(p.structuredFormat?.mainText?.text||p.text?.text,200),address:text(p.structuredFormat?.secondaryText?.text)})).filter(s=>s.name);
     return reply(200,{suggestions});
    }
