@@ -49,6 +49,11 @@ test('plain-text answers are accepted, and the 2026 search tool falls back to th
  const data=await(await handler(request())).json();assert.equal(data.text,'Hello!');
  assert.deepEqual(claude().map(b=>b.tools.at(-1).type),['web_search_20260209','web_search_20250305']);
 });
+test('an empty reply call is asked for again instead of showing nothing',async()=>{
+ const {handler,claude}=harness({turns:[{stop_reason:'tool_use',content:[tool('reply',{},'r1')]},{stop_reason:'tool_use',content:[tool('reply',{text:'Second try works.'},'r2')]}]});
+ const data=await(await handler(request())).json();assert.equal(data.text,'Second try works.');
+ const retry=claude()[1].messages.at(-1).content[0];assert.equal(retry.tool_use_id,'r1');assert.equal(retry.is_error,true);
+});
 test('bad origins, bad trip links, quotas and missing setup stop before any AI call',async()=>{
  const {handler,claude}=harness({turns:[]});
  assert.equal((await handler(request(body,'https://evil.example'))).status,403);
