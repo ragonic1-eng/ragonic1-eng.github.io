@@ -40,6 +40,9 @@ with sync_playwright() as p:
  # Keyboard: arrow to the option and press Enter; the activity name fills from an empty title, and travel legs appear.
  page.locator('#title').fill('');page.locator('#placeQuery').press('ArrowDown');page.locator('#placeQuery').press('Enter');expect(page.locator('#placeSelected')).to_contain_text('Booking requirement not confirmed');assert page.locator('#placeSelected script').count()==0
  assert page.locator('#title').input_value().startswith('Taipei 101');expect(page.locator('#journey')).to_contain_text('km');assert route_calls
+ # A poor closest guess is shown apart from exact matches, never auto-picked by Enter, with a Google Maps fallback.
+ page.locator('#changePlace').click();page.locator('#placeQuery').fill('suhu cafe');expect(page.locator('.weak-heading')).to_be_visible();expect(page.locator('.place-option.is-weak')).to_have_count(1);expect(page.locator('#placeMessage')).to_contain_text('isn’t on the free map exactly')
+ assert page.locator('#placeOptionGoogle').count()==0;expect(page.locator('#placeResults [role=option]').first).to_have_attribute('data-ask-orbit','');page.locator('#placeQuery').press('Enter');expect(page.locator('#placeMessage')).to_contain_text('shared trip link');expect(page.locator('#placeSelected')).to_contain_text('Taipei 101');page.locator('#placeQuery').fill('suhu cafe');expect(page.locator('.weak-heading')).to_be_visible();page.locator('#placeQuery').press('Escape');expect(page.locator('#placeResults')).to_be_hidden();page.locator('#changePlace').click()
  # Routing failure falls back to a labelled estimate.
  ctx.unroute(OSRM);ctx.route(OSRM,lambda r:r.abort());page.locator('#changePlace').click();page.locator('#placeQuery').fill('Elsewhere park');expect(page.locator('[data-place-result]')).to_have_count(1);page.locator('[data-place-result]').click();expect(page.locator('#journey')).to_contain_text('rough estimate')
  # Map outage keeps local suggestions and explains the fallback.
