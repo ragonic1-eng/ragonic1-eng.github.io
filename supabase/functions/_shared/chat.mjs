@@ -141,7 +141,10 @@ export function createChatHandler({env,fetcher=fetch,now=()=>Date.now()}){
     const e=Error(response.status===429?'PROVIDER_LIMIT':'PROVIDER');e.detail='HTTP '+response.status+' '+detail.slice(0,300);throw e;
    }
    const message=await response.json();const content=Array.isArray(message?.content)?message.content:[];
-   const final=content.find(b=>b?.type==='tool_use'&&b.name==='reply');if(final)return final.input;
+   const final=content.find(b=>b?.type==='tool_use'&&b.name==='reply');
+   // Diagnostics: what came back each round (block types, stop reason, reply fields), never the content itself.
+   log('round',JSON.stringify({round,stop:message?.stop_reason,blocks:content.map(b=>b?.type+(b?.name?':'+b.name:'')),reply:final?(typeof final.input==='object'?Object.keys(final.input||{}):typeof final.input):null,textLen:typeof final?.input?.text==='string'?final.input.text.length:null}));
+   if(final)return typeof final.input==='string'?(()=>{try{return JSON.parse(final.input)}catch{return {text:final.input}}})():final.input;
    const calls=content.filter(b=>b?.type==='tool_use'&&b.name==='find_places');
    messages=[...messages,{role:'assistant',content}];
    if(calls.length){messages.push({role:'user',content:await Promise.all(calls.map(async c=>({type:'tool_result',tool_use_id:c.id,content:JSON.stringify(await findPlaces(c.input))})))});continue}
