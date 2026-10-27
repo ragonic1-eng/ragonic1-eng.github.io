@@ -178,16 +178,15 @@ body.map-open .map-toggle{display:none}
 .place-rating{margin:0 0 6px;font-weight:600;color:#3d342a}.place-rating>span:first-child{color:#e0a000}.place-rating span:last-child{font-weight:500;color:#6b6257}
 .place-attribution{margin:6px 0 0;font-size:11px;color:#6b6257}
 .place-hours{white-space:pre-line}
-/* Orbit chat: floating robot Spitz and its chat panel. */
+/* Orbit chat: floating chibi donkey and its chat panel. */
 .orbit-pal{position:fixed;right:22px;bottom:22px;z-index:19;width:64px;height:64px;min-height:0;padding:4px;border-radius:50%;border:2px solid #d8c8ea;background:radial-gradient(circle at 35% 30%,#fff 0,#f6ecff 55%,#ead9fb 100%);box-shadow:0 8px 22px #54426c40;animation:orbit-float 3.2s ease-in-out infinite}
 .orbit-pal:hover{border-color:#b9a0d6}.orbit-pal:focus-visible{outline:3px solid #9b7fc2;outline-offset:3px}
-.orbit-pal .orbit-dog{width:100%;height:100%;display:block}
+.orbit-pal .orbit-mascot{width:100%;height:100%;display:block}
 .orbit-pal-hint{position:absolute;right:70px;bottom:18px;white-space:nowrap;background:#463f66;color:#fff;font-size:13px;font-weight:700;padding:6px 11px;border-radius:12px 12px 2px 12px;box-shadow:0 4px 12px #463f6640}
-.dog-antenna circle{animation:orbit-glow 1.8s ease-in-out infinite}.dog-eyes{animation:orbit-blink 5s infinite;transform-origin:32px 33px}
+.mascot-eyes{animation:orbit-blink 5s infinite;transform-origin:32px 33px}
 @keyframes orbit-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
-@keyframes orbit-glow{0%,100%{fill:#ff8fc8}50%{fill:#ffd1e8}}
 @keyframes orbit-blink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.15)}}
-@media(prefers-reduced-motion:reduce){.orbit-pal,.dog-antenna circle,.dog-eyes,.orbit-dots i{animation:none}}
+@media(prefers-reduced-motion:reduce){.orbit-pal,.mascot-eyes,.orbit-dots i{animation:none}}
 body.orbit-chat-open .orbit-pal{animation:none;transform:scale(.92)}
 .orbit-chat{position:fixed;right:22px;bottom:96px;z-index:46;width:min(400px,calc(100vw - 24px));height:min(620px,calc(100vh - 130px));display:flex;flex-direction:column;background:#fffafd;border:1px solid #dccbea;border-radius:22px;box-shadow:0 18px 48px #46385e40;overflow:hidden}
 .orbit-chat[hidden]{display:none}
@@ -257,7 +256,7 @@ body.map-open .orbit-pal{display:none}
 .drag-guide button{min-height:32px;min-width:32px;padding:2px 6px;border:0;background:none;color:#8a7f96}
 .orbit-status{font-size:13px}
 @media(max-width:740px){.activity{padding:9px 54px 9px 11px}}
-/* Orbit's "Ask me" bubble sits above the dog so it never covers the Map button. */
+/* Orbit's "Ask me" bubble sits above Orbit so it never covers the Map button. */
 .orbit-pal-hint{right:0;bottom:72px;border-radius:12px 12px 2px 12px}
 @media(max-width:740px){.orbit-pal-hint{right:0;bottom:64px}}
 /* Problems: what happened, why, and what to do. */
@@ -267,3 +266,4 @@ body.map-open .orbit-pal{display:none}
 .orbit-failed{background:none;border:0;padding:0;max-width:92%}
 .place-message .problem,.combo-note .problem{margin-top:4px}
 .orbit-card.orbit-error{padding:0;border:0;background:none}
+
