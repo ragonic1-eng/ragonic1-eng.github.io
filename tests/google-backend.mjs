@@ -27,7 +27,7 @@ test('autocomplete sends the key only to Google, limits it to Taiwan, and return
  const {handler,google}=harness();const r=await handler(request({action:'autocomplete',input:'紅色琉璃瓦',country:'tw',sessionToken:'abcd1234abcd1234'}));
  assert.equal(r.status,200);const data=await r.json();assert.deepEqual(data.suggestions,[{placeId:ID,name:'紅色琉璃瓦草莓園',address:'苗栗縣大湖鄉'}]);
  const [call]=google();assert.equal(call.options.headers['X-Goog-Api-Key'],'test-google-key');const sent=JSON.parse(call.options.body);
- assert.deepEqual(sent.includedRegionCodes,['tw']);assert.equal(sent.sessionToken,'abcd1234abcd1234');assert.equal(sent.languageCode,'zh-TW');
+ assert.deepEqual(sent.includedRegionCodes,['tw']);assert.equal(sent.includeFutureOpeningBusinesses,true);assert.equal(sent.sessionToken,'abcd1234abcd1234');assert.equal(sent.languageCode,'zh-TW');
  assert.ok(!JSON.stringify(data).includes('test-google-key'));
 });
 test('details become a planner place with Chinese name, pin, hours, rating, photo and the Google Maps link, then are cached',async()=>{
@@ -45,7 +45,7 @@ test('cached details and pins skip Google entirely',async()=>{
 test('locate uses an IDs-only text search, then the cheapest details for the pin',async()=>{
  const {handler,google}=harness();const data=await(await handler(request({action:'locate',query:'紅色琉璃瓦草莓園 苗栗縣大湖鄉',country:'tw'}))).json();
  assert.deepEqual(data.point,{lat:24.3912,lon:120.8721,googleId:ID,address:zh.formattedAddress});
- const [search,detail]=google();assert.equal(search.options.headers['X-Goog-FieldMask'],'places.id');assert.equal(detail.options.headers['X-Goog-FieldMask'],'id,location,formattedAddress');
+ const [search,detail]=google();assert.equal(search.options.headers['X-Goog-FieldMask'],'places.id');assert.equal(JSON.parse(search.options.body).includeFutureOpeningBusinesses,true);assert.equal(detail.options.headers['X-Goog-FieldMask'],'id,location,formattedAddress');
 });
 test('daily caps, bad origins, bad ids and a missing key never reach Google',async()=>{
  const capped=harness({allow:false});for(const body of [{action:'autocomplete',input:'farm'},{action:'details',placeId:ID},{action:'locate',query:'farm'}])assert.equal((await capped.handler(request(body))).status,429);
