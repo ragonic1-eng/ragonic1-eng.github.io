@@ -1,0 +1,458 @@
+{
+  "days": [
+    {
+      "name": "Touchdown, Taiwan",
+      "region": "Singapore → Taoyuan",
+      "date": "2026-12-07",
+      "start": 750,
+      "end": 1425,
+      "cards": [
+        {
+          "id": "home-to-airport",
+          "title": "Leave home → Changi Airport",
+          "notes": "",
+          "category": "travel",
+          "duration": 40,
+          "originalStart": 750,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "airport-play-checkin",
+          "title": "Airport check-in & playtime with the kids",
+          "notes": "",
+          "category": "kids",
+          "duration": 155,
+          "originalStart": 790,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-1-0",
+          "title": "EVA Air BR 216 · Singapore → Taipei",
+          "notes": "✈️ Flight to Taiwan: EVA Air BR 216 (SIN ➔ TPE). (Parent Note: Give the 2yo a pacifier or snack at 07:45 PM during the descent to help pop ears from cabin pressure drops).",
+          "category": "travel",
+          "duration": 270,
+          "originalStart": 945,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-1-1",
+          "title": "Hello, Taiwan · airport arrival",
+          "notes": "🛂 Airport Arrival: Clear immigration, collect 5 sets of bags, and gate-collect your double stroller.",
+          "category": "travel",
+          "duration": 60,
+          "originalStart": 1215,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-1-2",
+          "title": "Meet your private driver",
+          "notes": "🚗 Meet Driver: Load into your private 9-seater van and depart Taoyuan International Airport.",
+          "category": "travel",
+          "duration": 30,
+          "originalStart": 1275,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-1-3",
+          "title": "Bento boxes & bedtime milk",
+          "notes": "🍽️ Dinner Stop: Quick stop at a spacious Taoyuan 7-Eleven or FamilyMart. Grab hot microwaveable bento boxes (Japanese beef bowls/chicken rice) and bedtime milk for the kids.",
+          "category": "food",
+          "duration": 15,
+          "originalStart": 1305,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-1-4",
+          "title": "Chao Motels · check-in",
+          "notes": "🏨 Hotel Check-In: Check into Chao Motels (潮旅館) in Taoyuan. Eat comfortably in your suite and rest.",
+          "category": "hotel",
+          "duration": 90,
+          "originalStart": 1335,
+          "optional": false,
+          "estimated": true
+        }
+      ]
+    },
+    {
+      "name": "Little explorers",
+      "region": "Miaoli → Cingjing",
+      "date": "2026-12-08",
+      "start": 510,
+      "end": 1320,
+      "cards": [
+        {
+          "id": "activity-2-0",
+          "title": "Road trip to Miaoli",
+          "notes": "🚗 Morning Transit: Check out of Taoyuan, load suitcases into the van trunk, and drive 1.5 hours south to Miaoli.",
+          "category": "travel",
+          "duration": 120,
+          "originalStart": 510,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-2-1",
+          "title": "Flying Cow Ranch",
+          "notes": "🐄 Activity 1: Flying Cow Ranch (飛牛牧場). A flat pasture paradise. The 6yo can feed calves milk bottles, pet sheep, and run on the grass safely.",
+          "category": "kids",
+          "duration": 90,
+          "originalStart": 630,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-2-2",
+          "title": "Lunch at Flying Cow Ranch",
+          "notes": "🍽️ Lunch: Flying Cow Ranch Restaurant. Enjoy a spacious family lunch inside the ranch eatery (fresh milk hot pots and kid-friendly fried chicken baskets).",
+          "category": "food",
+          "duration": 60,
+          "originalStart": 720,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-2-3",
+          "title": "Mountain-bound · nap time",
+          "notes": "🚗 Afternoon Transit: Drive 2 hours toward the Nantou mountain base. (The kids take their mandatory afternoon car nap here).",
+          "category": "travel",
+          "duration": 120,
+          "originalStart": 810,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-2-4",
+          "title": "Matsubayashi Monster Village",
+          "notes": "👺 Activity 2: Matsubayashi Monster Village (妖怪村). A completely flat, stroller-friendly Japanese-themed fairytale walking avenue filled with red lanterns, cute cartoon monster statues, and floating bubble shows. Grab warm local charcoal egg tarts for the kids.",
+          "category": "kids",
+          "duration": 90,
+          "originalStart": 930,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-2-5",
+          "title": "Up to the Cingjing peaks",
+          "notes": "🚗 Mountain Highway Climb: Drive 2.5 hours up the winding highway to the Cingjing peaks.",
+          "category": "travel",
+          "duration": 150,
+          "originalStart": 1020,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-2-6",
+          "title": "Mountain resort & hot pot",
+          "notes": "🏨 Resort Check-In & 🍽️ Dinner: Check into your Cingjing mountain resort. Bundle the kids in thick winter jackets and head to Chun Da Di Hot Pot for a warm, nourishing mountain hot pot to combat the freezing evening alpine air.",
+          "category": "hotel",
+          "duration": 90,
+          "originalStart": 1170,
+          "optional": false,
+          "estimated": true
+        }
+      ]
+    },
+    {
+      "name": "Above the clouds",
+      "region": "Cingjing",
+      "date": "2026-12-09",
+      "start": 540,
+      "end": 1320,
+      "cards": [
+        {
+          "id": "activity-3-0",
+          "title": "Qingjing Farm · meet the sheep",
+          "notes": "🐑 Activity 1: Qingjing Farm (Green Green Grasslands). Catch the early morning open-air sheep shearing show and walk among the mountain sheep. (Parent Note: Ensure the kids wear hats and gloves; the December morning wind on the slopes is biting).",
+          "category": "kids",
+          "duration": 150,
+          "originalStart": 540,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-3-1",
+          "title": "Qingjing Skywalk",
+          "notes": "🌉 Activity 2: Qingjing Skywalk. Walk along a spectacular, wide steel boardwalk that is 100% flat and double-stroller friendly for stunning mountain photos.",
+          "category": "kids",
+          "duration": 60,
+          "originalStart": 690,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-3-2",
+          "title": "Inako Valley View Restaurant",
+          "notes": "🍽️ Lunch: Inako Valley View Restaurant. Panoramic mountain valley seating specializing in succulent local Taiwanese roasted whole chicken.",
+          "category": "food",
+          "duration": 90,
+          "originalStart": 780,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-3-3",
+          "title": "Cingjing Swiss Garden",
+          "notes": "🌷 Activity 3: Cingjing Swiss Garden. A flat, quiet, beautifully manicured flower park with wide paths perfect for a 2yo and 6yo to stretch their legs safely.",
+          "category": "kids",
+          "duration": 90,
+          "originalStart": 900,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-3-4",
+          "title": "Dinner at Carton King",
+          "notes": "🍽️ Dinner: Cingjing Carton King Restaurant (紙箱王). A whimsical indoor theme restaurant where the tables, chairs, and plates are made of ultra-sturdy cardboard. Flat, highly spacious, and an absolute hit for a 6yo.",
+          "category": "food",
+          "duration": 90,
+          "originalStart": 1080,
+          "optional": false,
+          "estimated": false
+        }
+      ]
+    },
+    {
+      "name": "Sweet little detours",
+      "region": "Miaoli → Yilan",
+      "date": "2026-12-10",
+      "start": 510,
+      "end": 1320,
+      "cards": [
+        {
+          "id": "activity-4-0",
+          "title": "Down the mountain to Miaoli",
+          "notes": "🚗 Drive Down Mountain: Check out of Cingjing and drive 2.5 hours down the mountain roads back to the Miaoli valley.",
+          "category": "travel",
+          "duration": 150,
+          "originalStart": 510,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-4-1",
+          "title": "Winter strawberry picking",
+          "notes": "🍓 Activity 1: Winter Strawberry Picking. Pick fresh winter strawberries right off the local vines with the kids.",
+          "category": "kids",
+          "duration": 90,
+          "originalStart": 660,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-4-2",
+          "title": "Schokolake · chocolate DIY & lunch",
+          "notes": "🍫 Activity 2 & 🍽️ Lunch: Schokolake Country House. Head inside the factory grounds for child-friendly DIY chocolate assembly workshops. Enjoy a relaxed, air-conditioned lunch right inside the Schokolake Cafe (pastas and light family meals).",
+          "category": "food",
+          "duration": 90,
+          "originalStart": 750,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-4-3",
+          "title": "Road trip to Yilan · nap time",
+          "notes": "🚗 Highway Run: Drive directly east through the national highway tunnels straight into Yilan (2 hours). Skip Taipei completely. (Kids take their afternoon car nap).",
+          "category": "travel",
+          "duration": 120,
+          "originalStart": 840,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-4-4",
+          "title": "Yilan villa · settle in",
+          "notes": "🏨 Yilan Resort Check-In: Check into your spacious 2-Bedroom Yilan Minsu or Hot Spring Villa. Your helper unpacks into her private bedroom, and your family settles into the master room.",
+          "category": "hotel",
+          "duration": 90,
+          "originalStart": 990,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-4-5",
+          "title": "Luodong roast chicken dinner",
+          "notes": "🍽️ Dinner: Luodong Classic Brick-Oven Roasted Chicken. Dine at a massive, retro-themed indoor family restaurant specializing in wood-fired crispy roast chicken. Optional stroller stroll through the wide avenues of Luodong Night Market afterward.",
+          "category": "food",
+          "duration": 90,
+          "originalStart": 1110,
+          "optional": false,
+          "estimated": true
+        }
+      ]
+    },
+    {
+      "name": "Made for little hands",
+      "region": "Yilan",
+      "date": "2026-12-11",
+      "start": 570,
+      "end": 1320,
+      "cards": [
+        {
+          "id": "activity-5-0",
+          "title": "Zhang Mei Ama’s Farm",
+          "notes": "🦫 Activity 1: Zhang Mei Ama’s Farm (張美阿嬤農場). Spotlessly clean, flat, and paved pasture zones. The kids can feed gentle capybaras, giant tortoises, and sika deer.",
+          "category": "kids",
+          "duration": 150,
+          "originalStart": 570,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-5-1",
+          "title": "Lunch at Shu Lan Restaurant",
+          "notes": "🍽️ Lunch: Shu Lan Restaurant (宜蘭蜀蘭餐廳). Traditional, non-greasy Taiwanese comfort plates and family-style noodle dishes right down the street from the farms.",
+          "category": "food",
+          "duration": 75,
+          "originalStart": 750,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-5-2",
+          "title": "Plum Blossom Lake · family cycling",
+          "notes": "🚴‍♂️ [⭐ OPTIONAL BACKUP] Activity 2: Plum Blossom Lake (梅花湖). Rent a 4-wheeled covered canopy family pedal surrey. You, your husband, the helper, and the kids sit together out of the sun and pedal around the flat water path. (If the kids are fussy or it rains, skip this and drive straight to the factory).",
+          "category": "kids",
+          "duration": 60,
+          "originalStart": 825,
+          "optional": true,
+          "estimated": false
+        },
+        {
+          "id": "activity-5-3",
+          "title": "Lucky Art Crayon Factory",
+          "notes": "🖍️ Activity 3: Lucky Art Crayon Factory (蠟藝蠟筆城堡). A massive indoor crayon castle. Features 4 interactive DIY stations where the kids make their own custom markers and crayons to take home. Perfect for a chilly December afternoon.",
+          "category": "kids",
+          "duration": 105,
+          "originalStart": 915,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-5-4",
+          "title": "Jiaoxi dinner & hot springs",
+          "notes": "🏨 🍽️ Dinner: Jiaoxi Hot Spring Town Local Eats. Return to your Yilan resort zone for local hot spring noodle bowls and fresh fruit cuts, followed by a relaxing private hot spring bath.",
+          "category": "food",
+          "duration": 90,
+          "originalStart": 1110,
+          "optional": false,
+          "estimated": true
+        }
+      ]
+    },
+    {
+      "name": "A little city magic",
+      "region": "Taipei",
+      "date": "2026-12-12",
+      "start": 510,
+      "end": 1320,
+      "cards": [
+        {
+          "id": "activity-6-0",
+          "title": "Early drive to Taipei",
+          "notes": "🚗 Morning Transit: Check out early from Yilan. Driving early beats the heavy weekend rush of Taipei locals heading back through the tunnel.",
+          "category": "travel",
+          "duration": 60,
+          "originalStart": 510,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-6-1",
+          "title": "Wooderful Life Indoor Playground",
+          "notes": "🌲 Activity 1: Wooderful Life Indoor Playground (Xindian). Arrive at Yulon City Mall right at opening. The kids spend 2 full hours jumping, sliding, and playing inside the elite indoor wooden forest playground.",
+          "category": "kids",
+          "duration": 120,
+          "originalStart": 585,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-6-2",
+          "title": "Lunch at LOCOFOOD",
+          "notes": "🍽️ Lunch: LOCOFOOD Longjiang Picnic Store (樂口福). Feast on hot, crispy iron-skillet pork and cheese danbing rolls with a safe buffer before the kitchen shuts at 02:00 PM.",
+          "category": "food",
+          "duration": 75,
+          "originalStart": 735,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-6-3",
+          "title": "Zhongshan · shopping & stroller naps",
+          "notes": "🛍️ Activity 2: The Double-Stroller Crash & Split-Team Shopping Loop. (Heavy lunch + heavy play = both kids crash out completely cold in the double stroller).\n• Shopping Team (You + Helper): Spend 3 hours browsing local premium fashion labels (Queen Shop, Meier.Q, Mouggan) along Chifeng Street in the car-free Zhongshan Linear Park.\n• Chill Team (Husband): Pushes the sleeping kids to Melange Café next door for strawberry waffles and tea. When the kids wake up around 03:30 PM, he moves them to the car-free Linear Park Playground right outside the café doors so the 6yo can climb the grass hills safely. (Rain backup: He rolls the stroller down the elevator into the flat, warm indoor R79 Underground Book Street).",
+          "category": "shopping",
+          "duration": 180,
+          "originalStart": 810,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-6-4",
+          "title": "Jolley Hotel · check-in",
+          "notes": "🏨 Taipei Hotel Check-In: Check into Jolley Hotel (or your chosen 2-Bedroom setup). Drop off your boutique shopping bags and freshen up.",
+          "category": "hotel",
+          "duration": 60,
+          "originalStart": 1020,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-6-5",
+          "title": "Shilin Night Market finale",
+          "notes": "🍽️ Dinner & Sights: Shilin Night Market Grand Finale. Head straight down into the spacious, air-conditioned Shilin Underground Food Court for a comfortable sit-down dinner of traditional beef noodles and bubble tea. Head upstairs afterward so the 6yo can play the carnival pinball games to end the holiday!",
+          "category": "food",
+          "duration": 90,
+          "originalStart": 1110,
+          "optional": false,
+          "estimated": true
+        }
+      ]
+    },
+    {
+      "name": "Until next time",
+      "region": "Taipei → Singapore",
+      "date": "2026-12-13",
+      "start": 375,
+      "end": 1320,
+      "cards": [
+        {
+          "id": "activity-7-0",
+          "title": "Wake up & final bag checks",
+          "notes": "🧳 Wake Up & Pack: Perform final bag checks. Skip all city breakfast stops to protect your international flight timeline.",
+          "category": "travel",
+          "duration": 30,
+          "originalStart": 375,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-7-1",
+          "title": "Private airport transfer",
+          "notes": "🚗 Private Airport Transfer: Private 9-seater charter picks you up directly at your hotel lobby door and drives straight to the terminal.",
+          "category": "travel",
+          "duration": 45,
+          "originalStart": 405,
+          "optional": false,
+          "estimated": false
+        },
+        {
+          "id": "activity-7-2",
+          "title": "Airport check-in · EVA Air BR 215",
+          "notes": "🛫 Airport Check-In: Arrive at Taoyuan International Airport Terminal 2. Check in bags, pass security with your double stroller, and grab fresh pastries inside the departure lounge. Flight EVA Air BR 215 (TPE ➔ SIN) departs cleanly at 09:35 AM.",
+          "category": "hotel",
+          "duration": 125,
+          "originalStart": 450,
+          "optional": false,
+          "estimated": false
+        }
+      ]
+    }
+  ],
+  "airportMorningAdded": true
+}

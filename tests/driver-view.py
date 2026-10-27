@@ -48,8 +48,8 @@ with sync_playwright() as p:
  language=json.loads(Path('driver-zh.json').read_text());seed=json.loads(Path('trip.json').read_text())
  for d in seed['days']:
   for c in d['cards']:
-   assert c['title'] in language
-   assert not c['notes'] or c['notes'] in language
+   assert c['title'] in language or c.get('driverTitle'),c['id']
+   assert not c['notes'] or c['notes'] in language or c.get('driverNotes'),c['id']
  for i in range(7):driver.locator(f'[data-day="{i}"]').click();expect(driver.locator('#date')).not_to_be_empty()
  for width in [320,390,430,768,1440]:
   driver.set_viewport_size({'width':width,'height':844});assert driver.evaluate('document.documentElement.scrollWidth<=innerWidth')

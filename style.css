@@ -138,3 +138,4 @@ input,select,textarea{font-weight:500}input::placeholder,textarea::placeholder{f
 .place-unverified{font-size:12.5px;color:#7a5a12;background:#fff6e3;border-radius:9px;padding:6px 9px;margin:0 0 10px!important}
 .weak-heading{color:#8a5b12!important;border-top:1px solid #f0e2c8;padding-top:8px}.place-option.is-weak strong{color:#5f5568}.place-option.is-weak .option-icon{color:#c79a4d}
 .ask-orbit.is-first{border-top:0;background:#f6effd;margin:0 0 4px}.ask-orbit.is-first strong{color:#5a3f73}
+.schedule-update{border:1px solid #d9c3ec;background:#f7effd;border-radius:14px;padding:12px 14px;margin:0 0 12px;font-size:14px;color:#4b3c5c}.schedule-update p{margin:0 0 10px;line-height:1.5}.schedule-update-actions{display:flex;gap:8px;flex-wrap:wrap}.schedule-update-actions .primary{flex:1;min-width:180px}

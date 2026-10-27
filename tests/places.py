@@ -1,6 +1,6 @@
 from urllib.parse import urlparse,parse_qs
 from playwright.sync_api import sync_playwright,expect
-from ui_helpers import expand_card
+from ui_helpers import expand_card,use_previous_plan
 base='http://127.0.0.1:8000'
 PHOTON='https://photon.komoot.io/**';OSRM='https://router.project-osrm.org/**'
 def feature(name,lon,lat,**props):return {'type':'Feature','geometry':{'type':'Point','coordinates':[lon,lat]},'properties':{'osm_type':'W','osm_id':100,'name':name,'city':'Taipei','country':'Taiwan','osm_value':'attraction',**props}}
@@ -16,7 +16,7 @@ with sync_playwright() as p:
  b=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox']);ctx=b.new_context(viewport={'width':390,'height':844},is_mobile=True,has_touch=True,reduced_motion='reduce');page=ctx.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
  orbit=[];ctx.route('**/functions/v1/research-place',lambda r:(orbit.append(r.request.url),r.abort()))
  ctx.route(PHOTON,photon);ctx.route(OSRM,osrm)
- page.goto(base);page.wait_for_selector('.activity');page.locator('[data-day="1"]').click()
+ page.goto(base);page.wait_for_selector('.activity');use_previous_plan(page);page.locator('[data-day="1"]').click()
  farm=lambda:page.locator('.activity').filter(has=page.get_by_role('heading',name='Flying Cow Ranch',exact=True))
  # Known places are suggested from the activity, chosen explicitly, then pinned and measured.
  expand_card(farm());farm().locator('[data-place-edit]').click();expect(page.locator('#placeResults')).to_contain_text('苗栗縣通霄鎮南和里166號');assert page.locator('#placeSelected').inner_text()==''
