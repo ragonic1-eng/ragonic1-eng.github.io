@@ -43,10 +43,29 @@ def run(viewport,mobile,shot):
   replies.append({'text':'Remove it?','changes':[{'op':'remove','cardId':hotel['id']},{'op':'move','cardId':hotel['id'],'day':2,'start':'25:99'}]})
   page.locator('#orbitChatInput').fill('remove the hotel');page.locator('#orbitChatSend').click();expect(page.locator('[data-orbit-apply]')).to_have_count(1)
   page.locator('[data-orbit-decline]').click();expect(page.locator('.orbit-change-status').last).to_have_text('Not applied.');assert page.evaluate("()=>JSON.stringify(state)")==before
+  # Remember: Orbit suggests a note; nothing is saved until "Save to memory", and the text can be edited first.
+  saved=[];ctx.unroute('**/functions/v1/orbit-chat')
+  def chat2(route):
+   body=route.request.post_data_json
+   if body.get('action')=='remember':saved.append(body);return route.fulfill(json={'saved':True,'note':body['note']})
+   sent.append(body);route.fulfill(json=replies.pop(0))
+  ctx.route('**/functions/v1/orbit-chat',chat2)
+  replies.append({'text':'Noted — I’ll plan around naps.','remember':['The 2-year-old naps around 13:00–15:00.']})
+  page.locator('#orbitChatInput').fill('Our toddler naps 1 to 3pm');page.locator('#orbitChatSend').click()
+  box=page.locator('[data-orbit-note]').last;expect(box).to_have_value('The 2-year-old naps around 13:00–15:00.');assert not saved
+  box.fill('The 2-year-old naps 13:00–15:00 in the car or hotel.');page.locator('[data-orbit-save]').last.click()
+  expect(page.locator('.orbit-memory-done').last).to_contain_text('naps 13:00–15:00 in the car or hotel');assert saved[-1]=={'action':'remember','roomId':'11111111-1111-1111-1111-111111111111','roomKey':'a'*64,'note':'The 2-year-old naps 13:00–15:00 in the car or hotel.'},saved
+  # Any of the person's own messages can be remembered too; Cancel discards; a refused note shows why.
+  page.locator('[data-orbit-remember]').last.click();expect(page.locator('[data-orbit-note]').last).to_have_value('Our toddler naps 1 to 3pm');expect(page.locator('[data-orbit-note]').last).to_be_focused()
+  page.locator('[data-orbit-forget]').last.click();expect(page.locator('[data-orbit-remember]').last).to_be_visible()
+  ctx.unroute('**/functions/v1/orbit-chat');ctx.route('**/functions/v1/orbit-chat',lambda r:r.fulfill(status=400,json={'error':'Notes can’t include numbers like phone or booking IDs, emails or links — the memory file is public.'}))
+  page.locator('[data-orbit-remember]').last.click();page.locator('[data-orbit-save]').last.click();expect(page.locator('.orbit-memory-error')).to_contain_text('the memory file is public');expect(page.locator('[data-orbit-save]').last).to_be_enabled()
+  page.locator('[data-orbit-forget]').last.click();assert len(saved)==1
+  expect(page.locator('#orbitChatLog a[href*="orbit-knowledge.md"]')).to_have_count(1)
   # Errors are shown in the chat; the conversation survives a reload on this tab; Escape closes.
   ctx.unroute('**/functions/v1/orbit-chat');ctx.route('**/functions/v1/orbit-chat',lambda r:r.fulfill(status=429,json={'error':'Orbit has answered a lot today. Try again tomorrow (UTC).'}))
   page.locator('#orbitChatInput').fill('anything else?');page.locator('#orbitChatSend').click();expect(page.locator('.orbit-failed')).to_contain_text('answered a lot today')
-  page.reload();page.wait_for_selector('.activity');page.locator('#orbitPal').click();expect(page.locator('.orbit-me')).to_have_count(5)
+  page.reload();page.wait_for_selector('.activity');page.locator('#orbitPal').click();expect(page.locator('.orbit-me')).to_have_count(6)
   page.keyboard.press('Escape');expect(page.locator('#orbitChat')).to_be_hidden();expect(page.locator('#orbitPal')).to_be_focused()
   # The model's text is never rendered as HTML.
   page.evaluate("()=>{sessionStorage.setItem('little-orbit-chat',JSON.stringify([{role:'assistant',text:'<img src=x onerror=alert(1)> **hi**'}]))}");page.reload();page.wait_for_selector('.activity');page.locator('#orbitPal').click()

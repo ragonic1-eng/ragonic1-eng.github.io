@@ -225,3 +225,12 @@ body.orbit-chat-open .orbit-pal{animation:none;transform:scale(.92)}
 }
 body.map-open .orbit-pal{display:none}
 .orbit-change-status button{min-height:34px;padding:4px 10px;margin-left:6px;font-size:12.5px;border-radius:10px}
+.orbit-remember{display:block;margin:6px 0 0 auto;min-height:30px;padding:2px 9px;font-size:12px;border-radius:999px;background:#ffffff26;border-color:#ffffff66;color:#fff}
+.orbit-memory{align-self:stretch;margin:-2px 0 2px 12%;padding:10px;border-radius:14px;background:#fff8e8;border:1px solid #f0d9a8}
+.orbit-bot .orbit-memory{margin:8px 0 0}
+.orbit-memory label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-weight:700;color:#7a5a12}
+.orbit-memory textarea{width:100%;resize:vertical;font-size:15px;font-weight:500;color:#343b4b;padding:8px 10px;border-radius:10px;border:1px solid #e6cf9b;background:#fff}
+.orbit-memory-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}.orbit-memory-actions button{min-height:38px;padding:6px 12px}
+.orbit-memory-error{margin:6px 0 0;color:#a43a3a;font-size:13px}
+.orbit-memory-done{align-self:flex-end;margin:0;font-size:12.5px;font-weight:700;color:#7a5a12}
+.orbit-bot .orbit-memory-done{align-self:auto;margin-top:8px}
