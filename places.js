@@ -26,22 +26,43 @@
   const address=[street,p.district,p.city,p.county,p.state,p.country].filter((v,i,a)=>v&&a.indexOf(v)===i).join(', ');
   return {id:kind?`osm-${kind}-${p.osm_id}`:'map-'+lat+','+lon,name:String(p.name||street||area).slice(0,200),address,description:`A ${type}${area?' in '+area:''}.`,lat:Number(lat),lon:Number(lon),source:kind&&/^\d+$/.test(String(p.osm_id))?`https://www.openstreetmap.org/${kind}/${p.osm_id}`:'https://www.openstreetmap.org/',bookingNote:'Booking requirement not confirmed yet.',checked:today(),planning:{category:OSM_CATEGORY[p.osm_value]||''}};
  }
- async function suggest(q,{limit=6,signal}={}){
+ async function suggest(q,{limit=6,signal,bias=near}={}){
   const config=await settings();if(config.enabled===false||!config.suggestUrl)throw Error('off');
   const url=new URL(config.suggestUrl);if(url.protocol!=='https:')throw Error('off');
   const area=AREAS[el('placeCountry').value],params={q,limit:String(limit),lang:'en'};
-  if(area)params.bbox=area.join(',');if(hasPoint(near)){params.lat=near.lat.toFixed(4);params.lon=near.lon.toFixed(4)}
+  if(area)params.bbox=area.join(',');if(hasPoint(bias)){params.lat=bias.lat.toFixed(4);params.lon=bias.lon.toFixed(4)}
   url.search=new URLSearchParams(params);
   const response=await fetch(url,{signal,referrerPolicy:'strict-origin-when-cross-origin'});if(!response.ok)throw Error();const data=await response.json();
   return (Array.isArray(data?.features)?data.features:[]).map(fromPhoton).filter(p=>valid(p)&&hasPoint(p));
  }
+ // Small places are often missing from the free map. Find an approximate point from the address, trimmed until the map
+ // recognises it (house number → hamlet → village → township), then look for the place by name near it. Without an exact
+ // match the approximate point is used and labelled, so drive times still work.
+ function addressQueries(address){
+  const a=String(address||'').trim(),out=[];if(!a)return out;
+  if(CJK.test(a)&&!a.includes(',')){
+   const m=a.replace(/\s/g,'').match(/^(?:\d{3,6})?(?:台灣|臺灣)?(.+?[縣市])?(.+?[鄉鎮區市])?(.+?[村里])?([^\d]*)/)||[];const [,county,town,village,rest]=m;
+   if(rest&&town)out.push(rest.replace(/[路街段巷弄號].*$/,'')+' '+town);if(village&&town)out.push(village+' '+town);if(town)out.push(town+(county?' '+county:''));
+  }else{
+   const parts=a.split(/\s*,\s*/).map(x=>x.replace(/\bNo\.?\s*/i,'').replace(/\b\d[\d-]*\b/g,'').trim()).filter(x=>x&&!/^(taiwan|singapore|r\.?o\.?c\.?)$/i.test(x));
+   for(let i=0;i<parts.length-1;i++)out.push(parts.slice(i).join(', '));
+  }
+  return [...new Set(out.filter(q=>q.trim().length>1))];
+ }
  async function locate(place,signal){
   if(hasPoint(place))return {lat:place.lat,lon:place.lon};
-  const q=[place.nameZh||place.name,place.address].filter(Boolean).join(' ').slice(0,200),key=el('placeCountry').value+':'+norm(q);
+  const name=place.nameZh||place.name,key=el('placeCountry').value+':'+norm(name+'|'+(place.address||''));
   if(pointCache.has(key))return pointCache.get(key);
-  const t=timeout(signal,8000);
-  try{const [found]=await suggest(q,{limit:1,signal:t.signal});const point=found?{lat:found.lat,lon:found.lon}:null;pointCache.set(key,point);return point}
-  catch{if(signal?.aborted)throw Error('Skipped.');return null}finally{t.done()}
+  const t=timeout(signal,15000);let approx=null;
+  try{
+   for(const q of addressQueries(place.address)){const [hit]=await suggest(q,{limit:1,signal:t.signal,bias:null});if(hit){approx={lat:hit.lat,lon:hit.lon,approx:hit.name};break}}
+   let point=null;
+   for(const n of [...new Set([place.name,place.nameZh].filter(Boolean))]){
+    const hits=await suggest(placeName(n),{limit:3,signal:t.signal,bias:approx});
+    const hit=hits.find(h=>exact(h,placeName(n))&&(!approx||crowFlies(h,approx)<=5));if(hit){point={lat:hit.lat,lon:hit.lon};break}
+   }
+   point??=approx;pointCache.set(key,point);return point;
+  }catch{if(signal?.aborted)throw Error('Skipped.');return approx}finally{t.done()}
  }
  function crowFlies(a,b){const r=Math.PI/180,x=(b.lon-a.lon)*r*Math.cos((a.lat+b.lat)*r/2),y=(b.lat-a.lat)*r;return Math.hypot(x,y)*6371}
  async function travel(a,b,signal){
@@ -120,16 +141,16 @@
  }
  // The map search always returns its closest guess, even a poor one ("suhu cafe" → "85°C Bakery Cafe" on Su-Hua Highway).
  // A result is an exact match only if every searched word appears in its name; the rest are shown separately as guesses.
- function exact(p,q){const hay=norm([p.name,p.nameZh,...(p.aliases||[])].join(' '));return norm(q).split(/[\s,，、·]+/).filter(Boolean).every(w=>hay.includes(w))}
+ function exact(p,q){const hay=norm([p.name,p.nameZh,...(p.aliases||[])].join(' '));return norm(q).split(/[\s,，、·・‧]+/).filter(Boolean).every(w=>hay.includes(w))}
  function merge(local,remote,q){
   const seen=new Set(local.map(p=>norm(p.name))),fresh=remote.filter(p=>!seen.has(norm(p.name)));
   return [...local,...fresh.filter(p=>exact(p,q)),...fresh.filter(p=>!exact(p,q)).map(p=>({...p,weak:true}))].slice(0,8);
  }
  // Activity titles carry more than a place name ("紅色琉璃瓦草莓園 & SUHU Café (Dahu) · strawberries & lunch"). The map needs
- // just the name: skip "Lunch ·"-style labels and trailing descriptions, prefer a Chinese name in brackets, take the first of "A & B".
+ // just the name (Chinese names join parts with an unspaced "・": 清境農場・青青草原): skip "Lunch ·"-style labels and trailing descriptions, prefer a Chinese name in brackets, take the first of "A & B".
  const GENERIC=/^(breakfast|brunch|lunch|dinner|supper|snacks?|check[ -]?in|check[ -]?out|hotel rest|rest|pit stop|evening|nap|drive|depart|return)\b/i,CJK=/[\u3400-\u9fff]/;
  function placeName(text){
-  const parts=String(text||'').split(/\s+[·|｜]\s+/).map(s=>s.trim()).filter(Boolean);
+  const parts=String(text||'').split(/\s+[·|｜]\s+|\s*[・‧]\s*|(?<=[\u3400-\u9fff])·(?=[\u3400-\u9fff])/).map(s=>s.trim()).filter(Boolean);
   let name=parts.find(p=>!GENERIC.test(p))||parts[0]||'';
   const bracket=name.match(/[(（]([^()（）]+)[)）]/);
   name=bracket&&CJK.test(bracket[1])&&!CJK.test(name.replace(bracket[0],''))?bracket[1]:name.replace(/\s*[(（][^()（）]*[)）]/g,'');
@@ -193,13 +214,16 @@
   flow?.abort();const current=flow=new AbortController(),signal=current.signal,notes=[];
   showLoading('Getting '+place.name+' ready…',steps,{now:steps.some(s=>s.id==='research')});
   try{
-   step('locate','active');const point=await locate(draft,signal);if(point)Object.assign(draft,point);step('locate',point?'done':'skipped');if(!point)notes.push('Couldn’t pin it on the map, so travel times are unavailable.');
+   step('locate','active');let point=await locate(draft,signal);if(point)Object.assign(draft,point);step('locate',point?'done':'skipped');
    step('travel','active');await updateJourney(signal);step('travel','done');
    if(steps.some(s=>s.id==='research')){
     step('research','active');
-    try{const data=await orbit({query:researchQuery(draft),country:el('placeCountry').value},signal,110000);const best=Array.isArray(data.places)?data.places.find(valid):null;if(best){const {planning:found,...facts}=best;draft=mergeResearch(draft,facts);preview();autofill(draft,found||{})}else notes.push(String(data.message||'Orbit couldn’t confirm details with sources.'));step('research',best?'done':'skipped')}
+    try{const data=await orbit({query:researchQuery(draft),country:el('placeCountry').value},signal,110000);const best=Array.isArray(data.places)?data.places.find(valid):null;if(best){const {planning:found,...facts}=best;draft=mergeResearch(draft,facts);preview();autofill(draft,found||{});
+     // The address Orbit found can pin a place the map didn't know by name.
+     if(!point&&draft.address&&(point=await locate(draft,signal))){Object.assign(draft,point);preview();await updateJourney(signal)}}else notes.push(String(data.message||'Orbit couldn’t confirm details with sources.'));step('research',best?'done':'skipped')}
     catch(e){if(signal.aborted)throw e;notes.push(e.message);step('research','failed')}
    }
+   if(!point)notes.push('Couldn’t pin it on the map, so travel times are unavailable.');
    if(steps.some(s=>s.id==='check')){step('check','active');await checkPlan(signal);step('check',advice&&!advice.error?'done':'failed')}
   }catch{notes.push('Skipped. You can run Research with Orbit any time.')}
   finally{if(flow===current){flow=null;hideLoading();preview();renderJourney();renderAdvice();message(notes.join(' '))}}
