@@ -4,6 +4,7 @@
  const el=id=>document.getElementById(id),{escape,valid,maps}=PlaceCore;
  const STORE='little-orbit-chat',HINT='little-orbit-chat-hint',GEO='little-orbit-geo';
  const DOG=`<svg viewBox="0 0 64 64" aria-hidden="true" class="orbit-dog"><g class="dog-antenna"><line x1="32" y1="12" x2="32" y2="5" stroke="#8f7bb0" stroke-width="2" stroke-linecap="round"/><circle cx="32" cy="4.5" r="3" fill="#ff8fc8"/></g><g stroke="#cdbfe0" stroke-width="1.4"><path d="M13 27 17 5 30 17Z" fill="#fff"/><path d="M51 27 47 5 34 17Z" fill="#fff"/><circle cx="13" cy="40" r="7" fill="#fff"/><circle cx="51" cy="40" r="7" fill="#fff"/><circle cx="17" cy="51" r="7" fill="#fff"/><circle cx="47" cy="51" r="7" fill="#fff"/><circle cx="32" cy="55" r="8" fill="#fff"/><circle cx="22" cy="22" r="7" fill="#fff"/><circle cx="42" cy="22" r="7" fill="#fff"/></g><path d="M16.5 22 18.5 10 26 17Z" fill="#ffc6e2"/><path d="M47.5 22 45.5 10 38 17Z" fill="#ffc6e2"/><circle cx="32" cy="37" r="19.5" fill="#fff"/><circle cx="10.5" cy="35" r="2.6" fill="#d9d2ea" stroke="#a99bc6" stroke-width="1"/><circle cx="53.5" cy="35" r="2.6" fill="#d9d2ea" stroke="#a99bc6" stroke-width="1"/><rect x="17" y="27" width="30" height="12" rx="6" fill="#463f66"/><g class="dog-eyes" stroke="#7ef3ff" stroke-width="2.4" stroke-linecap="round" fill="none"><path d="M22.5 34.5q3-4 6 0"/><path d="M35.5 34.5q3-4 6 0"/></g><ellipse cx="32" cy="44" rx="2.8" ry="2" fill="#463f66"/><path d="M28.4 46.8q3.6 3.2 7.2 0" stroke="#463f66" stroke-width="1.6" fill="none" stroke-linecap="round"/><circle cx="21" cy="45" r="2.5" fill="#ffb3d6"/><circle cx="43" cy="45" r="2.5" fill="#ffb3d6"/></svg>`;
+ const MEMORY_URL='https://github.com/ragonic1-eng/ragonic1-eng.github.io/blob/main/orbit-knowledge.md';
  const IDEAS=['Show all our hotels on a map','What’s fun near our next stop?','Any rainy-day ideas for today?'];
  let log=[],busy=false,settingsRequest;
  try{log=JSON.parse(sessionStorage.getItem(STORE)||'[]');if(!Array.isArray(log))log=[]}catch{log=[]}
@@ -53,7 +54,7 @@
    const response=await fetch(config.chatUrl,{method:'POST',headers:{'Content-Type':'application/json',apikey:app.supabaseKey},body:JSON.stringify({roomId,roomKey,messages,trip:tripSummary()}),signal:AbortSignal.timeout(140000),referrerPolicy:'no-referrer'});
    let data;try{data=await response.json()}catch{throw Error('Orbit is having a nap. Try again shortly.')}
    if(!response.ok)throw Error(typeof data.error==='string'?data.error:'Orbit couldn’t answer right now.');
-   log.push({role:'assistant',text:String(data.text||''),map:data.map,places:Array.isArray(data.places)?data.places:undefined,changes:Array.isArray(data.changes)&&data.changes.length?data.changes:undefined,changeSummary:data.changeSummary});
+   log.push({role:'assistant',text:String(data.text||''),map:data.map,places:Array.isArray(data.places)?data.places:undefined,changes:Array.isArray(data.changes)&&data.changes.length?data.changes:undefined,changeSummary:data.changeSummary,notes:Array.isArray(data.remember)?data.remember.slice(0,2).map(text=>({text:String(text)})):undefined});
   }catch(e){log.push({role:'assistant',failed:true,text:e.name==='TimeoutError'?'That took too long — try asking in a simpler way.':e.message==='Failed to fetch'?'I can’t reach the internet right now.':e.message})}
   finally{busy=false;save();render()}
  }
@@ -73,15 +74,24 @@
   const bits=[c.title&&'rename to “'+c.title+'”',c.duration&&'make it '+span(c.duration),c.category&&'set type to '+(CATS[c.category]?.label||c.category),c.notes&&'update the description',c.place&&'set the place to '+c.place.name].filter(Boolean);
   return `Change ${name}: ${bits.join(', ')}`;
  }
+ // A note being written or suggested: editable until saved; key is "<message>" or "<message>:<suggestion>".
+ function memoryBox(key,note,label){
+  if(note.status==='saved')return `<p class="orbit-memory-done">🐾 Orbit will remember: “${escape(note.text)}”</p>`;
+  if(note.status==='dismissed')return '';
+  return `<div class="orbit-memory"><label><span>${label}</span><textarea data-orbit-note="${key}" rows="2" maxlength="300">${escape(note.text)}</textarea></label>${note.error?`<p class="orbit-memory-error" role="alert">${escape(note.error)}</p>`:''}<div class="orbit-memory-actions"><button type="button" class="primary" data-orbit-save="${key}"${note.status==='saving'?' disabled':''}>${note.status==='saving'?'Saving…':'Save to memory'}</button><button type="button" data-orbit-forget="${key}">${key.includes(':')?'No thanks':'Cancel'}</button></div></div>`;
+ }
  function render(){
-  const intro=`<div class="orbit-msg orbit-bot"><p>Woof! I’m Orbit 🐾 Ask me about your trip — I can map your stops, find fun places nearby, and tidy up your plan (I’ll always ask first).</p><div class="orbit-ideas">${IDEAS.map(q=>`<button type="button" data-orbit-ask="${escape(q)}">${escape(q)}</button>`).join('')}</div></div>`;
-  list.innerHTML=intro+log.map((m,i)=>m.role==='user'?`<div class="orbit-msg orbit-me">${format(m.text)}</div>`:`<div class="orbit-msg orbit-bot${m.failed?' orbit-failed':''}">${format(m.text)}${m.needsShare?'<button type="button" class="orbit-share" data-orbit-share>Turn on Orbit</button>':''}${m.map?.points?.length?`<div class="orbit-map" data-orbit-map="${i}" role="img" aria-label="${escape(m.map.title||'Map')}"></div>`:''}${m.places?.length?`<ul class="orbit-places">${m.places.map(p=>`<li><div><strong>${escape(p.name)}</strong>${Number.isFinite(p.rating)?` <span class="orbit-rating">★ ${p.rating.toFixed(1)}</span>`:''}${p.why?`<small>${escape(p.why)}</small>`:''}</div><div class="orbit-place-actions"><a href="${escape(maps(p))}" target="_blank" rel="noopener noreferrer">Map ↗</a><button type="button" data-orbit-ask="${escape('Add '+p.name+' to our plan at a good time')}">Add</button></div></li>`).join('')}</ul>`:''}${m.changes?`<div class="orbit-changes"><strong>${escape(m.changeSummary||'Suggested changes')}</strong><ul>${m.changes.map(c=>`<li>${escape(describe(c))}</li>`).join('')}</ul>${m.status?`<p class="orbit-change-status">${escape(m.status)}${m.undoAt&&m.undoAt===history.length?` <button type="button" data-orbit-undo="${i}">Undo</button>`:''}</p>`:`<div class="orbit-change-actions"><button type="button" class="primary" data-orbit-apply="${i}">Apply changes</button><button type="button" data-orbit-decline="${i}">Not now</button></div>`}</div>`:''}</div>`).join('')+(busy?'<div class="orbit-msg orbit-bot orbit-thinking" role="status"><span class="orbit-dots" aria-hidden="true"><i></i><i></i><i></i></span> Orbit is sniffing around…</div>':'');
+  const intro=`<div class="orbit-msg orbit-bot"><p>Woof! I’m Orbit 🐾 Ask me about your trip — I can map your stops, find fun places nearby, and tidy up your plan (I’ll always ask first). Tap 🐾 on anything you tell me and I’ll remember it for next time — <a href="${MEMORY_URL}" target="_blank" rel="noopener noreferrer">see what I remember ↗</a></p><div class="orbit-ideas">${IDEAS.map(q=>`<button type="button" data-orbit-ask="${escape(q)}">${escape(q)}</button>`).join('')}</div></div>`;
+  list.innerHTML=intro+log.map((m,i)=>m.role==='user'?`<div class="orbit-msg orbit-me">${format(m.text)}${m.memory?'':`<button type="button" class="orbit-remember" data-orbit-remember="${i}" aria-label="Remember this">🐾 Remember</button>`}</div>${m.memory?memoryBox(String(i),m.memory,'Remember this?'):''}`:`<div class="orbit-msg orbit-bot${m.failed?' orbit-failed':''}">${format(m.text)}${m.needsShare?'<button type="button" class="orbit-share" data-orbit-share>Turn on Orbit</button>':''}${m.map?.points?.length?`<div class="orbit-map" data-orbit-map="${i}" role="img" aria-label="${escape(m.map.title||'Map')}"></div>`:''}${m.places?.length?`<ul class="orbit-places">${m.places.map(p=>`<li><div><strong>${escape(p.name)}</strong>${Number.isFinite(p.rating)?` <span class="orbit-rating">★ ${p.rating.toFixed(1)}</span>`:''}${p.why?`<small>${escape(p.why)}</small>`:''}</div><div class="orbit-place-actions"><a href="${escape(maps(p))}" target="_blank" rel="noopener noreferrer">Map ↗</a><button type="button" data-orbit-ask="${escape('Add '+p.name+' to our plan at a good time')}">Add</button></div></li>`).join('')}</ul>`:''}${(m.notes||[]).map((n,j)=>memoryBox(i+':'+j,n,'Remember this for next time?')).join('')}${m.changes?`<div class="orbit-changes"><strong>${escape(m.changeSummary||'Suggested changes')}</strong><ul>${m.changes.map(c=>`<li>${escape(describe(c))}</li>`).join('')}</ul>${m.status?`<p class="orbit-change-status">${escape(m.status)}${m.undoAt&&m.undoAt===history.length?` <button type="button" data-orbit-undo="${i}">Undo</button>`:''}</p>`:`<div class="orbit-change-actions"><button type="button" class="primary" data-orbit-apply="${i}">Apply changes</button><button type="button" data-orbit-decline="${i}">Not now</button></div>`}</div>`:''}</div>`).join('')+(busy?'<div class="orbit-msg orbit-bot orbit-thinking" role="status"><span class="orbit-dots" aria-hidden="true"><i></i><i></i><i></i></span> Orbit is sniffing around…</div>':'');
   el('orbitChatSend').disabled=busy;
   for(const box of list.querySelectorAll('[data-orbit-map]'))drawMap(box,log[Number(box.dataset.orbitMap)].map);
   list.scrollTop=list.scrollHeight;
  }
  list.addEventListener('click',e=>{
   const ask=e.target.closest('[data-orbit-ask]');if(ask){send(ask.dataset.orbitAsk);return}
+  const remember=e.target.closest('[data-orbit-remember]');if(remember){const m=log[Number(remember.dataset.orbitRemember)];m.memory={text:m.text.slice(0,300)};save();render();list.querySelector(`[data-orbit-note="${remember.dataset.orbitRemember}"]`)?.focus();return}
+  const keep=e.target.closest('[data-orbit-save]');if(keep){saveNote(keep.dataset.orbitSave);return}
+  const forget=e.target.closest('[data-orbit-forget]');if(forget){const key=forget.dataset.orbitForget,[i,j]=key.split(':');if(j===undefined)delete log[Number(i)].memory;else noteAt(key).status='dismissed';save();render();return}
   if(e.target.closest('[data-orbit-share]')){close();el('share').click();return}
   const apply=e.target.closest('[data-orbit-apply]');if(apply){applyChanges(Number(apply.dataset.orbitApply));return}
   // Undo here only while Orbit's change is still the latest one, so it never reverses something else.
@@ -89,6 +99,22 @@
   const decline=e.target.closest('[data-orbit-decline]');if(decline){const m=log[Number(decline.dataset.orbitDecline)];m.status='Not applied.';save();render()}
  });
 
+ list.addEventListener('input',e=>{const box=e.target.closest('[data-orbit-note]');if(box){noteAt(box.dataset.orbitNote).text=box.value;save()}});
+ function noteAt(key){const [i,j]=key.split(':').map(Number),m=log[i];return Number.isInteger(j)?m.notes[j]:m.memory}
+ // Saving writes the note into orbit-knowledge.md (shared with Claude and ChatGPT); only after the person taps Save.
+ async function saveNote(key){
+  const note=noteAt(key);if(!note||note.status==='saving')return;const {roomId,roomKey}=room();
+  if(!roomId||!roomKey){note.error='Turn on Orbit (your shared trip) to save notes.';render();return}
+  note.status='saving';note.error='';render();
+  try{
+   const [config,app]=await settings();if(!config.chatUrl)throw Error('Orbit chat isn’t set up for this site yet.');
+   const response=await fetch(config.chatUrl,{method:'POST',headers:{'Content-Type':'application/json',apikey:app.supabaseKey},body:JSON.stringify({action:'remember',roomId,roomKey,note:note.text}),signal:AbortSignal.timeout(30000),referrerPolicy:'no-referrer'});
+   let data;try{data=await response.json()}catch{throw Error('Orbit couldn’t save that note right now.')}
+   if(!response.ok||!data.saved)throw Error(typeof data.error==='string'?data.error:'Orbit couldn’t save that note right now.');
+   note.text=String(data.note||note.text);note.status='saved';
+  }catch(e){note.status='';note.error=e.name==='TimeoutError'?'That took too long. Try again.':e.message}
+  save();render();
+ }
  // --- Small maps inside replies. ---
  async function drawMap(box,data){
   if(typeof L==='undefined'){box.remove();return}

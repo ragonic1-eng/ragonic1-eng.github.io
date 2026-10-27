@@ -4,7 +4,8 @@ Orbit (the chat helper on Little Orbit) reads this whole file before every answe
 tour agent: short, specific, and true. Anyone can edit it — the family, Claude, or ChatGPT (Codex) — see `AGENTS.md`.
 
 Rules for this file:
-- It is public (the website is public). Never add passport numbers, phone numbers, booking references, payment or health details.
+- It is public (the website is public). Never add passport or ID numbers, phone numbers, booking references, payment details or medical records. Simple food needs ("no peanuts") are fine.
+- Notes saved with Orbit's 🐾 Remember button land under "Remembered from chats"; tidy them into the right section now and then.
 - Every fact about a place gets a date and a source: `(checked 2026-10-27, Google Maps)`. Remove facts that turn out wrong.
 - Keep it under about 30,000 characters; Orbit stops reading beyond that.
 - Live data wins: Orbit uses Google Maps for hours, ratings and pins. Use this file for what Google doesn't know —
@@ -15,7 +16,7 @@ Rules for this file:
 - Travelling from Singapore to Taiwan, 7–13 December 2026, with a private driver for the whole trip.
 - Two children: a 2-year-old (naps, stroller) and a 6-year-old.
 - Likes: animal farms, hands-on activities, strawberry picking, night markets, cafés with something for the kids.
-- To fill in: food preferences and allergies, nap times, how much walking is too much, budget per day, things to avoid.
+- To fill in: food preferences and needs, nap times, how much walking is too much, budget per day, things to avoid.
 
 ## How Orbit should advise (tour-agent rules)
 
