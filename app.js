@@ -133,11 +133,14 @@ function scheduleHint(){
  choice.value=selected;
  try{
   if(!Number.isInteger(mins)||mins<1||mins>1440)throw Error('How long will you stay? Enter 1–1440 minutes.');
-  const cards=placement(d,{id:editing??'preview',title:$('title').value.trim()||'Your new activity',duration:mins},start),end=start+mins,previewStart=Math.min(d.start,start),finish=previewStart+total({cards});
-  $('scheduleHint').textContent=`${dateLabel(d,{day:'numeric',month:'short'})} · ${fmt(start)}–${fmt(end)}${end>=1440?' (next day)':''}. `+(finish>d.end?`This puts your day ${duration(finish-d.end)} past wrap-up. You can still save, or shorten the visit.`:'There’s room for this in your day.');
+  // Drive cards suggested by the travel check are previewed exactly as they will be saved.
+  const id=editing??'preview',placed=placement(d,{id,title:$('title').value.trim()||'Your new activity',duration:mins},start),cards=window.orbitPlaces?.withTransfers?.(placed,id)??placed,previewStart=Math.min(d.start,start),finish=previewStart+total({cards});
+  const begins=previewStart+cards.slice(0,cards.findIndex(c=>c.id===id)).reduce((n,c)=>n+c.duration,0),end=begins+mins;
+  $('scheduleHint').textContent=`${dateLabel(d,{day:'numeric',month:'short'})} · ${fmt(begins)}–${fmt(end)}${end>=1440?' (next day)':''}. `+(begins>start?`Includes a ${duration(begins-start)} drive first. `:'')+(finish>d.end?`This puts your day ${duration(finish-d.end)} past wrap-up. You can still save, or shorten the visit.`:'There’s room for this in your day.');
   if(start<d.start)$('scheduleHint').textContent+=` Your day will now start at ${fmt(start)}; later activities keep their times when there’s room.`;
   $('scheduleHint').classList.toggle('warning',finish>d.end);
   const i=cards.findIndex(c=>c.id===(editing??'preview')),previous=cards.slice(0,i).findLast(c=>c.category!=='break'),next=cards.slice(i+1).find(c=>c.category!=='break');
+  let clock=previewStart;window.orbitPlaces?.schedule({date:d.date,start:begins,end,index:i,stops:cards.map(c=>({card:c,start:clock,end:clock+=c.duration}))});
   const line=document.createElement('p');line.className='muted';line.textContent=previous?`After ${previous.title}`:'First activity of the day';$('nextActivity').append(line);
   const heading=document.createElement('strong');heading.textContent=next?`Up next · ${next.title}`:'Your last activity of the day';$('nextActivity').append(heading);
   const detail=document.createElement('p');
@@ -146,6 +149,7 @@ function scheduleHint(){
   $('nextActivity').append(detail);return true;
  }catch(e){
   $('scheduleHint').textContent=e.message;$('scheduleHint').classList.add('warning');
+  window.orbitPlaces?.schedule(null);
   $('nextActivity').textContent='Choose a free time or a card’s start time to see what comes next.';
   let cursor=d.start;
   for(const c of placementBase(d)){
@@ -180,7 +184,7 @@ $('new').onclick=$('addBottom').onclick=()=>openEditor();$('cancel').onclick=()=
  const values={place:window.orbitPlaces?.value(),driverTitle:$('driverTitle').value.trim(),driverNotes:$('driverNotes').value.trim(),title:$('title').value.trim(),category:$('category').value,duration:Number($('duration').value),notes:$('notes').value,optional:$('optional').checked};
  if(!values.title){$('title').setCustomValidity('Give your activity a name.');$('title').reportValidity();return;}
  const target=Number($('activityDay').value),source=state.days.flatMap(d=>d.cards).find(c=>c.id===editing),card={...source,...values,id:editing??uid()};if(card.place===undefined)delete card.place;
- let cards;try{cards=placement(state.days[target],card,timeval($('activityStart').value))}catch(e){$('scheduleHint').textContent=e.message;return}
+ let cards;try{cards=placement(state.days[target],card,timeval($('activityStart').value));cards=window.orbitPlaces?.withTransfers?.(cards,card.id)??cards}catch(e){$('scheduleHint').textContent=e.message;return}
  const saved=mutate(()=>{if(editing)for(const d of state.days)d.cards=d.cards.filter(c=>c.id!==editing);state.days[target].cards=cards;state.days[target].start=Math.min(state.days[target].start,timeval($('activityStart').value));day=target});
  if(!saved)return formError($('form'),'This day could not accept the activity. Move or remove a card if the day already has 200 activities, then try again.',$('title'));
  if(saved){$('editor').close();const el=[...document.querySelectorAll('.timeline-row')].find(r=>r.dataset.id===card.id);el?.classList.add('just-updated');setTimeout(()=>el?.classList.remove('just-updated'),1400);el?.querySelector('.activity')?.focus({preventScroll:true});el?.scrollIntoView({block:'nearest',behavior:reducedMotion()?'auto':'smooth'})}

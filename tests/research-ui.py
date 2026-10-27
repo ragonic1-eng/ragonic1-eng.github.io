@@ -1,21 +1,49 @@
 from playwright.sync_api import sync_playwright,expect
-from ui_helpers import open_extras
 base='http://127.0.0.1:8000'
-place={'name':'Taipei 101','nameZh':'台北101','address':'臺北市信義區信義路五段7號','description':'A city landmark with an observation deck.','descriptionZh':'設有觀景台的城市地標。','source':'https://www.taipei-101.com.tw/','bookingUrl':'https://www.taipei-101.com.tw/','bookingNote':'Check the observatory ticket and visit date.','bookingNoteZh':'請確認觀景台門票及日期。','research':'Claude Sonnet','checked':'2026-10-26','sources':[{'title':'Visitor information','url':'https://www.taipei-101.com.tw/'}]}
+place={'name':'Taipei 101','nameZh':'台北101','address':'臺北市信義區信義路五段7號','description':'A city landmark with an observation deck.','descriptionZh':'設有觀景台的城市地標。','openingHours':'Daily 10:00–21:00','openingHoursZh':'每日 10:00–21:00','source':'https://www.taipei-101.com.tw/','bookingUrl':'https://www.taipei-101.com.tw/','bookingNote':'Check the observatory ticket and visit date.','bookingNoteZh':'請確認觀景台門票及日期。','bookingLabel':'Official tickets & booking','research':'Orbit','checked':'2026-10-26','sources':[{'title':'Visitor information','url':'https://www.taipei-101.com.tw/'}]}
+verdict={'evaluation':{'verdict':'tight','headline':'Doable if you leave on time.','reasons':['26 min drive to the hotel'],'suggestion':'Shorten the visit by 15 minutes.'}}
+feature={'type':'Feature','geometry':{'type':'Point','coordinates':[121.565,25.033]},'properties':{'osm_type':'W','osm_id':101,'name':'Taipei 101','city':'Taipei','country':'Taiwan','osm_value':'attraction'}}
 with sync_playwright() as p:
- b=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox']);ctx=b.new_context(viewport={'width':390,'height':844},is_mobile=True,has_touch=True,reduced_motion='reduce');page=ctx.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.goto(base);page.wait_for_selector('.activity')
- page.locator('#mobileAdd').click();page.locator('#title').fill('Taipei 101 visit');page.locator('#placeSummary').click();page.locator('#placeQuery').fill('Taipei 101');page.locator('#placeResearch').click();expect(page.locator('#placeMessage')).to_contain_text('private shared trip link')
- page.evaluate("window.history.replaceState(null,'','/#room=11111111-1111-1111-1111-111111111111&key='+ 'a'.repeat(64))")
+ b=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox']);ctx=b.new_context(viewport={'width':390,'height':844},is_mobile=True,has_touch=True,reduced_motion='reduce');page=ctx.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+ ctx.route('https://photon.komoot.io/**',lambda r:r.fulfill(json={'features':[{**feature,'geometry':{'type':'Point','coordinates':[121.52,25.06]}} if '101' not in r.request.url else feature]}));ctx.route('https://router.project-osrm.org/**',lambda r:r.fulfill(json={'routes':[{'distance':5200,'duration':900}]}))
  calls=[]
  def respond(route):
-  calls.append(route.request.post_data_json);route.fulfill(json={'places':[place],'message':'Choose a researched place.'})
- ctx.route('**/functions/v1/research-place',respond);page.locator('#placeResearch').click();expect(page.locator('.place-result')).to_have_count(1);assert calls[0]['query']=='Taipei 101';assert set(calls[0])=={'query','country','roomId','roomKey'};page.locator('.place-result').click();expect(page.locator('#placeSelected')).to_contain_text('台北101');page.locator('#placeSelected .place-source>summary').click();expect(page.get_by_role('link',name='Visitor information')).to_be_visible();assert page.locator('#placeSelected a[href^="https://www.taipei-101.com.tw/"]').count()>0
- page.locator('#activityStart').fill('11:30');page.locator('[data-duration-preset="30"]').click();page.locator('#saveActivity').click();assert page.evaluate("state.days[0].cards.find(c=>c.title==='Taipei 101 visit').place.research")=='Claude Sonnet'
- page.locator('#mobileAdd').click();page.locator('#title').fill('Keep my draft');page.locator('#placeSummary').click();page.locator('#placeQuery').fill('No venue');ctx.unroute('**/functions/v1/research-place');ctx.route('**/functions/v1/research-place',lambda r:r.fulfill(status=429,json={'error':'Daily research limit reached.'}));page.locator('#placeResearch').click();expect(page.locator('#placeMessage')).to_contain_text('Daily research limit');assert page.locator('#title').input_value()=='Keep my draft';expect(page.locator('#placeResearch')).to_be_enabled();expect(page.locator('#placeSearch')).to_be_enabled()
- # Pending requests never overwrite a different activity or a later user choice.
- ctx.unroute('**/functions/v1/research-place');pending=[];ctx.route('**/functions/v1/research-place',lambda r:pending.append(r));page.locator('#placeResearch').click();expect(page.locator('#placeResearch')).to_be_disabled();page.locator('#placeQuery').fill('Flying Cow');expect(page.locator('#placeResearch')).to_be_enabled();page.locator('.place-result').click();pending[0].fulfill(json={'places':[place]});expect(page.locator('#placeSelected')).to_contain_text('Flying Cow Ranch');assert 'Taipei 101' not in page.locator('#placeSelected').inner_text()
+  body=route.request.post_data_json;calls.append(body)
+  route.fulfill(json=verdict if body.get('action')=='evaluate' else {'places':[place],'message':'Researched by Orbit.'})
+ ctx.route('**/functions/v1/research-place',respond)
+ page.goto(base);page.wait_for_selector('.activity')
+ def open_at(time='16:30'):
+  page.evaluate("openEditor()");page.locator('#activityDay').select_option('5')
+  if time:page.locator('#activityStart').fill(time);page.locator('#activityStart').dispatch_event('input')
+ # Without a private shared link, Orbit explains the prerequisite and sends nothing.
+ open_at();page.locator('#placeQuery').fill('Taipei 101');expect(page.locator('[data-ask-orbit]')).to_contain_text('Research with Orbit');page.locator('[data-ask-orbit]').click();expect(page.locator('#placeMessage')).to_contain_text('private shared trip link');assert not calls
+ page.locator('#activityCancel').click();page.evaluate("window.history.replaceState(null,'','/#room=11111111-1111-1111-1111-111111111111&key='+'a'.repeat(64))")
+ # Choosing a map result researches it and checks the plan behind a loading screen, sending only what each step needs.
+ open_at();page.locator('#title').fill('');page.locator('#placeQuery').fill('Taipei 101');expect(page.locator('[data-place-result]')).to_have_count(1);page.locator('[data-place-result]').click()
+ expect(page.locator('#orbitLoading')).to_be_hidden();expect(page.locator('#placeSelected')).to_contain_text('Daily 10:00–21:00');expect(page.locator('#placeSelected')).to_contain_text('台北101');expect(page.locator('#orbitAdvice')).to_contain_text('Tight but doable')
+ research,check=calls[0],calls[1];assert set(research)=={'query','country','roomId','roomKey'} and research['query'].startswith('Taipei 101');assert set(check)=={'action','plan','roomId','roomKey'} and check['plan']['start']=='16:30' and check['plan']['next']['travelMinutes']==15 and check['plan']['next']['place']=='Jolley Hotel'
+ assert 'notes' not in str(check['plan']) and page.locator('#researchPlace').count()==0;assert page.locator('#title').input_value()=='Taipei 101'
+ # Changing the time marks Orbit's verdict stale; re-checking sends one new plan check.
+ page.locator('#durationMore').click();expect(page.locator('.orbit-stale')).to_be_visible();page.locator('[data-orbit-check]').click();expect(page.locator('.orbit-stale')).to_have_count(0);assert len(calls)==3 and calls[2]['action']=='evaluate'
+ page.locator('#saveActivity').click();assert page.evaluate("state.days[5].cards.find(c=>c.title==='Taipei 101').place.research")=='Orbit';assert page.evaluate("state.days[5].cards.find(c=>c.title==='Taipei 101').place.openingHours")=='Daily 10:00–21:00'
+ # Research with Orbit from the search box offers sourced candidates; an already researched choice is only checked, not researched again.
+ calls.clear();open_at(None);page.locator('#placeQuery').fill('Taipei 101 observatory');expect(page.locator('[data-ask-orbit]')).to_be_visible();page.locator('[data-ask-orbit]').click();expect(page.locator('.combo-heading')).to_have_text('Orbit found');page.locator('[data-place-result]').first.click()
+ expect(page.locator('#orbitLoading')).to_be_hidden();expect(page.locator('#orbitAdvice')).to_contain_text('Tight');assert [c.get('action') for c in calls]==[None,'evaluate'],calls
  page.locator('#activityCancel').click()
- # Mobile controls fit, key is never an input field, and no content error executes.
+ # Quota errors are explained; the map result stays selected and the form stays usable.
+ ctx.unroute('**/functions/v1/research-place');ctx.route('**/functions/v1/research-place',lambda r:r.fulfill(status=429,json={'error':'Daily research limit reached.'}))
+ open_at();page.locator('#placeQuery').fill('Taipei 101');expect(page.locator('[data-place-result]')).to_have_count(1);page.locator('[data-place-result]').click();expect(page.locator('#placeMessage')).to_contain_text('Daily research limit');expect(page.locator('#placeSelected')).to_contain_text('Taipei 101');expect(page.locator('#researchPlace')).to_be_visible();expect(page.locator('#saveActivity')).to_be_enabled();page.locator('#activityCancel').click()
+ # Skip stops waiting; a late response after skipping or closing never changes the form.
+ ctx.unroute('**/functions/v1/research-place');pending=[];ctx.route('**/functions/v1/research-place',lambda r:pending.append(r))
+ open_at();page.locator('#placeQuery').fill('Taipei 101');expect(page.locator('[data-place-result]')).to_have_count(1);page.locator('[data-place-result]').click();expect(page.locator('#orbitLoading')).to_be_visible();expect(page.locator('#orbitSteps [data-state=active]')).to_contain_text('Orbit is finding')
+ page.locator('#orbitSkip').click();expect(page.locator('#orbitLoading')).to_be_hidden();expect(page.locator('#placeMessage')).to_contain_text('Skipped')
+ for r in pending:
+  try:r.fulfill(json={'places':[{**place,'name':'Late result'}]})
+  except Exception:pass
+ page.wait_for_timeout(300);expect(page.locator('#placeSelected')).not_to_contain_text('Late result');expect(page.locator('#placeSelected')).to_contain_text('Taipei 101');page.locator('#activityCancel').click()
+ # Mobile layout during loading and after a verdict.
+ ctx.unroute('**/functions/v1/research-place');ctx.route('**/functions/v1/research-place',respond)
  for width in [320,390,430,740]:
-  page.set_viewport_size({'width':width,'height':844});page.locator('#mobileAdd').click();page.locator('#placeSummary').click();assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');assert page.locator('#editor').evaluate('e=>e.scrollWidth<=e.clientWidth');page.locator('#activityCancel').click()
- assert page.locator('input[type=password]').count()==0;assert not errors,errors;b.close();print('PASS: research private-link prerequisite, explicit query only, sources and bilingual result save, quota recovery, cancelled/stale response protection, mobile controls')
+  page.set_viewport_size({'width':width,'height':844});open_at();page.locator('#placeQuery').fill('Taipei 101');expect(page.locator('[data-place-result]')).to_have_count(1);page.locator('[data-place-result]').click();expect(page.locator('#orbitAdvice')).to_contain_text('Tight')
+  assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');assert page.locator('#editor').evaluate('e=>e.scrollWidth<=e.clientWidth');page.locator('#activityCancel').click()
+ assert page.locator('input[type=password]').count()==0;assert not errors,errors;b.close();print('PASS: Orbit private-link prerequisite, research and plan check with minimal payloads, loading steps, stale verdict re-check, Research with Orbit candidates, quota recovery, skip and late-response protection, mobile layouts')

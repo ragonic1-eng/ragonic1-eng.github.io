@@ -1,4 +1,4 @@
-name: Deploy Claude place research
+name: Deploy Orbit place research
 on:
   workflow_dispatch:
   push:
@@ -11,7 +11,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: claude-place-research
+  group: orbit-place-research
   cancel-in-progress: false
 jobs:
   deploy:
@@ -24,7 +24,7 @@ jobs:
       - name: Check deployment access
         run: |
           if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
-            echo 'Add SUPABASE_ACCESS_TOKEN to repository Actions secrets, then re-run this workflow. ANTHROPIC_API_KEY stays in Supabase Edge Function secrets.'
+            echo 'Add SUPABASE_ACCESS_TOKEN to repository Actions secrets, then re-run this workflow. DASHSCOPE_API_KEY (the Qwen key) stays in Supabase Edge Function secrets.'
             exit 1
           fi
       - uses: supabase/setup-cli@v1
@@ -40,7 +40,7 @@ jobs:
           }, data=json.dumps({'query': pathlib.Path('supabase/research.sql').read_text()}).encode())
           try:
             with urllib.request.urlopen(request, timeout=60) as response:
-              if response.status != 200: raise RuntimeError('Migration did not succeed')
+              if not 200 <= response.status < 300: raise RuntimeError('Migration did not succeed: HTTP ' + str(response.status))
             print('Research schema installed')
           except urllib.error.HTTPError as e:
             detail = e.read().decode('utf-8', 'replace').replace(os.environ['SUPABASE_ACCESS_TOKEN'], '[redacted]')
@@ -58,10 +58,10 @@ jobs:
             try:
               with urllib.request.urlopen(url, timeout=15) as response: status = json.load(response)
               if status.get('available') is True:
-                print('Claude function is deployed and ANTHROPIC_API_KEY is configured. Live provider research still needs a private-trip request.')
+                print('Orbit (Qwen) function is deployed (model ' + str(status.get('model')) + ') and its API key is configured. Live provider research still needs a private-trip request.')
                 break
-              raise RuntimeError('ANTHROPIC_API_KEY is missing from Supabase Edge Function secrets')
+              raise RuntimeError('DASHSCOPE_API_KEY is missing from Supabase Edge Function secrets')
             except Exception:
-              if attempt == 5: raise SystemExit('Function readiness check failed. Check function deployment and ANTHROPIC_API_KEY in Supabase secrets.')
+              if attempt == 5: raise SystemExit('Function readiness check failed. Check function deployment and DASHSCOPE_API_KEY (or QWEN_API_KEY) in Supabase secrets.')
               time.sleep(5)
           PY

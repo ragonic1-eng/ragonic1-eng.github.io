@@ -1,62 +1,296 @@
+// Activity editor place search: live suggestions, Orbit (Qwen) research, travel times and plan checks.
 (() => {
  const el=id=>document.getElementById(id),{escape,valid,html}=PlaceCore;
- let catalogue=[],draft=null,results=[],generation=0,controller,lastSearch=0,cache=new Map();
+ // Bounding boxes keep suggestions in the chosen area (minLon,minLat,maxLon,maxLat).
+ const AREAS={tw:[119.3,21.8,122.1,25.4],sg:[103.6,1.15,104.1,1.48]};
+ let catalogue=[],draft=null,options=[],active=-1,generation=0,typing,controller,flow,settingsRequest,schedule=null,journey=null,journeyToken=0,journeyTimer,advice=null,finding=false,autoTitle='',near=null,transfers={};
+ const remoteCache=new Map(),routeCache=new Map(),pointCache=new Map();
  const norm=s=>String(s||'').normalize('NFKC').toLowerCase().replace(/[’']/g,'').trim();
  const known=text=>catalogue.filter(p=>p.aliases.some(a=>norm(text).includes(norm(a))));
  function matches(q){q=norm(q);if(q.length<2)return [];return catalogue.filter(p=>[p.name,p.nameZh,...p.aliases].some(a=>norm(a).includes(q)||q.includes(norm(a)))).slice(0,6)}
- function inferred(){return known(el('title').value+' '+el('notes').value)}
- function summary(){const suggestions=inferred();el('placeSummary').textContent=draft?'Place · '+draft.name:suggestions.length?'Place · '+suggestions.length+' suggested location'+(suggestions.length>1?'s':''):'Place · Find a location';}
- function preview(){summary();el('placeFinder').open=!draft;el('placeFields').classList.toggle('has-place',!!draft);el('correctPlace').hidden=!draft;el('placeSelected').innerHTML=draft?html(draft)+'<button type="button" id="removePlace">Remove place</button>':'';if(draft)el('removePlace').onclick=()=>{draft=null;preview();suggest()}}
- function show(list,message){results=list;el('placeMessage').textContent=message;el('placeResults').innerHTML=list.map((p,i)=>`<button type="button" class="place-result" data-place-result="${i}"><strong>${escape(p.name)}</strong>${p.nameZh?`<span>${escape(p.nameZh)}</span>`:''}<small>${escape(p.address||'Street address not supplied — check the map')}</small><span class="place-use">Use this place ＋</span></button>`).join('')}
- function suggest(){const q=el('placeQuery').value.trim(),list=q?matches(q):inferred();show(list,list.length?'Suggested matches — choose the right location.':'Type a venue name and city, then Search.');summary()}
- function open(card){generation++;controller?.abort();draft=card?.place&&valid(card.place)?structuredClone(card.place):null;el('placeFields').open=false;el('placeQuery').value='';el('placeManual').open=false;el('manualPlaceMessage').textContent='';for(const id of ['manualPlaceName','manualPlaceAddress','manualPlaceDescription','manualPlaceBooking'])el(id).value='';el('placeCountry').value=/changi|singapore|樟宜/i.test(card?.title||'')?'sg':'tw';el('placeSearch').disabled=false;el('placeSearch').textContent='Search';el('placeSearch').removeAttribute('aria-busy');resetResearch();preview();suggest()}
- function resetResearch(){el('placeResearch').disabled=false;el('placeResearch').textContent='✦ Research with Claude';el('placeResearch').removeAttribute('aria-busy')}
- function cleanTitle(){return el('title').value.replace(/^.*[→➔]/,'').replace(/^(lunch at|dinner at|dinner|meet your|road trip to|early drive to|down the mountain to|up to the)\s+/i,'').split(/[·|]/)[0].trim()}
- async function search(){
-  if(el('placeSearch').disabled)return;
-  const query=el('placeQuery').value.trim();if(query.length<2){show([], 'Enter at least 2 characters, such as “Taipei 101”.');el('placeQuery').focus();return}
-  resetResearch();const country=el('placeCountry').value,key=country+':'+norm(query),local=matches(query),token=++generation;controller?.abort();
-  const cached=cache.get(key);if(cached){show([...local,...cached], 'Choose the matching place. Map details may be incomplete.');return}
-  if(Date.now()-lastSearch<1200){show(local,'Please wait a moment before searching again.');return}lastSearch=Date.now();
-  const button=el('placeSearch');button.disabled=true;button.textContent='Searching…';button.setAttribute('aria-busy','true');show(local,'Looking up addresses…');controller=new AbortController();const requestController=controller,signal=controller.signal,timer=setTimeout(()=>requestController.abort(),10000);
-  try{
-   const config=await fetch('places-config.json',{signal}).then(r=>{if(!r.ok)throw Error();return r.json()});if(!config.enabled)throw Error();const endpoint=new URL(config.searchUrl);if(endpoint.protocol!=='https:')throw Error();
-   endpoint.search=new URLSearchParams({q:query,format:'jsonv2',addressdetails:'1',extratags:'1',namedetails:'1',limit:'5','accept-language':'en,zh-TW',...(country?{countrycodes:country}:{})}).toString();
-   const response=await fetch(endpoint,{signal,referrerPolicy:'strict-origin-when-cross-origin'});if(!response.ok)throw Error();const data=await response.json();if(!Array.isArray(data))throw Error();
-   const remote=data.map(p=>{const a=p.address||{},name=p.namedetails?.['name:en']||p.name||p.display_name?.split(',')[0],type=String(p.type||p.category||'place').replaceAll('_',' '),area=a.city||a.town||a.county||a.country||'',extra=p.extratags||{},site=PlaceCore.url(extra.website||extra['contact:website']);return {id:'osm-'+p.osm_type+'-'+p.osm_id,name,nameZh:p.namedetails?.['name:zh-Hant']||p.namedetails?.['name:zh']||'',address:p.display_name||'',description:`A mapped ${type}${area?' in '+area:''}. Check the entrance and opening details before visiting.`,descriptionZh:'地圖收錄地點；請確認地址、入口及營業資訊。',lat:Number(p.lat),lon:Number(p.lon),source:['node','way','relation'].includes(p.osm_type)&&/^\d+$/.test(String(p.osm_id))?`https://www.openstreetmap.org/${p.osm_type}/${p.osm_id}`:'https://www.openstreetmap.org/',bookingNote:'Booking requirement not confirmed. Use the venue website or ticket search to check.',bookingNoteZh:'是否需購票或預約尚未確認，請查閱場地網站或搜尋官方票券。',bookingUrl:site,bookingLabel:'Venue website · check booking',checked:new Date().toISOString().slice(0,10)}}).filter(valid);
-   if(token!==generation)return;cache.set(key,remote);if(cache.size>30)cache.delete(cache.keys().next().value);const all=[...local,...remote];show(all,all.length?'Choose the right branch and address. Online matches: © OpenStreetMap contributors.':'No match found. Try the Chinese name or add the city. You can also enter a place manually.');
-  }catch{if(token===generation)show(local,'Online search is unavailable. Try again, choose a known match, or enter the place manually.')}finally{clearTimeout(timer);if(token===generation){button.disabled=false;button.textContent='Search';button.removeAttribute('aria-busy')}}
+ const inferred=()=>known(el('title').value+' '+el('notes').value);
+ const hasPoint=p=>Number.isFinite(p?.lat)&&Number.isFinite(p?.lon);
+ const today=()=>new Date().toISOString().slice(0,10);
+ const clock=m=>{m=((Math.round(m)%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')};
+ const span=m=>{m=Math.max(0,Math.round(m));return m<60?m+' min':Math.floor(m/60)+' h'+(m%60?' '+m%60+' min':'')};
+ const settings=()=>settingsRequest??=fetch('places-config.json').then(r=>{if(!r.ok)throw Error();return r.json()}).catch(()=>{settingsRequest=null;return {}});
+ function room(){const p=new URLSearchParams(location.hash.slice(1));return {roomId:p.get('room'),roomKey:p.get('key')}}
+ const shared=()=>{const r=room();return !!(r.roomId&&r.roomKey)};
+ function timeout(signal,ms){const local=new AbortController(),stop=()=>local.abort();signal?.addEventListener('abort',stop);const timer=setTimeout(stop,ms);return {signal:local.signal,done(){clearTimeout(timer);signal?.removeEventListener('abort',stop)}}}
+
+ // --- Map lookups (Photon suggestions, OSRM routes); every failure has a usable fallback. ---
+ function fromPhoton(f){
+  const p=f?.properties||{},[lon,lat]=f?.geometry?.coordinates||[],kind={N:'node',W:'way',R:'relation'}[p.osm_type],type=String(p.osm_value||p.type||'place').replaceAll('_',' ');
+  const street=[p.housenumber,p.street].filter(Boolean).join(' '),area=p.city||p.town||p.district||p.county||p.state||'';
+  const address=[street,p.district,p.city,p.county,p.state,p.country].filter((v,i,a)=>v&&a.indexOf(v)===i).join(', ');
+  return {id:kind?`osm-${kind}-${p.osm_id}`:'map-'+lat+','+lon,name:String(p.name||street||area).slice(0,200),address,description:`A ${type}${area?' in '+area:''}.`,lat:Number(lat),lon:Number(lon),source:kind&&/^\d+$/.test(String(p.osm_id))?`https://www.openstreetmap.org/${kind}/${p.osm_id}`:'https://www.openstreetmap.org/',bookingNote:'Booking requirement not confirmed yet.',checked:today()};
  }
- async function research(){
-  if(el('placeResearch').disabled)return;
-  const query=(el('placeQuery').value.trim()||draft?.name||cleanTitle()).trim(),params=new URLSearchParams(location.hash.slice(1)),roomId=params.get('room'),roomKey=params.get('key');
-  if(!roomId||!roomKey){show([], 'Open your private shared trip link first (Trip options → Share trip). Map search works without sharing.');return}
-  if(query.length<2||query.length>200){show([], 'Enter a place name and city (2–200 characters).');el('placeQuery').focus();return}
-  const token=++generation;controller?.abort();controller=new AbortController();const current=controller,timer=setTimeout(()=>current.abort(),65000),signal=current.signal;
-  el('placeSearch').disabled=false;el('placeSearch').textContent='Search';el('placeSearch').removeAttribute('aria-busy');const button=el('placeResearch');button.disabled=true;button.textContent='Researching sources…';button.setAttribute('aria-busy','true');show([], 'Claude is checking the address and booking information. This can take up to a minute.');
-  try{
-   const [config,appConfig]=await Promise.all([fetch('places-config.json',{signal}).then(r=>r.json()),fetch('config.json',{signal}).then(r=>r.json())]);
-   if(!config.researchUrl||appConfig.provider!=='supabase'||!config.researchUrl.startsWith(appConfig.supabaseUrl.replace(/\/$/,'')+'/functions/v1/'))throw Error('Claude research is not configured for this trip. Map search still works.');
-   const response=await fetch(config.researchUrl,{method:'POST',headers:{'Content-Type':'application/json',apikey:appConfig.supabaseKey},body:JSON.stringify({query,country:el('placeCountry').value,roomId,roomKey}),signal,referrerPolicy:'no-referrer'});
-   let data;try{data=await response.json()}catch{throw Error('Claude research is temporarily unavailable. Try map search.')}
-   if(response.status===404)throw Error('Claude research is awaiting backend setup. Map search and known-place suggestions are ready.');
-   if(!response.ok)throw Error(typeof data.error==='string'?data.error:'Claude research is unavailable. Try map search.');
-   if(!Array.isArray(data.places)||data.places.length>3||!data.places.every(valid))throw Error('The research result was incomplete. Please try a more specific place name.');
-   if(token!==generation)return;show(data.places,(data.cached?'Recent research · ':'')+String(data.message||'Choose the correct place, then save your activity.'));
-  }catch(e){if(token===generation)show(matches(query),e.name==='AbortError'?'Research took too long. Try again later or use map search.':e.message==='Failed to fetch'?'Cannot reach Claude research. Check your connection or use map search.':e.message)}finally{clearTimeout(timer);if(token===generation)resetResearch()}
+ async function suggest(q,{limit=6,signal}={}){
+  const config=await settings();if(config.enabled===false||!config.suggestUrl)throw Error('off');
+  const url=new URL(config.suggestUrl);if(url.protocol!=='https:')throw Error('off');
+  const area=AREAS[el('placeCountry').value],params={q,limit:String(limit),lang:'en'};
+  if(area)params.bbox=area.join(',');if(hasPoint(near)){params.lat=near.lat.toFixed(4);params.lon=near.lon.toFixed(4)}
+  url.search=new URLSearchParams(params);
+  const response=await fetch(url,{signal,referrerPolicy:'strict-origin-when-cross-origin'});if(!response.ok)throw Error();const data=await response.json();
+  return (Array.isArray(data?.features)?data.features:[]).map(fromPhoton).filter(p=>valid(p)&&hasPoint(p));
  }
- el('placeResearch').onclick=research;
- el('placeSearch').onclick=search;el('placeQuery').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();search()}});
- el('placeQuery').oninput=()=>{resetResearch();generation++;controller?.abort();el('placeSearch').disabled=false;el('placeSearch').textContent='Search';el('placeSearch').removeAttribute('aria-busy');suggest()};
- el('placeCountry').onchange=el('placeQuery').oninput;
- el('placeFromActivity').onclick=()=>{el('placeQuery').value=cleanTitle();el('placeQuery').oninput();el('placeQuery').focus()};
- el('placeResults').onclick=e=>{const b=e.target.closest('[data-place-result]');if(!b)return;const chosen=results[Number(b.dataset.placeResult)];if(!valid(chosen))return;draft=structuredClone(chosen);resetResearch();generation++;controller?.abort();el('placeSearch').disabled=false;el('placeSearch').textContent='Search';el('placeSearch').removeAttribute('aria-busy');preview();show([],'Place selected. Save the activity to keep it.');el('placeSelected').scrollIntoView({block:'nearest'});};
- el('useManualPlace').onclick=()=>{const name=el('manualPlaceName').value.trim(),address=el('manualPlaceAddress').value.trim(),bookingUrl=el('manualPlaceBooking').value.trim();if(!name){el('manualPlaceMessage').textContent='Add a place name first.';el('manualPlaceName').focus();return}if(bookingUrl&&!PlaceCore.url(bookingUrl)){el('manualPlaceMessage').textContent='Use a full https:// or http:// booking link.';el('manualPlaceBooking').focus();return}draft={name,address,description:el('manualPlaceDescription').value.trim(),bookingUrl,bookingLabel:'Saved booking link',bookingNote:'User-entered link; confirm the venue and date.'};preview();el('placeManual').open=false;el('manualPlaceMessage').textContent='';el('placeMessage').textContent='Place selected. Save the activity to keep it.'};
- el('correctPlace').onclick=()=>{if(!draft)return;el('placeFinder').open=true;el('placeManual').open=true;el('manualPlaceName').value=draft.name;el('manualPlaceAddress').value=draft.address||'';el('manualPlaceDescription').value=draft.description||'';el('manualPlaceBooking').value=draft.bookingUrl||'';el('manualPlaceName').focus()};
- for(const id of ['title','notes'])el(id).addEventListener('input',()=>{if(!draft&&!el('placeQuery').value)suggest()});
- el('editor').addEventListener('close',()=>{resetResearch();generation++;controller?.abort()});
+ async function locate(place,signal){
+  if(hasPoint(place))return {lat:place.lat,lon:place.lon};
+  const q=[place.nameZh||place.name,place.address].filter(Boolean).join(' ').slice(0,200),key=el('placeCountry').value+':'+norm(q);
+  if(pointCache.has(key))return pointCache.get(key);
+  const t=timeout(signal,8000);
+  try{const [found]=await suggest(q,{limit:1,signal:t.signal});const point=found?{lat:found.lat,lon:found.lon}:null;pointCache.set(key,point);return point}
+  catch{if(signal?.aborted)throw Error('Skipped.');return null}finally{t.done()}
+ }
+ function crowFlies(a,b){const r=Math.PI/180,x=(b.lon-a.lon)*r*Math.cos((a.lat+b.lat)*r/2),y=(b.lat-a.lat)*r;return Math.hypot(x,y)*6371}
+ async function travel(a,b,signal){
+  const key=[a.lat,a.lon,b.lat,b.lon].map(n=>n.toFixed(4)).join(',');if(routeCache.has(key))return routeCache.get(key);
+  const straight=crowFlies(a,b);if(straight<.05)return {km:0,minutes:0,estimated:false};
+  const t=timeout(signal,8000);
+  try{
+   const config=await settings();if(!config.routeUrl||config.enabled===false)throw Error();const base=new URL(config.routeUrl);if(base.protocol!=='https:')throw Error();
+   const response=await fetch(base.href.replace(/\/?$/,'/')+`${a.lon},${a.lat};${b.lon},${b.lat}?overview=false`,{signal:t.signal});if(!response.ok)throw Error();const route=(await response.json())?.routes?.[0];
+   if(!Number.isFinite(route?.distance)||!Number.isFinite(route?.duration))throw Error();
+   const result={km:route.distance/1000,minutes:Math.max(1,Math.round(route.duration/60)),estimated:false};routeCache.set(key,result);return result;
+  }catch{if(signal?.aborted)throw Error('Skipped.');
+   // Rough fallback: winding roads ~1.3× the straight line at ~40 km/h, plus parking.
+   return {km:straight*1.3,minutes:Math.round(straight*1.3/40*60)+5,estimated:true};
+  }finally{t.done()}
+ }
+
+ // --- Orbit (Supabase edge function using Qwen). ---
+ async function orbit(payload,signal,ms){
+  const {roomId,roomKey}=room();if(!roomId||!roomKey)throw Error('Open your private shared trip link first (Trip options → Share trip) to use Orbit.');
+  const t=timeout(signal,ms);
+  try{
+   const [config,app]=await Promise.all([settings(),fetch('config.json',{signal:t.signal}).then(r=>r.json())]);
+   if(!config.researchUrl||app.provider!=='supabase'||!config.researchUrl.startsWith(app.supabaseUrl.replace(/\/$/,'')+'/functions/v1/'))throw Error('Orbit is not configured for this trip. Map search still works.');
+   const response=await fetch(config.researchUrl,{method:'POST',headers:{'Content-Type':'application/json',apikey:app.supabaseKey},body:JSON.stringify({...payload,roomId,roomKey}),signal:t.signal,referrerPolicy:'no-referrer'});
+   let data;try{data=await response.json()}catch{throw Error('Orbit is temporarily unavailable. Try again shortly.')}
+   if(response.status===404)throw Error('Orbit is awaiting backend setup. Map suggestions still work.');
+   if(!response.ok)throw Error(typeof data.error==='string'?data.error:'Orbit is unavailable right now.');
+   return data;
+  }catch(e){if(signal?.aborted)throw Error('Skipped.');throw e.name==='AbortError'?Error('Orbit took too long. Try again later.'):e.message==='Failed to fetch'?Error('Cannot reach Orbit. Check your connection.'):e}
+  finally{t.done()}
+ }
+ const researchQuery=p=>[p.nameZh||p.name,p.address].filter(Boolean).join(', ').slice(0,200);
+ const mergeResearch=(base,found)=>({...base,...found,id:base.id||found.id,lat:base.lat,lon:base.lon});
+
+ // --- Loading overlay. ---
+ // Appears after a short delay so instant lookups don't flash a screen.
+ let loadingTimer;
+ function showLoading(title,steps){
+  el('orbitLoadingTitle').textContent=title;el('orbitSteps').innerHTML=steps.map(s=>`<li data-step="${s.id}" data-state="pending"><span class="step-mark" aria-hidden="true"></span><span>${escape(s.label)}</span></li>`).join('');
+  el('form').setAttribute('aria-busy','true');clearTimeout(loadingTimer);loadingTimer=setTimeout(()=>{el('orbitLoading').hidden=false;el('orbitSkip').focus({preventScroll:true})},250);
+ }
+ function step(id,state){const item=el('orbitSteps').querySelector(`[data-step="${id}"]`);if(item)item.dataset.state=state}
+ function hideLoading(){clearTimeout(loadingTimer);el('form').removeAttribute('aria-busy');if(el('orbitLoading').hidden)return;el('orbitLoading').hidden=true;el('form').removeAttribute('aria-busy');(draft?el('placeSelected').querySelector('button'):el('placeQuery'))?.focus({preventScroll:true})}
+ el('orbitSkip').onclick=()=>flow?.abort();
+
+ // --- Suggestions list (combobox). ---
+ function setBusy(on){el('placeFinder').classList.toggle('is-searching',on)}
+ function message(text){el('placeMessage').textContent=text}
+ function closeList(){el('placeResults').hidden=true;el('placeQuery').setAttribute('aria-expanded','false');el('placeQuery').removeAttribute('aria-activedescendant');active=-1}
+ function renderOptions(list,heading=''){
+  options=list;active=-1;const q=el('placeQuery').value.trim();
+  el('placeResults').innerHTML=(heading&&list.length?`<p class="combo-heading">${escape(heading)}</p>`:'')+list.map((p,i)=>`<button type="button" role="option" id="placeOption${i}" class="place-option" data-place-result="${i}" aria-selected="false"><span class="option-icon" aria-hidden="true">${p.research?'✦':'⌖'}</span><span class="option-text"><strong>${escape(p.name)}${p.nameZh&&p.nameZh!==p.name?` <span lang="zh-Hant">${escape(p.nameZh)}</span>`:''}</strong><small>${escape(p.address||'Address to be confirmed')}</small></span></button>`).join('')+(q.length>=2?`<button type="button" role="option" id="placeOptionAsk" class="place-option ask-orbit" data-ask-orbit><span class="option-icon" aria-hidden="true">✦</span><span class="option-text"><strong>Research with Orbit</strong><small>Ask Orbit to find “${escape(q)}” with sources</small></span></button><button type="button" role="option" id="placeOptionManual" class="place-option manual-option" data-manual-place><span class="option-icon" aria-hidden="true">✎</span><span class="option-text"><strong>Enter the details yourself</strong><small>Type the name, address and booking link</small></span></button>`:'');
+  const show=!!el('placeResults').children.length;el('placeResults').hidden=!show;el('placeQuery').setAttribute('aria-expanded',String(show));
+ }
+ function highlight(next){
+  const items=[...el('placeResults').querySelectorAll('[role=option]')];if(!items.length)return;
+  active=(next+items.length)%items.length;items.forEach((b,i)=>b.setAttribute('aria-selected',String(i===active)));
+  el('placeQuery').setAttribute('aria-activedescendant',items[active].id);items[active].scrollIntoView({block:'nearest'});
+ }
+ function merge(local,remote){const seen=new Set(local.map(p=>norm(p.name)));return [...local,...remote.filter(p=>!seen.has(norm(p.name)))].slice(0,8)}
+ function onType(){
+  const q=el('placeQuery').value.trim(),token=++generation;controller?.abort();clearTimeout(typing);message('');
+  const local=q?matches(q):inferred();renderOptions(local,q?'':'Suggested from this activity');
+  if(q.length<3){setBusy(false);return}
+  const key=el('placeCountry').value+':'+norm(q);
+  if(remoteCache.has(key)){setBusy(false);renderOptions(merge(local,remoteCache.get(key)));return}
+  setBusy(true);
+  typing=setTimeout(async()=>{
+   controller=new AbortController();const t=timeout(controller.signal,8000);
+   try{const remote=await suggest(q,{signal:t.signal});if(token!==generation)return;remoteCache.set(key,remote);if(remoteCache.size>40)remoteCache.delete(remoteCache.keys().next().value);renderOptions(merge(local,remote));if(!local.length&&!remote.length)message('No map match yet. Try the Chinese name, add the city, or use Research with Orbit.')}
+   catch(e){if(token===generation&&!controller.signal.aborted)message(e.message==='off'?'':'Map suggestions are unavailable right now. Use Research with Orbit, or enter the details yourself.')}
+   finally{t.done();if(token===generation)setBusy(false)}
+  },350);
+ }
+
+ // --- Choosing a place runs the guided lookup. ---
+ async function choose(place,{research=true}={}){
+  if(!valid(place))return;
+  ++generation;controller?.abort();clearTimeout(typing);setBusy(false);closeList();
+  const title=el('title').value.trim();if(!title||title===autoTitle){el('title').value=place.name;autoTitle=place.name}
+  const {aliases,...picked}=place;draft=structuredClone(picked);finding=false;transfers={};advice=null;el('placeQuery').value='';message('');preview();
+  const orbitOn=shared(),steps=[{id:'locate',label:'Pinpointing it on the map'},{id:'travel',label:'Working out travel times from your other stops'}];
+  if(orbitOn&&research&&!draft.research)steps.push({id:'research',label:'Orbit is finding the address, opening hours and booking info'});
+  if(orbitOn&&schedule)steps.push({id:'check',label:'Orbit is checking how it fits your day'});
+  flow?.abort();const current=flow=new AbortController(),signal=current.signal,notes=[];
+  showLoading('Getting '+place.name+' ready…',steps);
+  try{
+   step('locate','active');const point=await locate(draft,signal);if(point)Object.assign(draft,point);step('locate',point?'done':'skipped');if(!point)notes.push('Couldn’t pin it on the map, so travel times are unavailable.');
+   step('travel','active');await updateJourney(signal);step('travel','done');
+   if(steps.some(s=>s.id==='research')){
+    step('research','active');
+    try{const data=await orbit({query:researchQuery(draft),country:el('placeCountry').value},signal,65000);const best=Array.isArray(data.places)?data.places.find(valid):null;if(best){draft=mergeResearch(draft,best);preview()}else notes.push(String(data.message||'Orbit couldn’t confirm details with sources.'));step('research',best?'done':'skipped')}
+    catch(e){if(signal.aborted)throw e;notes.push(e.message);step('research','failed')}
+   }
+   if(steps.some(s=>s.id==='check')){step('check','active');await checkPlan(signal);step('check',advice&&!advice.error?'done':'failed')}
+  }catch{notes.push('Skipped. You can run Research with Orbit any time.')}
+  finally{if(flow===current){flow=null;hideLoading();preview();renderJourney();renderAdvice();message(notes.join(' '))}}
+ }
+ async function askOrbit(){
+  const q=el('placeQuery').value.trim();if(q.length<2){message('Type a place name first.');return}
+  if(!shared()){message('Open your private shared trip link first (Trip options → Share trip) to use Orbit. Map suggestions work without sharing.');return}
+  ++generation;controller?.abort();clearTimeout(typing);setBusy(false);closeList();
+  flow?.abort();const current=flow=new AbortController();showLoading('Researching “'+q+'”…',[{id:'research',label:'Orbit is searching official and tourism sources'}]);step('research','active');
+  try{const data=await orbit({query:q,country:el('placeCountry').value},current.signal,65000);const found=(Array.isArray(data.places)?data.places:[]).filter(valid);if(flow!==current)return;renderOptions(found,'Orbit found');message(found.length?(data.cached?'Recent research · ':'')+'Choose the right place.':String(data.message||'No supported match found. Try a more specific name.'))}
+  catch(e){if(flow===current)message(e.message)}
+  finally{if(flow===current){flow=null;hideLoading();el('placeQuery').focus({preventScroll:true})}}
+ }
+
+ // --- Travel legs and fit. ---
+ function neighbour(dir){
+  if(!schedule)return null;const {stops,index}=schedule;
+  // Transfers without a place ("Drive to…") are the journey itself, so measure from the stop before them.
+  for(let i=index+dir;i>=0&&i<stops.length;i+=dir){const s=stops[i];if(s.card.category==='break'||(s.card.category==='travel'&&!s.card.place))continue;return s}
+  return null;
+ }
+ async function stopPoint(card,signal){
+  if(card.place)return locate(card.place,signal);
+  const found=known(card.title+' '+card.notes);return found.length===1?locate(found[0],signal):null;
+ }
+ async function updateJourney(signal){
+  const token=++journeyToken;if(!draft||!schedule){journey=null;renderJourney();return}
+  const prev=neighbour(-1),next=neighbour(1);journey={prev:prev&&{stop:prev,loading:true},next:next&&{stop:next,loading:true}};renderJourney();
+  const leg=async(stop,outbound)=>{if(!stop)return null;const point=await stopPoint(stop.card,signal);if(!point||!hasPoint(draft))return {stop,point};return {stop,point,route:await travel(outbound?draft:point,outbound?point:draft,signal)}};
+  const [a,b]=await Promise.all([leg(prev,false),leg(next,true)]);
+  if(token!==journeyToken)return;journey={prev:a,next:b};near=a?.point||null;renderJourney();renderAdvice();
+ }
+ function fit(free,need){
+  if(need===undefined)return null;const spare=free-need;
+  if(spare>=10)return {level:'ok',text:`${span(spare)} to spare`};
+  if(spare>=0)return {level:'tight',text:spare?`Only ${span(spare)} spare — little room for parking or traffic`:'No spare time for parking or traffic'};
+  return {level:'short',text:`About ${span(-spare)} short`};
+ }
+ function legHTML(leg,outbound){
+  const label=outbound?'Then to':'From';
+  if(!leg)return `<li class="leg leg-none"><span class="leg-dir" aria-hidden="true">${outbound?'↓':'↑'}</span><div><strong>${outbound?'Last stop of the day':'First stop of the day'}</strong></div></li>`;
+  const {stop}=leg,title=escape(stop.card.title),free=outbound?stop.start-schedule.end:schedule.start-stop.end;
+  if(leg.loading)return `<li class="leg is-loading"><span class="leg-dir" aria-hidden="true">${outbound?'↓':'↑'}</span><div><strong>${label} ${title}</strong><span class="leg-detail">Calculating travel time…</span></div></li>`;
+  if(!leg.route)return `<li class="leg"><span class="leg-dir" aria-hidden="true">${outbound?'↓':'↑'}</span><div><strong>${label} ${title}</strong><span class="leg-detail">${hasPoint(draft)?`Add a place to “${title}” to see the travel time.`:'Travel time appears once this place is on the map.'} ${free>0?span(free)+' free between them.':'No gap between them.'}</span></div></li>`;
+  const r=leg.route,f=r.km<.05?null:fit(free,r.minutes),from=outbound?draft:leg.point,to=outbound?leg.point:draft;
+  return `<li class="leg"><span class="leg-dir" aria-hidden="true">${outbound?'↓':'↑'}</span><div><strong>${label} ${title}</strong><span class="leg-detail">${r.km<.05?'Same place':`${r.km.toFixed(r.km<10?1:0)} km · ~${span(r.minutes)} drive${r.estimated?' (rough estimate)':''}`} · ${span(free)} free ${outbound?'before it starts at '+clock(stop.start):'after it ends at '+clock(stop.end)}</span>${f?`<span class="fit fit-${f.level}">${f.level==='ok'?'✓':f.level==='tight'?'!':'✕'} ${escape(f.text)}</span>`:''}</div>${r.km>=.05?`<a class="leg-link" href="${escape(PlaceCore.directions(from,to))}" target="_blank" rel="noopener noreferrer" aria-label="Directions in Google Maps from ${outbound?escape(draft.name):title} to ${outbound?title:escape(draft.name)}">Route ↗</a>`:''}</li>`;
+ }
+ const roundUp=m=>Math.ceil(m/5)*5;
+ // The day is packed back to back, so a drive only fits as its own card; later activities then shift.
+ const driveFor=l=>roundUp(l.route.minutes+10);
+ function transferCard(k,leg){
+  const minutes=transfers[k];if(!minutes||!leg?.route)return null;const other=leg.stop.card.title,name=draft.name;
+  return {id:(typeof uid==='function'?uid():String(Math.random()).slice(2)),title:k==='prev'?`Drive to ${name}`:`Drive to ${other}`,notes:`About ${span(leg.route.minutes)} by car (${leg.route.km.toFixed(1)} km${leg.route.estimated?', rough estimate':''}) ${k==='prev'?'from '+other:'from '+name}, plus time for parking and getting everyone ready. Added from the travel check.`,category:'travel',duration:minutes};
+ }
+ function withTransfers(cards,id){
+  if(!draft||!journey)return cards;const i=cards.findIndex(c=>c.id===id);if(i<0)return cards;
+  const before=transferCard('prev',journey.prev),after=transferCard('next',journey.next);
+  return [...cards.slice(0,i),...(before?[before]:[]),cards[i],...(after?[after]:[]),...cards.slice(i+1)];
+ }
+ function journeySummary(){
+  const legs=[['prev',journey.prev],['next',journey.next]].filter(([,l])=>l?.route&&l.route.km>=.05).map(([k,l])=>{const free=k==='prev'?schedule.start-l.stop.end:l.stop.start-schedule.end;return {k,l,free,f:fit(free,l.route.minutes)}});
+  const added=Object.entries(transfers).filter(([,m])=>m).map(([k,m])=>`<span class="drive-chip">🚗 ${span(m)} drive ${k==='prev'?'before':'after'} this stop<button type="button" data-drop-transfer="${k}" aria-label="Remove the ${span(m)} drive ${k==='prev'?'before':'after'} this stop">✕</button></span>`).join('');
+  if(!legs.length)return added?`<div class="journey-summary is-ok"><div class="journey-fixes">${added}</div></div>`:'';
+  const short=legs.filter(x=>x.f.level==='short'),tight=legs.filter(x=>x.f.level==='tight');
+  const fixes=[...short,...tight].filter(x=>!transfers[x.k]).map(x=>`<button type="button" data-add-transfer="${x.k}" data-minutes="${driveFor(x.l)}">＋ Add a ${span(driveFor(x.l))} drive ${x.k==='prev'?'from “'+escape(x.l.stop.card.title)+'”':'to “'+escape(x.l.stop.card.title)+'”'}</button>`).join('');
+  const chips=added?`<div class="journey-fixes">${added}</div>`:'';
+  if(short.length)return `<div class="journey-summary is-short"><p><strong>Travel doesn’t fit yet.</strong> ${short.map(x=>x.k==='prev'?`Getting here from “${escape(x.l.stop.card.title)}” takes ~${span(x.l.route.minutes)}, but there’s ${x.free>0?'only '+span(x.free):'no time'} between them.`:`Reaching “${escape(x.l.stop.card.title)}” takes ~${span(x.l.route.minutes)}, but there’s ${x.free>0?'only '+span(x.free):'no time'} before it starts.`).join(' ')}</p>${fixes?`<div class="journey-fixes">${fixes}</div><p class="journey-note">Adds a “Getting around” card; later activities move to make room.</p>`:''}${chips}</div>`;
+  if(tight.length)return `<div class="journey-summary is-tight"><p><strong>Travel fits, just.</strong> Little buffer for traffic, parking or getting the kids ready.</p>${fixes?`<div class="journey-fixes">${fixes}</div>`:''}${chips}</div>`;
+  return `<div class="journey-summary is-ok"><p><strong>✓ Travel fits</strong> around your other stops.</p>${chips}</div>`;
+ }
+ const reschedule=()=>el('activityStart').dispatchEvent(new Event('input',{bubbles:true}));
+ el('journey').addEventListener('click',e=>{
+  const add=e.target.closest('[data-add-transfer]'),drop=e.target.closest('[data-drop-transfer]');
+  if(add){transfers[add.dataset.addTransfer]=Number(add.dataset.minutes);reschedule()}
+  if(drop){delete transfers[drop.dataset.dropTransfer];reschedule()}
+ });
+ function renderJourney(){
+  const box=el('journey');if(!draft||!schedule||!journey){box.innerHTML=draft?'':'<p class="journey-empty">Choose a place in step 1 to see travel times from your previous and next stops.</p>';return}
+  box.innerHTML=journeySummary()+`<ol class="legs">${legHTML(journey.prev,false)}<li class="leg leg-here"><span class="leg-dir" aria-hidden="true">●</span><div><strong>${escape(draft.name)}</strong><span class="leg-detail">${clock(schedule.start)}–${clock(schedule.end)}</span></div></li>${legHTML(journey.next,true)}</ol>${[journey.prev,journey.next].some(l=>l?.route?.estimated)?'<p class="field-help">Rough estimates assume ~40 km/h. Driving times exclude traffic.</p>':'<p class="field-help">Driving times exclude traffic and parking.</p>'}`;
+ }
+
+ // --- Orbit's plan check. ---
+ function plan(){
+  if(!draft||!schedule)return null;
+  const leg=(l,key,time)=>l?{title:l.stop.card.title,place:l.stop.card.place?.name||(known(l.stop.card.title+' '+l.stop.card.notes).length===1?known(l.stop.card.title+' '+l.stop.card.notes)[0].name:''),[key]:clock(time),travelMinutes:l.route?.minutes,km:l.route?.km,estimated:!!l.route?.estimated}:null;
+  return {place:{name:draft.name,address:draft.address||'',openingHours:draft.openingHours||'',description:draft.description||''},date:schedule.date,start:clock(schedule.start),end:clock(schedule.end),previous:leg(journey?.prev,'leaveAt',journey?.prev?.stop.end),next:leg(journey?.next,'startsAt',journey?.next?.stop.start)};
+ }
+ const planKey=()=>JSON.stringify(plan());
+ async function checkPlan(signal){
+  const request=plan();if(!request)return;const key=JSON.stringify(request);
+  try{const data=await orbit({action:'evaluate',plan:request},signal,30000);if(!data.evaluation)throw Error('Orbit couldn’t check this plan.');advice={key,...data.evaluation}}
+  catch(e){if(signal?.aborted)throw e;advice={key,error:e.message}}
+  renderAdvice();
+ }
+ async function recheck(){
+  flow?.abort();const current=flow=new AbortController();showLoading('Checking your plan…',[{id:'travel',label:'Updating travel times'},{id:'check',label:'Orbit is checking how it fits your day'}]);
+  try{step('travel','active');await updateJourney(current.signal);step('travel','done');step('check','active');await checkPlan(current.signal)}catch{}
+  finally{if(flow===current){flow=null;hideLoading();renderAdvice()}}
+ }
+ function renderAdvice(){
+  const box=el('orbitAdvice');if(!draft||!schedule){box.innerHTML='';return}
+  if(!shared()){box.innerHTML='<p class="orbit-note"><span aria-hidden="true">✦</span> Open your private shared trip link to let Orbit research places and check whether they fit your day.</p>';return}
+  const stale=advice&&advice.key!==planKey(),labels={good:'Looks good',tight:'Tight but doable',not_recommended:'Not recommended'};
+  if(!advice){box.innerHTML='<button type="button" class="orbit-button" data-orbit-check>✦ Ask Orbit if this fits</button>';return}
+  if(advice.error){box.innerHTML=`<div class="orbit-card orbit-error"><p>${escape(advice.error)}</p><button type="button" class="orbit-button" data-orbit-check>Try again</button></div>`;return}
+  box.innerHTML=`<div class="orbit-card verdict-${escape(advice.verdict)}${stale?' is-stale':''}"><p class="orbit-head"><span class="verdict">${escape(labels[advice.verdict]||'Orbit’s view')}</span><span class="orbit-by">✦ Orbit</span></p><p class="orbit-headline">${escape(advice.headline)}</p>${advice.reasons?.length?`<ul>${advice.reasons.map(r=>`<li>${escape(r)}</li>`).join('')}</ul>`:''}${advice.suggestion?`<p class="orbit-suggestion"><strong>Try:</strong> ${escape(advice.suggestion)}</p>`:''}${stale?'<p class="orbit-stale">You changed the time or place since Orbit checked.</p><button type="button" class="orbit-button" data-orbit-check>Re-check with Orbit</button>':''}<p class="field-help">AI suggestion — use your own judgement.</p></div>`;
+ }
+ el('orbitAdvice').onclick=e=>{if(e.target.closest('[data-orbit-check]'))recheck()};
+
+ // --- Selected place panel. ---
+ function preview(){
+  const box=el('placeSelected');el('placeFinder').hidden=!!draft&&!finding;el('placeFields').classList.toggle('has-place',!!draft);
+  box.innerHTML=draft?`<div class="selected-place"><div class="selected-head"><span class="selected-label">Selected place</span><div class="selected-tools"><button type="button" id="changePlace">${finding?'Keep this place':'Change'}</button><button type="button" id="removePlace">Remove</button></div></div>${html(draft)}<div class="selected-actions"><button type="button" id="correctPlace">Edit details</button>${draft.research?'':'<button type="button" id="researchPlace" class="orbit-button">✦ Research with Orbit</button>'}</div></div>`:'';
+  if(!draft)return;
+  el('changePlace').onclick=()=>{finding=!finding;preview();if(finding){el('placeQuery').focus();onType()}else closeList()};
+  el('removePlace').onclick=()=>{draft=null;finding=false;advice=null;journey=null;transfers={};reschedule();if(el('title').value.trim()===autoTitle)autoTitle='';preview();renderJourney();renderAdvice();message('');el('placeQuery').focus()};
+  el('correctPlace').onclick=()=>{finding=true;preview();el('placeManual').open=true;el('manualPlaceName').value=draft.name;el('manualPlaceAddress').value=draft.address||'';el('manualPlaceDescription').value=draft.description||'';el('manualPlaceBooking').value=draft.bookingUrl||'';el('manualPlaceName').focus()};
+  el('researchPlace')?.addEventListener('click',()=>{if(!shared()){message('Open your private shared trip link first (Trip options → Share trip) to use Orbit.');return}choose(draft)});
+ }
+
+ // --- Editor lifecycle and events. ---
+ function open(card){
+  ++generation;controller?.abort();flow?.abort();flow=null;clearTimeout(typing);clearTimeout(loadingTimer);el('orbitLoading').hidden=true;el('form').removeAttribute('aria-busy');
+  draft=card?.place&&valid(card.place)?structuredClone(card.place):null;finding=false;advice=null;journey=null;autoTitle='';near=null;transfers={};
+  el('placeQuery').value='';el('placeManual').open=false;el('manualPlaceMessage').textContent='';for(const id of ['manualPlaceName','manualPlaceAddress','manualPlaceDescription','manualPlaceBooking'])el(id).value='';
+  el('placeCountry').value=/changi|singapore|樟宜/i.test(card?.title||'')?'sg':'tw';setBusy(false);closeList();message('');preview();renderJourney();renderAdvice();
+ }
+ el('placeQuery').addEventListener('input',onType);
+ el('placeQuery').addEventListener('focus',()=>{if(!el('placeQuery').value&&!draft)onType()});
+ el('placeQuery').addEventListener('keydown',e=>{
+  const listOpen=!el('placeResults').hidden;
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();if(!listOpen)onType();highlight(active+(e.key==='ArrowDown'?1:-1))}
+  else if(e.key==='Enter'){e.preventDefault();const items=[...el('placeResults').querySelectorAll('[role=option]')];(items[active]||items[0])?.click()}
+  else if(e.key==='Escape'&&listOpen){e.preventDefault();e.stopPropagation();closeList()}
+ });
+ el('placeResults').addEventListener('click',e=>{const ask=e.target.closest('[data-ask-orbit]');if(ask){askOrbit();return}if(e.target.closest('[data-manual-place]')){closeList();el('placeManual').open=true;if(!el('manualPlaceName').value)el('manualPlaceName').value=el('placeQuery').value.trim();el('manualPlaceName').focus();return}const b=e.target.closest('[data-place-result]');if(b)choose(options[Number(b.dataset.placeResult)])});
+ document.addEventListener('click',e=>{if(!el('placeResults').hidden&&!e.target.closest('#placeFinder'))closeList()});
+ el('placeCountry').onchange=()=>{remoteCache.clear();if(el('placeQuery').value)onType()};
+ el('useManualPlace').onclick=()=>{
+  const name=el('manualPlaceName').value.trim(),address=el('manualPlaceAddress').value.trim(),bookingUrl=el('manualPlaceBooking').value.trim();
+  if(!name){el('manualPlaceMessage').textContent='Add a place name first.';el('manualPlaceName').focus();return}
+  if(bookingUrl&&!PlaceCore.url(bookingUrl)){el('manualPlaceMessage').textContent='Use a full https:// or http:// booking link.';el('manualPlaceBooking').focus();return}
+  const keep=draft&&draft.name===name&&(draft.address||'')===address?{lat:draft.lat,lon:draft.lon}:{};
+  el('placeManual').open=false;el('manualPlaceMessage').textContent='';
+  choose({...keep,name,address,description:el('manualPlaceDescription').value.trim(),bookingUrl,bookingLabel:'Saved booking link',bookingNote:'User-entered link; confirm the venue and date.'},{research:false});
+ };
+ el('editor').addEventListener('close',()=>{++generation;controller?.abort();flow?.abort();clearTimeout(typing);clearTimeout(journeyTimer)});
  function card(c){const found=known(c.title+' '+c.notes);return `<div class="place-on-card" data-place-card="${escape(c.id)}">${c.place?html(c.place):''}<button type="button" data-place-edit="${escape(c.id)}">${c.place?'Change place':found.length?'⌖ '+found.length+' place suggestion'+(found.length>1?'s':''):'⌖ Add a place'}</button></div>`}
- document.addEventListener('click',e=>{const b=e.target.closest('[data-place-edit]');if(!b)return;const c=state.days[day].cards.find(c=>c.id===b.dataset.placeEdit);if(c){openEditor(c);el('placeFields').open=true;el('placeFields').scrollIntoView({block:'start'});el('placeQuery').focus({preventScroll:true})}});
- window.orbitPlaces={open,value:()=>draft?structuredClone(draft):undefined,card};
- fetch('places.json').then(r=>{if(!r.ok)throw Error();return r.json()}).then(list=>{catalogue=list.filter(p=>valid(p)&&Array.isArray(p.aliases));if(typeof state!=='undefined'&&state){for(const node of document.querySelectorAll('[data-place-card]')){const c=state.days.flatMap(d=>d.cards).find(c=>c.id===node.dataset.placeCard);if(c)node.outerHTML=card(c)}if(el('editor').open)suggest()}}).catch(()=>{el('placeMessage').textContent='Known-place suggestions could not load. Use Search or enter a place manually.'});
+ document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-place-edit]');if(!b)return;const c=state.days[day].cards.find(c=>c.id===b.dataset.placeEdit);if(!c)return;
+  openEditor(c);el('placeFields').scrollIntoView({block:'start'});
+  if(c.place){finding=true;preview()}el('placeQuery').focus({preventScroll:true});onType();
+ });
+ // app.js reports the previewed day whenever the day, time or duration changes.
+ function scheduleChanged(next){schedule=next;clearTimeout(journeyTimer);if(!draft){renderJourney();return}if(!next){journey=null;renderJourney();renderAdvice();return}journeyTimer=setTimeout(()=>updateJourney().catch(()=>{}),250)}
+ window.orbitPlaces={open,value:()=>draft?structuredClone(draft):undefined,card,schedule:scheduleChanged,withTransfers};
+ fetch('places.json').then(r=>{if(!r.ok)throw Error();return r.json()}).then(list=>{catalogue=list.filter(p=>valid(p)&&Array.isArray(p.aliases));if(typeof state!=='undefined'&&state){for(const node of document.querySelectorAll('[data-place-card]')){const c=state.days.flatMap(d=>d.cards).find(c=>c.id===node.dataset.placeCard);if(c)node.outerHTML=card(c)}}}).catch(()=>message('Known-place suggestions could not load. Map suggestions and manual entry still work.'));
 })();
