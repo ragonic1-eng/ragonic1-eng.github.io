@@ -193,7 +193,7 @@
    step('travel','active');await updateJourney(signal);step('travel','done');
    if(steps.some(s=>s.id==='research')){
     step('research','active');
-    try{const data=await orbit({query:researchQuery(draft),country:el('placeCountry').value},signal,65000);const best=Array.isArray(data.places)?data.places.find(valid):null;if(best){const {planning:found,...facts}=best;draft=mergeResearch(draft,facts);preview();autofill(draft,found||{})}else notes.push(String(data.message||'Orbit couldn’t confirm details with sources.'));step('research',best?'done':'skipped')}
+    try{const data=await orbit({query:researchQuery(draft),country:el('placeCountry').value},signal,110000);const best=Array.isArray(data.places)?data.places.find(valid):null;if(best){const {planning:found,...facts}=best;draft=mergeResearch(draft,facts);preview();autofill(draft,found||{})}else notes.push(String(data.message||'Orbit couldn’t confirm details with sources.'));step('research',best?'done':'skipped')}
     catch(e){if(signal.aborted)throw e;notes.push(e.message);step('research','failed')}
    }
    if(steps.some(s=>s.id==='check')){step('check','active');await checkPlan(signal);step('check',advice&&!advice.error?'done':'failed')}
@@ -205,7 +205,7 @@
   if(!shared()){message('Open your private shared trip link first (Trip options → Share trip) to use Orbit. Map suggestions work without sharing.');return}
   ++generation;controller?.abort();clearTimeout(typing);setBusy(false);closeList();
   flow?.abort();const current=flow=new AbortController();showLoading('Researching “'+q+'”…',[{id:'research',label:'Orbit is looking this place up'}]);step('research','active');
-  try{const data=await orbit({query:q,country:el('placeCountry').value},current.signal,65000);const found=(Array.isArray(data.places)?data.places:[]).filter(valid);if(flow!==current)return;renderOptions(found,'Orbit found');message(found.length?(data.cached?'Recent research · ':'')+'Choose the right place.':String(data.message||'No supported match found. Try a more specific name.'))}
+  try{const data=await orbit({query:q,country:el('placeCountry').value},current.signal,110000);const found=(Array.isArray(data.places)?data.places:[]).filter(valid);if(flow!==current)return;renderOptions(found,'Orbit found');message(found.length?(data.cached?'Recent research · ':'')+'Choose the right place.':String(data.message||'No supported match found. Try a more specific name.'))}
   catch(e){if(flow===current)message(e.message)}
   finally{if(flow===current){flow=null;hideLoading();el('placeQuery').focus({preventScroll:true})}}
  }
