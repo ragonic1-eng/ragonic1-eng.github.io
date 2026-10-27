@@ -8,6 +8,7 @@ with sync_playwright() as p:
  google=[];chat=[]
  def places(route):
   if route.request.method=='GET':return route.fulfill(json={'available':True})
+  if route.request.post_data_json.get('action')!='autocomplete':return route.fulfill(json={'point':None})
   google.append(1)
   if len(google)<=2:return route.fulfill(status=502,json={'error':'Google Maps rejected the key. Check that Places API (New) is enabled and billing is on.','code':'GOOGLE_AUTH'})
   route.fulfill(json={'suggestions':[{'placeId':'ChIJ_strawberry_farm_1234','name':'草莓園','address':'大湖'}]})

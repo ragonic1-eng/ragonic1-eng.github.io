@@ -23,7 +23,7 @@ with sync_playwright() as p:
  ctx,page=context({'width':1440,'height':900})
  page.evaluate("d=>{state.days[2].cards=d;day=2;render()}",day)
  # Pins in visit order, the route, drive times between stops and a warning when back-to-back stops leave no time to drive.
- expect(page.locator('.map-pin')).to_have_count(4);expect(page.locator('.leg-connector')).to_have_count(3);expect(page.locator('.leg-connector').first).to_contain_text('26 min · 14 km');expect(page.locator('.leg-connector').first).to_contain_text('only 0 min planned')
+ expect(page.locator('.map-pin')).to_have_count(4);expect(page.locator('.leg-connector')).to_have_count(3);expect(page.locator('.leg-connector').first).to_contain_text('26 min drive · 14 km');expect(page.locator('.leg-connector').first).to_contain_text('no time planned');expect(page.locator('.leg-connector').first.locator('[data-fix-drive]')).to_have_text('＋ Add 40 min drive');expect(page.locator('#dayDriving')).to_contain_text('drives don’t fit')
  expect(page.locator('.leg-connector').nth(2)).to_contain_text('from Farm B');assert len(osrm_calls)==1
  expect(page.locator('#mapUnpinned')).to_contain_text('Not on the map yet (1)');expect(page.locator('#mapEmpty')).to_be_hidden()
  # A pin shows what the place is and jumps to its card.
