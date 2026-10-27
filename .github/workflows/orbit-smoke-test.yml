@@ -53,6 +53,19 @@ jobs:
           else: note('error', 'Plan check failed', f"HTTP {status}: {check}")
           if not (places and check.get('evaluation')): raise SystemExit(1)
           PY
+      - name: Edge Function secret names (values are never read)
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+          token = os.environ.get('SUPABASE_ACCESS_TOKEN')
+          if not token: raise SystemExit(0)
+          request = urllib.request.Request(f"https://api.supabase.com/v1/projects/{os.environ['SUPABASE_PROJECT_REF']}/secrets", headers={'Authorization': 'Bearer ' + token, 'User-Agent': 'little-orbit-check/1.0'})
+          try:
+            with urllib.request.urlopen(request, timeout=30) as response: names = [s.get('name', '') for s in json.load(response)]
+            print('::notice title=Secret names::' + ', '.join(repr(n) for n in names if not n.startswith('SUPABASE_')))
+          except Exception as e: print('::warning title=Secret names::' + type(e).__name__)
+          PY
       - name: Recent Orbit errors from Supabase logs
         if: always()
         run: |
