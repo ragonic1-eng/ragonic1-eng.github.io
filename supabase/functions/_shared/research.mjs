@@ -60,10 +60,16 @@ export function cleanPlan(plan){
  const place=plan.place||{},clean={place:{name:text(place.name,200),address:text(place.address,300),openingHours:text(place.openingHours,300),description:text(place.description,400)},date:/^\d{4}-\d{2}-\d{2}$/.test(plan.date)?plan.date:'',start:clock(plan.start),end:clock(plan.end),previous:cleanLeg(plan.previous,'leaveAt'),next:cleanLeg(plan.next,'startsAt')};
  return clean.place.name.length>=2&&clean.date&&clean.start&&clean.end?clean:null;
 }
+// Models phrase the same verdict in different ways ("Not recommended", "doable", "risky"); map them onto the three we show.
+const VERDICT_WORDS={good:'good',ok:'good',fits:'good',feasible:'good',yes:'good',recommended:'good',tight:'tight',doable:'tight',possible:'tight',risky:'tight',caution:'tight',not_recommended:'not_recommended',not_feasible:'not_recommended',infeasible:'not_recommended',unrealistic:'not_recommended',no:'not_recommended',bad:'not_recommended'};
+function verdictOf(value){const key=String(value??'').trim().toLowerCase().replace(/[\s-]+/g,'_').replace(/[^a-z_]/g,'');return VERDICT_WORDS[key]||(key.startsWith('not')?'not_recommended':'')}
+const asList=v=>Array.isArray(v)?v:typeof v==='string'&&v.trim()?[v]:[];
 export function sanitizeEvaluation(result){
- const data=parseJSON(replyText(result));
- if(!VERDICTS.includes(data?.verdict)||typeof data.headline!=='string'||!data.headline.trim())throw Error('INVALID_RESULT');
- return {evaluation:{verdict:data.verdict,headline:text(data.headline,200),reasons:(Array.isArray(data.reasons)?data.reasons:[]).filter(r=>typeof r==='string'&&r.trim()).slice(0,3).map(r=>text(r,240)),suggestion:text(data.suggestion,300)}};
+ const raw=replyText(result);let data;try{data=parseJSON(raw)}catch(e){e.detail=raw.slice(0,300);throw e}
+ if(data?.evaluation&&typeof data.evaluation==='object')data=data.evaluation;
+ const verdict=verdictOf(data?.verdict??data?.status??data?.rating),headline=[data?.headline,data?.summary,data?.title].find(v=>typeof v==='string'&&v.trim());
+ if(!VERDICTS.includes(verdict)||!headline){const e=Error('INVALID_RESULT');e.detail=raw.slice(0,300);throw e}
+ return {evaluation:{verdict,headline:text(headline,200),reasons:asList(data.reasons).filter(r=>typeof r==='string'&&r.trim()).slice(0,3).map(r=>text(r,240)),suggestion:text(typeof data.suggestion==='string'?data.suggestion:asList(data.suggestion)[0]||'',300)}};
 }
 export function createHandler({env,fetcher=fetch,now=()=>Date.now()}) {
  const MODEL=env('QWEN_MODEL')||DEFAULT_MODEL,apiKey=()=>env('DASHSCOPE_API_KEY')||env('QWEN_API_KEY');
@@ -101,15 +107,18 @@ export function createHandler({env,fetcher=fetch,now=()=>Date.now()}) {
    // Accept the host alone or a URL copied from Alibaba's docs with an API path on the end.
    const base=(env('QWEN_BASE_URL')||DEFAULT_BASE).trim().replace(/\/+$/,'').replace(/\/(compatible-mode|api)\/v1$/,'');
    const response=await fetcher(base+'/api/v1/services/aigc/text-generation/generation',{method:'POST',headers:{Authorization:'Bearer '+apiKey(),'Content-Type':'application/json'},body:JSON.stringify(modelRequest),signal:AbortSignal.timeout(45000)});
-   if(!response.ok)throw Error(response.status===429?'PROVIDER_LIMIT':response.status===401||response.status===403?'PROVIDER_AUTH':'PROVIDER');
-   const result=await response.json();if(result?.output?.choices?.[0]?.finish_reason==='length')throw Error('INCOMPLETE');
+   if(!response.ok){const e=Error(response.status===429?'PROVIDER_LIMIT':response.status===401||response.status===403?'PROVIDER_AUTH':'PROVIDER');e.detail='HTTP '+response.status+' '+(await response.text().catch(()=>'')).slice(0,300);throw e}
+   const result=await response.json();if(result?.output?.choices?.[0]?.finish_reason==='length'){const e=Error('INCOMPLETE');e.detail=replyText(result).slice(0,300);throw e}
    const output=evaluate?sanitizeEvaluation(result):sanitizeResearch(result);
    await rpc('orbit_finish_research',{p_id:roomId,p_hash:hash,p_result:output});claimed=false;
    return reply(200,output);
   }catch(e){
    if(claimed)try{await rpc('orbit_finish_research',{p_id:roomId,p_hash:hash,p_result:null})}catch{}
-   const code=e?.message;const message=code==='BACKEND'?'Orbit setup is incomplete or temporarily unavailable. Try map search.':code==='PROVIDER_AUTH'?'Orbit’s Qwen key needs checking: it must be saved in Supabase secrets and match the API region. Map search still works.':code==='PROVIDER_LIMIT'?'Orbit is at its usage limit. Try again later or use map search.':evaluate?'Orbit could not check this plan right now. The travel times above still apply.':'Research could not be confirmed with sources. Try a more specific name, or use map search.';
-   return reply(503,{error:message});
+   const code=e?.name==='TimeoutError'?'PROVIDER_TIMEOUT':['BACKEND','PROVIDER','PROVIDER_AUTH','PROVIDER_LIMIT','INCOMPLETE','INVALID_RESULT','NO_SOURCES'].includes(e?.message)?e.message:'UNEXPECTED';
+   // Shown in Supabase → Edge Functions → Logs. Never includes trip keys or the provider key.
+   console.error(JSON.stringify({orbit:evaluate?'evaluate':'research',code,detail:String(e?.detail||(code==='UNEXPECTED'?e?.message:'')||'').replace(apiKey()||'\u0000','[key]').slice(0,400)}));
+   const message=code==='BACKEND'?'Orbit setup is incomplete or temporarily unavailable. Try map search.':code==='PROVIDER_AUTH'?'Orbit’s Qwen key needs checking: it must be saved in Supabase secrets and match the API region. Map search still works.':code==='PROVIDER_LIMIT'?'Orbit is at its usage limit. Try again later or use map search.':code==='PROVIDER_TIMEOUT'?'Qwen took too long to answer. Try again in a moment.':evaluate?'Orbit could not check this plan right now. The travel times above still apply.':'Research could not be confirmed with sources. Try a more specific name, or use map search.';
+   return reply(503,{error:message,code});
   }
  };
 }

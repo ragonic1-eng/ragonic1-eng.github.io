@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createHandler,sanitizeResearch,cleanPlan} from '../supabase/functions/_shared/research.mjs';
+import {createHandler,sanitizeResearch,cleanPlan,sanitizeEvaluation} from '../supabase/functions/_shared/research.mjs';
 const source='https://venue.example/visit';
 const place={name:'Example farm',nameZh:'示範農場',address:'1 Farm Road',description:'A family farm.',descriptionZh:'親子農場。',source,bookingUrl:source,bookingNote:'Tickets available on arrival.',bookingNoteZh:'可現場購票。'};
 const qwen=(places,results=[{index:1,url:source,title:'Venue visitor information'}])=>({output:{choices:[{finish_reason:'stop',message:{role:'assistant',content:'```json\n'+JSON.stringify({places})+'\n```'}}],search_info:{search_results:results}}});
@@ -67,4 +67,19 @@ test('QWEN_BASE_URL copied with an API path still reaches the native endpoint',a
 test('research returns bounded planning hints for the activity form',()=>{
  const r=sanitizeResearch(qwen([{...place,category:'food',visitMinutes:100,tips:'Go early to avoid queues.'}]));assert.deepEqual(r.places[0].planning,{category:'food',visitMinutes:105,tips:'Go early to avoid queues.',tipsZh:''});
  const bad=sanitizeResearch(qwen([{...place,category:'casino',visitMinutes:'all day',tips:7}]));assert.deepEqual(bad.places[0].planning,{category:'',visitMinutes:null,tips:'',tipsZh:''});
+});
+test('plan checks accept common verdict phrasings and wrapped or loosely shaped replies',()=>{
+ const reply=obj=>({output:{choices:[{message:{content:typeof obj==='string'?obj:JSON.stringify(obj)}}]}});
+ assert.equal(sanitizeEvaluation(reply({verdict:'Not recommended',headline:'Too far.'})).evaluation.verdict,'not_recommended');
+ assert.equal(sanitizeEvaluation(reply({verdict:'Doable',summary:'Leave on time.',reasons:'Traffic after 17:00',suggestion:['Go earlier']})).evaluation.reasons[0],'Traffic after 17:00');
+ assert.equal(sanitizeEvaluation(reply('Here you go:\n```json\n{"evaluation":{"verdict":"GOOD","headline":"Fits well."}}\n```')).evaluation.verdict,'good');
+ assert.throws(()=>sanitizeEvaluation(reply({verdict:'maybe',headline:'Hmm'})),/INVALID_RESULT/);
+});
+test('failures return a short code and log the provider reason without keys',async()=>{
+ const logged=[],original=console.error;console.error=m=>logged.push(String(m));
+ try{
+  const {handler}=harness({providerStatus:400,providerContent:{code:'InvalidParameter',message:'bad model test-provider-secret'}});
+  const r=await handler(request());const data=await r.json();assert.equal(r.status,503);assert.equal(data.code,'PROVIDER');assert.ok(!JSON.stringify(data).includes('InvalidParameter'));
+  assert.ok(logged.some(l=>l.includes('InvalidParameter')&&l.includes('HTTP 400')));assert.ok(!logged.join('').includes('test-provider-secret'));assert.ok(!logged.join('').includes(body.roomKey));
+ }finally{console.error=original}
 });

@@ -69,7 +69,7 @@
    const response=await fetch(config.researchUrl,{method:'POST',headers:{'Content-Type':'application/json',apikey:app.supabaseKey},body:JSON.stringify({...payload,roomId,roomKey}),signal:t.signal,referrerPolicy:'no-referrer'});
    let data;try{data=await response.json()}catch{throw Error('Orbit is temporarily unavailable. Try again shortly.')}
    if(response.status===404)throw Error('Orbit is awaiting backend setup. Map suggestions still work.');
-   if(!response.ok)throw Error(typeof data.error==='string'?data.error:'Orbit is unavailable right now.');
+   if(!response.ok)throw Error((typeof data.error==='string'?data.error:'Orbit is unavailable right now.')+(typeof data.code==='string'&&/^[A-Z_]{2,30}$/.test(data.code)?` (code: ${data.code})`:''));
    return data;
   }catch(e){if(signal?.aborted)throw Error('Skipped.');throw e.name==='AbortError'?Error('Orbit took too long. Try again later.'):e.message==='Failed to fetch'?Error('Cannot reach Orbit. Check your connection.'):e}
   finally{t.done()}
