@@ -22,9 +22,17 @@
 <form id="orbitChatForm" class="orbit-chat-form"><label class="sr-only" for="orbitChatInput">Message Orbit</label><textarea id="orbitChatInput" rows="1" maxlength="1000" placeholder="Ask Orbit… e.g. where are our hotels?" enterkeyhint="send"></textarea><button type="submit" id="orbitChatSend" class="primary" aria-label="Send">➤</button></form></section>`);
  const pal=el('orbitPal'),panel=el('orbitChat'),list=el('orbitChatLog'),input=el('orbitChatInput');
  try{if(!localStorage.getItem(HINT)){el('orbitPalHint').hidden=false;setTimeout(()=>{el('orbitPalHint').hidden=true},9000)}}catch{}
- function open(){panel.hidden=false;pal.setAttribute('aria-expanded','true');document.body.classList.add('orbit-chat-open');el('orbitPalHint').hidden=true;try{localStorage.setItem(HINT,'1')}catch{}render();input.focus({preventScroll:true})}
- function close(){panel.hidden=true;pal.setAttribute('aria-expanded','false');document.body.classList.remove('orbit-chat-open');pal.focus({preventScroll:true})}
+ function open(){window.Sounds?.play('heehaw');panel.hidden=false;pal.setAttribute('aria-expanded','true');document.body.classList.add('orbit-chat-open');el('orbitPalHint').hidden=true;try{localStorage.setItem(HINT,'1')}catch{}render();input.focus({preventScroll:true})}
+ function close(){if(!panel.hidden)window.Sounds?.play('close');panel.hidden=true;pal.setAttribute('aria-expanded','false');document.body.classList.remove('orbit-chat-open');pal.focus({preventScroll:true})}
  pal.onclick=()=>panel.hidden?open():close();
+ // Messages pop up in the same corner; lift Orbit above any message on screen so it stays tappable.
+ const toast=document.getElementById('toast');
+ function clearOfToast(){
+  pal.style.translate='';if(!toast?.classList.contains('show'))return;
+  const t=toast.getBoundingClientRect(),p=pal.getBoundingClientRect();
+  if(t.left<p.right&&p.left<t.right&&t.top<p.bottom&&p.top<t.bottom)pal.style.translate=`0 ${Math.round(t.top-p.bottom-10)}px`;
+ }
+ if(toast){new MutationObserver(clearOfToast).observe(toast,{attributes:true,attributeFilter:['class'],childList:true});addEventListener('resize',clearOfToast)}
  el('orbitChatClose').onclick=close;
  el('orbitChatClear').onclick=()=>{if(busy)return;log=[];save();render();input.focus()};
  panel.addEventListener('keydown',e=>{if(e.key==='Escape'){e.stopPropagation();close()}});
@@ -47,7 +55,7 @@
   const {roomId,roomKey}=room();
   log.push({role:'user',text:question});input.value='';input.style.height='auto';
   if(!roomId||!roomKey){log.push({role:'assistant',text:'I can only help on your private shared trip. Tap “Turn on Orbit” to make one — then ask me again!',needsShare:true});save();render();return}
-  busy=true;save();render();
+  busy=true;window.Sounds?.play('send');save();render();
   try{
    const [config,app]=await settings();if(!config.chatUrl||app.provider!=='supabase'||!config.chatUrl.startsWith(String(app.supabaseUrl).replace(/\/$/,'')+'/functions/v1/'))throw Error('Orbit chat isn’t set up for this site yet.');
    const messages=log.filter(m=>m.text&&!m.failed).slice(-10).map(m=>({role:m.role,text:m.role==='assistant'?m.text+(m.changes?'\n[Proposed changes: '+m.changes.map(describe).join('; ')+(m.status?' — '+m.status:'')+']':''):m.text}));
@@ -59,9 +67,11 @@
     if(!response.ok)throw Problems.fromResponse(response,data,'Orbit couldn’t answer right now.');
     return data;
    });
+   window.Sounds?.play('chime');
    log.push({role:'assistant',text:String(data.text||''),map:data.map,places:Array.isArray(data.places)?data.places:undefined,changes:Array.isArray(data.changes)&&data.changes.length?data.changes:undefined,changeSummary:data.changeSummary,memory:[...(data.remembered||[]).map(text=>({text:String(text),status:'saved'})),...(data.forgot||[]).map(text=>({text:String(text),status:'replaced'}))],memoryNote:data.memoryError||(Array.isArray(data.memoryOff)&&data.memoryOff.length?'Orbit would remember “'+data.memoryOff.join('”, “')+'”, but its memory isn’t switched on yet.':'')});
-  }catch(e){const problem=Problems.describe(e,'Orbit couldn’t answer right now.');log.push({role:'assistant',failed:true,text:problem.title,problem,retryText:question})}
-  finally{busy=false;save();render()}
+  }catch(e){const problem=Problems.describe(e,'Orbit couldn’t answer right now.');window.Sounds?.play('error');log.push({role:'assistant',failed:true,text:problem.title,problem,retryText:question})}
+  // The send button is disabled while Orbit thinks, which drops focus; bring it back to the message box.
+  finally{busy=false;save();render();if(!panel.hidden)input.focus({preventScroll:true})}
  }
 
  // --- Showing replies. Model text is escaped; only **bold** and list lines are formatted. ---
@@ -159,7 +169,7 @@
   catch(e){m.status='Couldn’t apply: '+(e.message&&e.message!=='Invalid trip'?e.message:'the plan wouldn’t be valid.')+' Ask Orbit for another time.';save();render();return}
   const changedDay=m.changes.find(c=>Number.isInteger(c.day))?.day;
   const ok=mutate(()=>{run(state,m.changes);if(Number.isInteger(changedDay))day=changedDay});
-  m.status=ok?'✓ Applied.':'Couldn’t apply these changes.';if(ok)m.undoAt=history.length;save();render();
+  m.status=ok?'✓ Applied.':'Couldn’t apply these changes.';if(ok){m.undoAt=history.length;window.Sounds?.play('sparkle')}save();render();
  }
  window.orbitChat={open,close,send};
 })();

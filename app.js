@@ -8,6 +8,7 @@ const reducedMotion=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
 function animateElement(el,frames,options){if(el&&!reducedMotion()&&el.animate)el.animate(frames,options)}
 function dismissToast(){const toast=$('toast');if(toast.contains(document.activeElement))document.activeElement.blur();toast.classList.remove('show')}
 function notify(msg,options={}){
+ if(options.error)window.Sounds?.play('error');
  const toast=$('toast');toast.replaceChildren();toast.dataset.kind=options.error?'error':'success';
  const label=document.createElement('span');label.textContent=(options.error?'! ':'✓ ')+msg;toast.append(label);
  for(const action of options.actions??(options.action?[options.action]:[])){const button=document.createElement('button');button.type='button';button.textContent=action.label;button.onclick=()=>{dismissToast();action.run()};toast.append(button)}
@@ -44,10 +45,10 @@ function mutate(fn){
  const changed=state.days[day].cards.find(c=>JSON.stringify(c)!==JSON.stringify(before.days[day].cards.find(p=>p.id===c.id))),targetId=changed?.id??focusId;
  const target=[...document.querySelectorAll('.timeline-row')].find(r=>r.dataset.id===targetId);target?.classList.add('just-updated');setTimeout(()=>target?.classList.remove('just-updated'),1400);
  if(focusId&&!$('editor').open&&!$('branchEditor').open&&!$('moveEditor').open){const current=[...document.querySelectorAll('.timeline-row')].find(r=>r.dataset.id===focusId);const focus=current?.querySelector(`[data-action="${action}"]:not(:disabled)`)??current?.querySelector('.activity')??document.querySelector('.activity')??$('new');focus.focus({preventScroll:true});if(action==='up'||action==='down')focus.scrollIntoView({block:'nearest',behavior:reducedMotion()?'auto':'smooth'})}
- if(saved)notify(describeChange(before),{action:{label:'Undo',run:undoChange}});
+ window.Sounds?.changed();if(saved)notify(describeChange(before),{action:{label:'Undo',run:undoChange}});
  return true;
 }
-function undoChange(){if(!history.length)return;state=JSON.parse(history.pop());day=historyDays.pop()??day;const saved=persist();render();if(saved)notify('Last change undone. Your previous plan is restored.');animateElement($('timeline'),[{opacity:.5},{opacity:1}],{duration:180})}
+function undoChange(){if(!history.length)return;window.Sounds?.play('undo');state=JSON.parse(history.pop());day=historyDays.pop()??day;const saved=persist();render();if(saved)notify('Last change undone. Your previous plan is restored.');animateElement($('timeline'),[{opacity:.5},{opacity:1}],{duration:180})}
 function clearFormError(form){form.querySelectorAll('[aria-invalid="true"]').forEach(el=>{el.removeAttribute('aria-invalid');el.removeAttribute('aria-describedby')});const error=form.querySelector('.form-error');if(error){error.hidden=true;error.textContent=''}}
 function formError(form,message,field){const error=form.querySelector('.form-error');error.textContent=message;error.hidden=false;if(field){field.setAttribute('aria-invalid','true');field.setAttribute('aria-describedby',error.id);field.focus()}error.scrollIntoView({block:'nearest',behavior:reducedMotion()?'auto':'smooth'});animateElement(error,[{transform:'translateX(-4px)'},{transform:'translateX(4px)'},{transform:'translateX(0)'}],{duration:180});return false}
 function validateActivityForm(){
