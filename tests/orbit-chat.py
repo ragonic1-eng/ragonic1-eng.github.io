@@ -43,10 +43,30 @@ def run(viewport,mobile,shot):
   replies.append({'text':'Remove it?','changes':[{'op':'remove','cardId':hotel['id']},{'op':'move','cardId':hotel['id'],'day':2,'start':'25:99'}]})
   page.locator('#orbitChatInput').fill('remove the hotel');page.locator('#orbitChatSend').click();expect(page.locator('[data-orbit-apply]')).to_have_count(1)
   page.locator('[data-orbit-decline]').click();expect(page.locator('.orbit-change-status').last).to_have_text('Not applied.');assert page.evaluate("()=>JSON.stringify(state)")==before
+  # Memory is passive: Orbit's reply says what it remembered or replaced, and each saved note has an Undo.
+  forgets=[];ctx.unroute('**/functions/v1/orbit-chat')
+  def chat2(route):
+   body=route.request.post_data_json
+   if body.get('action')=='forget':forgets.append(body);return route.fulfill(json={'forgotten':True,'note':body['note']})
+   sent.append(body);route.fulfill(json=replies.pop(0))
+  ctx.route('**/functions/v1/orbit-chat',chat2)
+  replies.append({'text':'Noted — I’ll plan around naps.','remembered':['The 2-year-old naps 14:00–16:00.','Both kids dislike spicy food.'],'forgot':['The 2-year-old naps 13:00–15:00.']})
+  page.locator('#orbitChatInput').fill('Our toddler naps 2 to 4pm now, and no spicy food');page.locator('#orbitChatSend').click()
+  chips=page.locator('.orbit-memory-list').last;expect(chips).to_contain_text('Remembered: “The 2-year-old naps 14:00–16:00.”');expect(chips).to_contain_text('Updated: no longer “The 2-year-old naps 13:00–15:00.”')
+  assert page.locator('[data-orbit-remember]').count()==0 and page.locator('[data-orbit-save]').count()==0,'no manual remember buttons'
+  chips.locator('[data-orbit-forget]').nth(1).click();expect(chips).to_contain_text('Forgotten: “Both kids dislike spicy food.”')
+  assert forgets==[{'action':'forget','roomId':'11111111-1111-1111-1111-111111111111','roomKey':'a'*64,'note':'Both kids dislike spicy food.'}],forgets
+  ctx.unroute('**/functions/v1/orbit-chat');ctx.route('**/functions/v1/orbit-chat',lambda r:r.fulfill(status=503,json={'error':'Orbit couldn’t update its memory right now. Try again shortly.'}))
+  chips.locator('[data-orbit-forget]').first.click();expect(chips.locator('.orbit-memory-error')).to_contain_text('couldn’t update its memory');expect(chips.locator('[data-orbit-forget]').first).to_be_enabled()
+  # When memory isn't switched on, Orbit says what it would have remembered.
+  ctx.unroute('**/functions/v1/orbit-chat');ctx.route('**/functions/v1/orbit-chat',chat2)
+  replies.append({'text':'Sure.','memoryOff':['The kids love capybaras.']});page.locator('#orbitChatInput').fill('we love capybaras');page.locator('#orbitChatSend').click()
+  expect(page.locator('.orbit-memory-note').last).to_contain_text('would remember “The kids love capybaras.”, but its memory isn’t switched on yet')
+  expect(page.locator('#orbitChatLog a[href*="orbit-knowledge.md"]')).to_have_count(1)
   # Errors are shown in the chat; the conversation survives a reload on this tab; Escape closes.
   ctx.unroute('**/functions/v1/orbit-chat');ctx.route('**/functions/v1/orbit-chat',lambda r:r.fulfill(status=429,json={'error':'Orbit has answered a lot today. Try again tomorrow (UTC).'}))
   page.locator('#orbitChatInput').fill('anything else?');page.locator('#orbitChatSend').click();expect(page.locator('.orbit-failed')).to_contain_text('answered a lot today')
-  page.reload();page.wait_for_selector('.activity');page.locator('#orbitPal').click();expect(page.locator('.orbit-me')).to_have_count(5)
+  page.reload();page.wait_for_selector('.activity');page.locator('#orbitPal').click();expect(page.locator('.orbit-me')).to_have_count(7)
   page.keyboard.press('Escape');expect(page.locator('#orbitChat')).to_be_hidden();expect(page.locator('#orbitPal')).to_be_focused()
   # The model's text is never rendered as HTML.
   page.evaluate("()=>{sessionStorage.setItem('little-orbit-chat',JSON.stringify([{role:'assistant',text:'<img src=x onerror=alert(1)> **hi**'}]))}");page.reload();page.wait_for_selector('.activity');page.locator('#orbitPal').click()
