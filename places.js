@@ -101,7 +101,12 @@
  function closeList(){el('placeResults').hidden=true;el('placeQuery').setAttribute('aria-expanded','false');el('placeQuery').removeAttribute('aria-activedescendant');active=-1}
  function renderOptions(list,heading=''){
   options=list;active=-1;const q=el('placeQuery').value.trim();
-  el('placeResults').innerHTML=(heading&&list.length?`<p class="combo-heading">${escape(heading)}</p>`:'')+list.map((p,i)=>`<button type="button" role="option" id="placeOption${i}" class="place-option" data-place-result="${i}" aria-selected="false"><span class="option-icon" aria-hidden="true">${p.research?'✦':'⌖'}</span><span class="option-text"><strong>${escape(p.name)}${p.nameZh&&p.nameZh!==p.name?` <span lang="zh-Hant">${escape(p.nameZh)}</span>`:''}</strong><small>${escape(p.address||'Address to be confirmed')}</small></span></button>`).join('')+(q.length>=2?`<button type="button" role="option" id="placeOptionAsk" class="place-option ask-orbit" data-ask-orbit><span class="option-icon" aria-hidden="true">✦</span><span class="option-text"><strong>Research with Orbit</strong><small>Ask Orbit to find “${escape(q)}” with sources</small></span></button><button type="button" role="option" id="placeOptionManual" class="place-option manual-option" data-manual-place><span class="option-icon" aria-hidden="true">✎</span><span class="option-text"><strong>Enter the details yourself</strong><small>Type the name, address and booking link</small></span></button>`:'');
+  const option=(p,i)=>`${p.weak&&!list[i-1]?.weak?'<p class="combo-heading weak-heading">Not an exact match — check before choosing</p>':''}<button type="button" role="option" id="placeOption${i}" class="place-option${p.weak?' is-weak':''}" data-place-result="${i}" aria-selected="false"><span class="option-icon" aria-hidden="true">${p.research?'✦':'⌖'}</span><span class="option-text"><strong>${escape(p.name)}${p.nameZh&&p.nameZh!==p.name?` <span lang="zh-Hant">${escape(p.nameZh)}</span>`:''}</strong><small>${escape(p.address||'Address to be confirmed')}</small></span></button>`;
+  // One input: when the map has no exact match, Orbit (the AI) comes first and Enter asks it.
+  const orbitFirst=q.length>=3&&!list.some(p=>!p.weak);
+  const ask=q.length>=2?`<button type="button" role="option" id="placeOptionAsk" class="place-option ask-orbit${orbitFirst?' is-first':''}" data-ask-orbit><span class="option-icon" aria-hidden="true">✦</span><span class="option-text"><strong>Find “${escape(q)}” with Orbit</strong><small>${orbitFirst?'Not found exactly on the map. Orbit will work out which place you mean.':'Ask Orbit (AI) to work out which place you mean'}</small></span></button>`:'';
+  const manual=q.length>=2?`<button type="button" role="option" id="placeOptionManual" class="place-option manual-option" data-manual-place><span class="option-icon" aria-hidden="true">✎</span><span class="option-text"><strong>Enter the details yourself</strong><small>Type the name, address and booking link</small></span></button>`:'';
+  el('placeResults').innerHTML=(orbitFirst?ask:'')+(heading&&list.length?`<p class="combo-heading">${escape(heading)}</p>`:'')+list.map(option).join('')+(orbitFirst?'':ask)+manual;
   const show=!!el('placeResults').children.length;el('placeResults').hidden=!show;el('placeQuery').setAttribute('aria-expanded',String(show));
  }
  function highlight(next){
@@ -109,18 +114,25 @@
   active=(next+items.length)%items.length;items.forEach((b,i)=>b.setAttribute('aria-selected',String(i===active)));
   el('placeQuery').setAttribute('aria-activedescendant',items[active].id);items[active].scrollIntoView({block:'nearest'});
  }
- function merge(local,remote){const seen=new Set(local.map(p=>norm(p.name)));return [...local,...remote.filter(p=>!seen.has(norm(p.name)))].slice(0,8)}
+ // The map search always returns its closest guess, even a poor one ("suhu cafe" → "85°C Bakery Cafe" on Su-Hua Highway).
+ // A result is an exact match only if every searched word appears in its name; the rest are shown separately as guesses.
+ function exact(p,q){const hay=norm([p.name,p.nameZh,...(p.aliases||[])].join(' '));return norm(q).split(/[\s,，、·]+/).filter(Boolean).every(w=>hay.includes(w))}
+ function merge(local,remote,q){
+  const seen=new Set(local.map(p=>norm(p.name))),fresh=remote.filter(p=>!seen.has(norm(p.name)));
+  return [...local,...fresh.filter(p=>exact(p,q)),...fresh.filter(p=>!exact(p,q)).map(p=>({...p,weak:true}))].slice(0,8);
+ }
+ function noExactMatch(q){if(q.length>=3&&!options.some(p=>!p.weak))message(`“${q}” isn’t on the free map exactly — small cafés often aren’t. Press Enter or tap “Find with Orbit”.`)}
  function onType(){
   const q=el('placeQuery').value.trim(),token=++generation;controller?.abort();clearTimeout(typing);message('');
   const local=q?matches(q):inferred();renderOptions(local,q?'':'Suggested from this activity');
   if(q.length<3){setBusy(false);return}
   const key=el('placeCountry').value+':'+norm(q);
-  if(remoteCache.has(key)){setBusy(false);renderOptions(merge(local,remoteCache.get(key)));return}
+  if(remoteCache.has(key)){setBusy(false);renderOptions(merge(local,remoteCache.get(key),q));noExactMatch(q);return}
   setBusy(true);
   typing=setTimeout(async()=>{
    controller=new AbortController();const t=timeout(controller.signal,8000);
-   try{const remote=await suggest(q,{signal:t.signal});if(token!==generation)return;remoteCache.set(key,remote);if(remoteCache.size>40)remoteCache.delete(remoteCache.keys().next().value);renderOptions(merge(local,remote));if(!local.length&&!remote.length)message('No map match yet. Try the Chinese name, add the city, or use Research with Orbit.')}
-   catch(e){if(token===generation&&!controller.signal.aborted)message(e.message==='off'?'':'Map suggestions are unavailable right now. Use Research with Orbit, or enter the details yourself.')}
+   try{const remote=await suggest(q,{signal:t.signal});if(token!==generation)return;remoteCache.set(key,remote);if(remoteCache.size>40)remoteCache.delete(remoteCache.keys().next().value);renderOptions(merge(local,remote,q));noExactMatch(q)}
+   catch(e){if(token===generation&&!controller.signal.aborted)message(e.message==='off'?'':'Map suggestions are unavailable right now. Press Enter to find it with Orbit, or enter the details yourself.')}
    finally{t.done();if(token===generation)setBusy(false)}
   },350);
  }
@@ -181,7 +193,7 @@
   const q=el('placeQuery').value.trim();if(q.length<2){message('Type a place name first.');return}
   if(!shared()){message('Open your private shared trip link first (Trip options → Share trip) to use Orbit. Map suggestions work without sharing.');return}
   ++generation;controller?.abort();clearTimeout(typing);setBusy(false);closeList();
-  flow?.abort();const current=flow=new AbortController();showLoading('Researching “'+q+'”…',[{id:'research',label:'Orbit is searching official and tourism sources'}]);step('research','active');
+  flow?.abort();const current=flow=new AbortController();showLoading('Researching “'+q+'”…',[{id:'research',label:'Orbit is looking this place up'}]);step('research','active');
   try{const data=await orbit({query:q,country:el('placeCountry').value},current.signal,65000);const found=(Array.isArray(data.places)?data.places:[]).filter(valid);if(flow!==current)return;renderOptions(found,'Orbit found');message(found.length?(data.cached?'Recent research · ':'')+'Choose the right place.':String(data.message||'No supported match found. Try a more specific name.'))}
   catch(e){if(flow===current)message(e.message)}
   finally{if(flow===current){flow=null;hideLoading();el('placeQuery').focus({preventScroll:true})}}
@@ -306,7 +318,7 @@
  el('placeQuery').addEventListener('keydown',e=>{
   const listOpen=!el('placeResults').hidden;
   if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();if(!listOpen)onType();highlight(active+(e.key==='ArrowDown'?1:-1))}
-  else if(e.key==='Enter'){e.preventDefault();const items=[...el('placeResults').querySelectorAll('[role=option]')];(items[active]||items[0])?.click()}
+  else if(e.key==='Enter'){e.preventDefault();const items=[...el('placeResults').querySelectorAll('[role=option]')];if(items[active]){items[active].click();return}const first=items.find(b=>b.matches('[data-place-result]:not(.is-weak)'))||items.find(b=>b.matches('[data-ask-orbit]'));first?.click()}
   else if(e.key==='Escape'&&listOpen){e.preventDefault();e.stopPropagation();closeList()}
  });
  el('placeResults').addEventListener('click',e=>{const ask=e.target.closest('[data-ask-orbit]');if(ask){askOrbit();return}if(e.target.closest('[data-manual-place]')){closeList();el('placeManual').open=true;if(!el('manualPlaceName').value)el('manualPlaceName').value=el('placeQuery').value.trim();el('manualPlaceName').focus();return}const b=e.target.closest('[data-place-result]');if(b)choose(options[Number(b.dataset.placeResult)])});

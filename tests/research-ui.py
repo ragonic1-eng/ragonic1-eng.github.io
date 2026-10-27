@@ -17,7 +17,7 @@ with sync_playwright() as p:
   page.evaluate("openEditor()");page.locator('#activityDay').select_option('5')
   if time:page.locator('#activityStart').fill(time);page.locator('#activityStart').dispatch_event('input')
  # Without a private shared link, Orbit explains the prerequisite and sends nothing.
- open_at();page.locator('#placeQuery').fill('Taipei 101');expect(page.locator('[data-ask-orbit]')).to_contain_text('Research with Orbit');page.locator('[data-ask-orbit]').click();expect(page.locator('#placeMessage')).to_contain_text('private shared trip link');assert not calls
+ open_at();page.locator('#placeQuery').fill('Taipei 101');expect(page.locator('[data-ask-orbit]')).to_contain_text('Ask Orbit');page.locator('[data-ask-orbit]').click();expect(page.locator('#placeMessage')).to_contain_text('private shared trip link');assert not calls
  page.locator('#activityCancel').click();page.evaluate("window.history.replaceState(null,'','/#room=11111111-1111-1111-1111-111111111111&key='+'a'.repeat(64))")
  # Choosing a map result researches it and checks the plan behind a loading screen, sending only what each step needs.
  open_at();page.locator('#title').fill('');page.locator('#placeQuery').fill('Taipei 101');expect(page.locator('[data-place-result]')).to_have_count(1);page.locator('[data-place-result]').click()
