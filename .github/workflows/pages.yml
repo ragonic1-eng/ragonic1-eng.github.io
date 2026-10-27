@@ -22,7 +22,7 @@ jobs:
       - name: Prepare public site files
         run: |
           mkdir _site
-          cp index.html style.css app.js collaboration.js config.json trip.json privacy.html driver.html driver.css driver.js driver-zh.json place-core.js places.js places.json places-config.json _site/
+          cp index.html style.css app.js collaboration.js config.json trip.json privacy.html driver.html driver.css driver.js driver-zh.json place-core.js places.js places.json places-config.json map.js _site/ && cp -r vendor _site/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
