@@ -15,7 +15,8 @@ with sync_playwright() as p:
   body=route.request.post_data_json;calls.append(body)
   if body['action']=='autocomplete':return route.fulfill(json={'suggestions':[{'placeId':ID,'name':'紅色琉璃瓦草莓園','address':'苗栗縣大湖鄉'},{'placeId':'ChIJ_other_place_5678','name':'SUHU Café','address':'苗栗縣大湖鄉'}]})
   if body['action']=='details':return route.fulfill(json={'place':place})
-  route.fulfill(json={'point':{'lat':24.39,'lon':120.87,'googleId':ID}})
+  # Like the real farm: Google doesn't know it by name, but pins its street address.
+  route.fulfill(json={'point':None if body['query'].startswith('紅色琉璃瓦草莓園 ') else {'lat':24.3879,'lon':120.863,'googleId':'ChIJ_address'}})
  ctx.route('**/functions/v1/google-places',google);ctx.route('https://photon.komoot.io/**',lambda r:(photon.append(r.request.url),r.abort()))
  ctx.route('**/functions/v1/research-place',lambda r:(orbit.append(r.request.post_data_json),r.fulfill(json={'evaluation':{'verdict':'good','headline':'Fits well.','reasons':[],'suggestion':''}})))
  ctx.route('https://router.project-osrm.org/**',lambda r:r.fulfill(json={'code':'Ok','routes':[{'distance':14300,'duration':1560,'legs':[{'distance':14300,'duration':1560}]}]}))
@@ -44,6 +45,9 @@ with sync_playwright() as p:
  ctx.route('https://lh3.googleusercontent.com/missing.jpg',lambda r:r.fulfill(status=404))
  page.evaluate("()=>{const d=document.createElement('div');d.id='expired';d.innerHTML=PlaceCore.html({name:'X',photo:'https://lh3.googleusercontent.com/missing.jpg'});document.body.append(d)}")
  expect(page.locator('#expired .place-info')).to_have_count(1);expect(page.locator('#expired .place-photo')).to_have_count(0)
+ # A place Google doesn't list by name is pinned exactly from its address.
+ calls.clear();point=page.evaluate("p=>orbitPlaces.locate(p)",{'name':'Red Glazed Tile Strawberry Farm','nameZh':'紅色琉璃瓦草莓園','address':'苗栗縣大湖鄉義和村淋漓坪96-6號'})
+ assert point=={'lat':24.3879,'lon':120.863},point;assert [c['query'] for c in calls]==['紅色琉璃瓦草莓園 苗栗縣大湖鄉義和村淋漓坪96-6號','苗栗縣大湖鄉義和村淋漓坪96-6號'],calls;assert not photon,photon
  assert not errors,errors
  b.close()
 print('google search tests passed')
