@@ -6,6 +6,7 @@ on:
     paths:
       - 'supabase/functions/**'
       - 'supabase/research.sql'
+      - 'supabase/setup.sql'
       - 'supabase/config.toml'
       - '.github/workflows/research.yml'
 permissions:
@@ -30,22 +31,31 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: latest
-      - name: Apply private research cache and usage limits
+      - name: Apply shared-trip database and Orbit research tables
         run: |
           python3 - <<'PY'
           import json, os, pathlib, urllib.request, urllib.error
+          token = os.environ['SUPABASE_ACCESS_TOKEN']
+          def fail(message):
+            # Annotations stay readable even when raw logs can't be downloaded; never include the token.
+            clean = ' '.join(message.replace(token, '[redacted]').split())[:900]
+            print('::error title=Supabase schema deployment::' + clean)
+            raise SystemExit(1)
           url = 'https://api.supabase.com/v1/projects/' + os.environ['SUPABASE_PROJECT_REF'] + '/database/query'
-          request = urllib.request.Request(url, method='POST', headers={
-            'Authorization': 'Bearer ' + os.environ['SUPABASE_ACCESS_TOKEN'], 'Content-Type': 'application/json'
-          }, data=json.dumps({'query': pathlib.Path('supabase/research.sql').read_text()}).encode())
-          try:
-            with urllib.request.urlopen(request, timeout=60) as response:
-              if not 200 <= response.status < 300: raise RuntimeError('Migration did not succeed: HTTP ' + str(response.status))
-            print('Research schema installed')
-          except urllib.error.HTTPError as e:
-            detail = e.read().decode('utf-8', 'replace').replace(os.environ['SUPABASE_ACCESS_TOKEN'], '[redacted]')
-            print('Supabase schema diagnostic: ' + detail[:1200])
-            raise SystemExit('Supabase schema deployment failed with HTTP ' + str(e.code) + '. Check project permissions and the existing shared-trip setup.')
+          # An explicit User-Agent: Cloudflare in front of the API can reject Python's default one.
+          # setup.sql (shared trips) must exist before research.sql; both are safe to re-run.
+          for name in ['supabase/setup.sql', 'supabase/research.sql']:
+            request = urllib.request.Request(url, method='POST', headers={
+              'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'User-Agent': 'little-orbit-deploy/1.0'
+            }, data=json.dumps({'query': pathlib.Path(name).read_text()}).encode())
+            try:
+              with urllib.request.urlopen(request, timeout=60) as response:
+                if not 200 <= response.status < 300: fail(name + ': unexpected HTTP ' + str(response.status))
+              print('Applied ' + name)
+            except urllib.error.HTTPError as e:
+              fail(name + ': HTTP ' + str(e.code) + ': ' + e.read().decode('utf-8', 'replace'))
+            except Exception as e:
+              fail(name + ': ' + type(e).__name__ + ': ' + str(e))
           PY
       - name: Deploy secured edge function
         run: supabase functions deploy research-place --project-ref "$SUPABASE_PROJECT_REF" --use-api
