@@ -40,7 +40,7 @@ jobs:
           }, data=json.dumps({'query': pathlib.Path('supabase/research.sql').read_text()}).encode())
           try:
             with urllib.request.urlopen(request, timeout=60) as response:
-              if response.status != 200: raise RuntimeError('Migration did not succeed')
+              if not 200 <= response.status < 300: raise RuntimeError('Migration did not succeed: HTTP ' + str(response.status))
             print('Research schema installed')
           except urllib.error.HTTPError as e:
             detail = e.read().decode('utf-8', 'replace').replace(os.environ['SUPABASE_ACCESS_TOKEN'], '[redacted]')
