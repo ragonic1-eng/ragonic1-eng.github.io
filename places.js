@@ -35,6 +35,29 @@
   const response=await fetch(url,{signal,referrerPolicy:'strict-origin-when-cross-origin'});if(!response.ok)throw Error();const data=await response.json();
   return (Array.isArray(data?.features)?data.features:[]).map(fromPhoton).filter(p=>valid(p)&&hasPoint(p));
  }
+ // --- Google Maps (through the google-places edge function, which holds the key). The free map is only a fallback
+ // while the key isn't set up. ---
+ let googleCheck,session='';
+ const newSession=()=>{session=crypto.randomUUID().replaceAll('-','')};
+ async function googleApi(payload,signal){
+  const [config,app]=await Promise.all([settings(),fetch('config.json',{signal}).then(r=>r.json())]);
+  if(!config.googleUrl||app.provider!=='supabase'||!config.googleUrl.startsWith(app.supabaseUrl.replace(/\/$/,'')+'/functions/v1/'))throw Error('off');
+  const response=await fetch(config.googleUrl,{method:payload?'POST':'GET',headers:{apikey:app.supabaseKey,...(payload?{'Content-Type':'application/json'}:{})},body:payload?JSON.stringify(payload):undefined,signal,referrerPolicy:'no-referrer'});
+  let data;try{data=await response.json()}catch{throw Error('Google Maps search is unavailable right now.')}
+  if(!response.ok){const e=Error(typeof data.error==='string'?data.error:'Google Maps search is unavailable right now.');e.code=data.code;throw e}
+  return data;
+ }
+ // Checked once per page load; a missing key (or no backend) means the free map is used instead.
+ const google=()=>googleCheck??=googleApi(null,AbortSignal.timeout(8000)).then(d=>d.available===true).catch(()=>false);
+ const fromGoogle=s=>({id:'google-'+s.placeId,googleId:s.placeId,name:String(s.name).slice(0,200),address:String(s.address||'').slice(0,300),source:'https://www.google.com/maps',checked:today()});
+ async function search(q,signal){
+  if(await google()){if(!session)newSession();const data=await googleApi({action:'autocomplete',input:q,country:el('placeCountry').value,sessionToken:session,...(hasPoint(near)?{near:{lat:near.lat,lon:near.lon}}:{})},signal);return (data.suggestions||[]).map(fromGoogle).filter(valid)}
+  return suggest(q,{signal});
+ }
+ async function googleDetails(place,signal){
+  const data=await googleApi({action:'details',placeId:place.googleId,country:el('placeCountry').value,sessionToken:session||undefined},signal);newSession();
+  return valid(data.place)?data.place:null;
+ }
  // Small places are often missing from the free map. Find an approximate point from the address, trimmed until the map
  // recognises it (house number → hamlet → village → township), then look for the place by name near it. Without an exact
  // match the approximate point is used and labelled, so drive times still work.
@@ -55,6 +78,10 @@
   if(pointCache.has(key))return pointCache.get(key);
   const t=timeout(signal,15000);let approx=null;
   try{
+   if(await google()){
+    const data=await googleApi({action:'locate',query:[placeName(name),place.address].filter(Boolean).join(' ').slice(0,200),country:el('placeCountry').value},t.signal).catch(e=>{if(t.signal.aborted)throw e;return null});
+    if(hasPoint(data?.point)){const point={lat:data.point.lat,lon:data.point.lon};pointCache.set(key,point);return point}
+   }
    for(const q of addressQueries(place.address)){const [hit]=await suggest(q,{limit:1,signal:t.signal,bias:null});if(hit){approx={lat:hit.lat,lon:hit.lon,approx:hit.name};break}}
    let point=null;
    for(const n of [...new Set([place.name,place.nameZh].filter(Boolean))]){
@@ -144,7 +171,9 @@
  function exact(p,q){const hay=norm([p.name,p.nameZh,...(p.aliases||[])].join(' '));return norm(q).split(/[\s,，、·・‧]+/).filter(Boolean).every(w=>hay.includes(w))}
  function merge(local,remote,q){
   const seen=new Set(local.map(p=>norm(p.name))),fresh=remote.filter(p=>!seen.has(norm(p.name)));
-  return [...local,...fresh.filter(p=>exact(p,q)),...fresh.filter(p=>!exact(p,q)).map(p=>({...p,weak:true}))].slice(0,8);
+  // Google's suggestions are its own ranked matches (they include places named differently from what was typed).
+  const good=p=>p.googleId||exact(p,q);
+  return [...local,...fresh.filter(good),...fresh.filter(p=>!good(p)).map(p=>({...p,weak:true}))].slice(0,8);
  }
  // Activity titles carry more than a place name ("紅色琉璃瓦草莓園 & SUHU Café (Dahu) · strawberries & lunch"). The map needs
  // just the name (Chinese names join parts with an unspaced "・": 清境農場・青青草原): skip "Lunch ·"-style labels and trailing descriptions, prefer a Chinese name in brackets, take the first of "A & B".
@@ -157,7 +186,8 @@
   name=name.split(/\s*[&＆+]\s*|\s+and\s+/i)[0].trim();
   return name.length>=2?name:String(text||'').trim();
  }
- function noExactMatch(q){if(q.length>=3&&!options.some(p=>!p.weak))message(`“${q}” isn’t on the free map exactly — small cafés often aren’t. Press Enter or tap “Find with Orbit”.`)}
+ let lastSearchGoogle=false;
+ function noExactMatch(q){if(q.length<3||options.some(p=>!p.weak))return;message(lastSearchGoogle?`Google Maps found nothing for “${q}”. Press Enter or tap “Find with Orbit”.`:`“${q}” isn’t on the free map exactly — small cafés often aren’t. Press Enter or tap “Find with Orbit”.`)}
  function onType(){
   const typed=el('placeQuery').value.trim(),q=placeName(typed),token=++generation;controller?.abort();clearTimeout(typing);message('');
   const local=typed?matches(typed):inferred();renderOptions(local,q?'':'Suggested from this activity');
@@ -167,8 +197,8 @@
   setBusy(true);
   typing=setTimeout(async()=>{
    controller=new AbortController();const t=timeout(controller.signal,8000);
-   try{const remote=await suggest(q,{signal:t.signal});if(token!==generation)return;remoteCache.set(key,remote);if(remoteCache.size>40)remoteCache.delete(remoteCache.keys().next().value);renderOptions(merge(local,remote,q));noExactMatch(q)}
-   catch(e){if(token===generation&&!controller.signal.aborted)message(e.message==='off'?'':'Map suggestions are unavailable right now. Press Enter to find it with Orbit, or enter the details yourself.')}
+   try{const remote=await search(q,t.signal);lastSearchGoogle=await google();if(token!==generation)return;remoteCache.set(key,remote);if(remoteCache.size>40)remoteCache.delete(remoteCache.keys().next().value);renderOptions(merge(local,remote,q));noExactMatch(q)}
+   catch(e){if(token===generation&&!controller.signal.aborted)message(e.message==='off'?'':e.code==='GOOGLE_AUTH'||/limit/i.test(e.message)?e.message:'Map suggestions are unavailable right now. Press Enter to find it with Orbit, or enter the details yourself.')}
    finally{t.done();if(token===generation)setBusy(false)}
   },350);
  }
@@ -208,13 +238,19 @@
   ++generation;controller?.abort();clearTimeout(typing);setBusy(false);closeList();
   const title=el('title').value.trim();if(!title||title===autoTitle){el('title').value=place.name;autoTitle=place.name}
   const {aliases,planning:hints,...picked}=place;draft=structuredClone(picked);finding=false;transfers={};advice=null;el('placeQuery').value='';message('');preview();autofill(draft,hints||{});
-  const orbitOn=shared(),steps=[{id:'locate',label:'Pinpointing it on the map'},{id:'travel',label:'Working out travel times from your other stops'}];
-  if(orbitOn&&research&&!draft.research)steps.push({id:'research',label:'Orbit is searching the web for the address, hours and booking info (up to a minute)'});
+  const fromGoogleSearch=!!draft.googleId&&!hasPoint(draft),orbitOn=shared(),steps=[fromGoogleSearch?{id:'google',label:'Getting the address, hours and photo from Google Maps'}:{id:'locate',label:'Pinpointing it on the map'},{id:'travel',label:'Working out travel times from your other stops'}];
+  // Google already gives the address, hours and pin; Orbit's web research stays available from the place card.
+  if(orbitOn&&research&&!draft.research&&!draft.googleId)steps.push({id:'research',label:'Orbit is searching the web for the address, hours and booking info (up to a minute)'});
   if(orbitOn&&schedule)steps.push({id:'check',label:'Orbit is checking how it fits your day'});
   flow?.abort();const current=flow=new AbortController(),signal=current.signal,notes=[];
   showLoading('Getting '+place.name+' ready…',steps,{now:steps.some(s=>s.id==='research')});
   try{
-   step('locate','active');let point=await locate(draft,signal);if(point)Object.assign(draft,point);step('locate',point?'done':'skipped');
+   let point=null;
+   if(fromGoogleSearch){
+    step('google','active');
+    try{const found=await googleDetails(draft,signal);if(found){const {planning:more,...facts}=found;draft={...facts};point=hasPoint(draft)?{lat:draft.lat,lon:draft.lon}:null;if(el('title').value.trim()===autoTitle){el('title').value=draft.name;autoTitle=draft.name}preview();autofill(draft,more||{})}step('google',found?'done':'failed')}
+    catch(e){if(signal.aborted)throw e;notes.push(e.message);step('google','failed')}
+   }else{step('locate','active');point=await locate(draft,signal);if(point)Object.assign(draft,point);step('locate',point?'done':'skipped')}
    step('travel','active');await updateJourney(signal);step('travel','done');
    if(steps.some(s=>s.id==='research')){
     step('research','active');
@@ -348,10 +384,12 @@
  // --- Editor lifecycle and events. ---
  function open(card){
   ++generation;controller?.abort();flow?.abort();flow=null;clearTimeout(typing);clearTimeout(loadingTimer);el('orbitLoading').hidden=true;el('form').removeAttribute('aria-busy');
-  draft=card?.place&&valid(card.place)?structuredClone(card.place):null;finding=false;advice=null;journey=null;autoTitle='';near=null;transfers={};auto={};filled=[];baseline={isNew:!card,duration:Number(el('duration').value),categoryTouched:!!card};for(const id of ['notes','driverTitle','category','duration'])el(id).classList.remove('auto-filled');el('orbitFilled').hidden=true;el('orbitStatus').hidden=shared();
+  draft=card?.place&&valid(card.place)?structuredClone(card.place):null;session='';finding=false;advice=null;journey=null;autoTitle='';near=null;transfers={};auto={};filled=[];baseline={isNew:!card,duration:Number(el('duration').value),categoryTouched:!!card};for(const id of ['notes','driverTitle','category','duration'])el(id).classList.remove('auto-filled');el('orbitFilled').hidden=true;el('orbitStatus').hidden=shared();
   el('placeQuery').value='';el('placeManual').open=false;el('manualPlaceMessage').textContent='';for(const id of ['manualPlaceName','manualPlaceAddress','manualPlaceDescription','manualPlaceBooking'])el(id).value='';
   el('placeCountry').value=/changi|singapore|樟宜/i.test(card?.title||'')?'sg':'tw';setBusy(false);closeList();message('');preview();renderJourney();renderAdvice();
  }
+ // Google photo links can expire; drop the frame rather than show a broken image.
+ document.addEventListener('error',e=>{if(e.target?.matches?.('.place-photo img'))e.target.closest('figure')?.remove()},true);
  el('placeQuery').addEventListener('input',onType);
  el('placeQuery').addEventListener('focus',()=>{if(!el('placeQuery').value&&!draft)onType()});
  el('placeQuery').addEventListener('keydown',e=>{

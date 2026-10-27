@@ -32,3 +32,7 @@ def use_previous_plan(page):
   d['cards']=cards
  trip['scheduleVersion']=2
  page.evaluate("t=>localStorage.setItem('little-orbit-v1',JSON.stringify(t))",trip);page.reload();page.wait_for_selector('.activity')
+
+def google_off(page):
+ # Tests never call the real Google Maps backend; suites that test Google search mock it themselves.
+ page.route('**/functions/v1/google-places',lambda r:r.fulfill(json={'available':False}))

@@ -1,4 +1,4 @@
-from ui_helpers import open_extras
+from ui_helpers import open_extras,google_off
 from playwright.sync_api import sync_playwright,expect
 import math
 
@@ -19,7 +19,7 @@ def touch_tap(page,client,selector):
 with sync_playwright() as p:
  b=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
  page=b.new_page(viewport={'width':390,'height':844},is_mobile=True,has_touch=True);errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
- page.goto('http://127.0.0.1:8000');page.wait_for_selector('.activity');page.emulate_media(reduced_motion='reduce');client=page.context.new_cdp_session(page)
+ google_off(page);page.goto('http://127.0.0.1:8000');page.wait_for_selector('.activity');page.emulate_media(reduced_motion='reduce');client=page.context.new_cdp_session(page)
  first=page.locator('.activity').first;box=first.bounding_box();assert box['y']<300 and box['height']<240,box
  expect(first.get_by_label('Edit activity',exact=True)).not_to_be_visible();expect(first.locator('.drag-handle')).to_be_visible();expect(first.locator('.timing-duration')).to_have_text('40m')
  page.screenshot(path='/tmp/orbit-minimal-overview.png')

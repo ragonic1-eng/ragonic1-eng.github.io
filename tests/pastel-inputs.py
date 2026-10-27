@@ -1,8 +1,8 @@
 from playwright.sync_api import sync_playwright,expect
-from ui_helpers import open_extras,expand_card
+from ui_helpers import open_extras,expand_card,google_off
 with sync_playwright() as p:
  b=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox']);page=b.new_page(viewport={'width':390,'height':844},is_mobile=True,has_touch=True);errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
- page.goto('http://127.0.0.1:8000');page.wait_for_selector('.activity');page.emulate_media(reduced_motion='reduce')
+ google_off(page);page.goto('http://127.0.0.1:8000');page.wait_for_selector('.activity');page.emulate_media(reduced_motion='reduce')
  assert page.evaluate('getComputedStyle(document.documentElement).colorScheme')=='light'
  footer=page.locator('.mobile-actions').bounding_box()['y'];visible=[card for card in page.locator('.activity').all() if card.bounding_box()['y']>=0 and card.bounding_box()['y']+card.bounding_box()['height']<=footer];assert len(visible)>=4,len(visible)
  assert page.locator('.activity').first.bounding_box()['height']<=130

@@ -1,5 +1,5 @@
 from playwright.sync_api import sync_playwright,expect
-from ui_helpers import use_previous_plan
+from ui_helpers import use_previous_plan,google_off
 base='http://127.0.0.1:8000'
 planning={'category':'food','visitMinutes':105,'tips':'Book the observatory online to skip the queue.','tipsZh':''}
 place={'name':'Taipei 101','nameZh':'台北101','address':'臺北市信義區信義路五段7號','description':'A city landmark with an observation deck.','descriptionZh':'設有觀景台的城市地標。','openingHours':'Daily 10:00–21:00','openingHoursZh':'每日 10:00–21:00','source':'https://www.taipei-101.com.tw/','bookingUrl':'https://www.taipei-101.com.tw/','bookingNote':'Check the observatory ticket and visit date.','bookingNoteZh':'請確認觀景台門票及日期。','bookingLabel':'Official tickets & booking','research':'Orbit','checked':'2026-10-26','sources':[{'title':'Visitor information','url':'https://www.taipei-101.com.tw/'}]}
@@ -13,7 +13,7 @@ with sync_playwright() as p:
   body=route.request.post_data_json;calls.append(body)
   route.fulfill(json=verdict if body.get('action')=='evaluate' else {'places':[{**place,'planning':planning}],'message':'Researched by Orbit.'})
  ctx.route('**/functions/v1/research-place',respond)
- page.goto(base);page.wait_for_selector('.activity');use_previous_plan(page)
+ google_off(page);page.goto(base);page.wait_for_selector('.activity');use_previous_plan(page)
  def open_at(time='16:30'):
   page.evaluate("openEditor()");page.locator('#activityDay').select_option('5')
   if time:page.locator('#activityStart').fill(time);page.locator('#activityStart').dispatch_event('input')

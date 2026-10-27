@@ -1,11 +1,11 @@
-from ui_helpers import open_extras
+from ui_helpers import open_extras,google_off
 from ui_helpers import open_day_settings,close_options
 from playwright.sync_api import sync_playwright
 from datetime import datetime,timezone
 with sync_playwright() as p:
  b=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox']);page=b.new_page(viewport={'width':390,'height':844},timezone_id='America/Los_Angeles');errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
  page.clock.install(time=datetime(2026,12,7,4,29,50,tzinfo=timezone.utc))
- page.goto('http://127.0.0.1:8000');page.wait_for_selector('.activity')
+ google_off(page);page.goto('http://127.0.0.1:8000');page.wait_for_selector('.activity')
  assert '12:29' in page.locator('#tripClock').inner_text()
  assert page.locator('.time-passed').count()==0
  assert 'Leave home' in page.locator('#liveHeading').inner_text()

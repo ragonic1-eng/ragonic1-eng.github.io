@@ -1,8 +1,8 @@
-from ui_helpers import open_options,close_options
+from ui_helpers import open_options,close_options,google_off
 from playwright.sync_api import sync_playwright,expect
 with sync_playwright() as p:
  b=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox']);page=b.new_page(viewport={'width':1440,'height':2600})
- page.goto('http://127.0.0.1:8000');page.wait_for_selector('.activity')
+ google_off(page);page.goto('http://127.0.0.1:8000');page.wait_for_selector('.activity')
  # Observe a real pending request; duplicate submissions are disabled until it finishes.
  pending=[];page.route('**/config.json',lambda r:r.fulfill(json={'provider':'server'}));page.route('**/api/rooms',lambda r:pending.append(r))
  open_options(page);page.locator('#share').click()
