@@ -3,7 +3,7 @@
  const el=id=>document.getElementById(id),{escape,valid,html}=PlaceCore;
  // Bounding boxes keep suggestions in the chosen area (minLon,minLat,maxLon,maxLat).
  const AREAS={tw:[119.3,21.8,122.1,25.4],sg:[103.6,1.15,104.1,1.48]};
- let catalogue=[],draft=null,options=[],active=-1,generation=0,typing,controller,flow,settingsRequest,schedule=null,journey=null,journeyToken=0,journeyTimer,advice=null,finding=false,autoTitle='',near=null,transfers={};
+ let catalogue=[],draft=null,options=[],active=-1,generation=0,typing,controller,flow,settingsRequest,schedule=null,journey=null,journeyToken=0,journeyTimer,advice=null,finding=false,autoTitle='',near=null,transfers={},auto={},baseline={},filled=[];
  const remoteCache=new Map(),routeCache=new Map(),pointCache=new Map();
  const norm=s=>String(s||'').normalize('NFKC').toLowerCase().replace(/[’']/g,'').trim();
  const known=text=>catalogue.filter(p=>p.aliases.some(a=>norm(text).includes(norm(a))));
@@ -19,11 +19,12 @@
  function timeout(signal,ms){const local=new AbortController(),stop=()=>local.abort();signal?.addEventListener('abort',stop);const timer=setTimeout(stop,ms);return {signal:local.signal,done(){clearTimeout(timer);signal?.removeEventListener('abort',stop)}}}
 
  // --- Map lookups (Photon suggestions, OSRM routes); every failure has a usable fallback. ---
+ const OSM_CATEGORY={restaurant:'food',cafe:'food',fast_food:'food',food_court:'food',bakery:'food',ice_cream:'food',hotel:'hotel',hostel:'hotel',guest_house:'hotel',motel:'hotel',apartment:'hotel',mall:'shopping',department_store:'shopping',supermarket:'shopping',marketplace:'shopping',gift:'shopping',clothes:'shopping',station:'travel',aerodrome:'travel',bus_station:'travel',ferry_terminal:'travel',zoo:'kids',theme_park:'kids',playground:'kids',park:'kids',museum:'kids',aquarium:'kids',attraction:'kids',farm:'kids'};
  function fromPhoton(f){
   const p=f?.properties||{},[lon,lat]=f?.geometry?.coordinates||[],kind={N:'node',W:'way',R:'relation'}[p.osm_type],type=String(p.osm_value||p.type||'place').replaceAll('_',' ');
   const street=[p.housenumber,p.street].filter(Boolean).join(' '),area=p.city||p.town||p.district||p.county||p.state||'';
   const address=[street,p.district,p.city,p.county,p.state,p.country].filter((v,i,a)=>v&&a.indexOf(v)===i).join(', ');
-  return {id:kind?`osm-${kind}-${p.osm_id}`:'map-'+lat+','+lon,name:String(p.name||street||area).slice(0,200),address,description:`A ${type}${area?' in '+area:''}.`,lat:Number(lat),lon:Number(lon),source:kind&&/^\d+$/.test(String(p.osm_id))?`https://www.openstreetmap.org/${kind}/${p.osm_id}`:'https://www.openstreetmap.org/',bookingNote:'Booking requirement not confirmed yet.',checked:today()};
+  return {id:kind?`osm-${kind}-${p.osm_id}`:'map-'+lat+','+lon,name:String(p.name||street||area).slice(0,200),address,description:`A ${type}${area?' in '+area:''}.`,lat:Number(lat),lon:Number(lon),source:kind&&/^\d+$/.test(String(p.osm_id))?`https://www.openstreetmap.org/${kind}/${p.osm_id}`:'https://www.openstreetmap.org/',bookingNote:'Booking requirement not confirmed yet.',checked:today(),planning:{category:OSM_CATEGORY[p.osm_value]||''}};
  }
  async function suggest(q,{limit=6,signal}={}){
   const config=await settings();if(config.enabled===false||!config.suggestUrl)throw Error('off');
@@ -117,12 +118,41 @@
   },350);
  }
 
+ // --- Orbit fills empty form fields; anything the person typed or changed is left alone. ---
+ const FILL_LABELS={notes:'description',driverTitle:'Chinese name for the driver',category:'activity type',duration:'visit length'};
+ function fillable(id){
+  const value=el(id).value;if(auto[id]!==undefined&&value===auto[id])return true;
+  if(id==='category')return baseline.isNew&&!baseline.categoryTouched;
+  if(id==='duration')return baseline.isNew&&Number(value)===baseline.duration;
+  return !value.trim();
+ }
+ function autofill(place,hints={}){
+  const notes=place.research||place.id&&catalogue.some(c=>c.id===place.id)?[place.description,hints.tips&&'Tips: '+hints.tips].filter(Boolean).join('\n\n'):'';
+  const values={notes,driverTitle:place.nameZh||'',category:hints.category||'',duration:hints.visitMinutes?String(Math.min(hints.visitMinutes,1440)):''};
+  for(const [id,value] of Object.entries(values)){
+   if(!value||!fillable(id))continue;
+   el(id).value=value;auto[id]=value;el(id).classList.add('auto-filled');if(!filled.includes(id))filled.push(id);
+   if(id==='duration')el('duration').dispatchEvent(new Event('input',{bubbles:true}));
+  }
+  renderFilled();
+ }
+ function renderFilled(){
+  const box=el('orbitFilled'),live=filled.filter(id=>el(id).value===auto[id]);
+  if(!live.length){box.hidden=true;return}
+  const label=id=>id==='category'&&typeof CATS!=='undefined'?`activity type (${CATS[el('category').value]?.label||el('category').value})`:id==='duration'?`visit length (${span(Number(el('duration').value))})`:FILL_LABELS[id];
+  box.hidden=false;box.innerHTML=`<span aria-hidden="true">✦</span><span>Filled in for you: ${escape(live.map(label).join(', '))}. Change anything you like.</span>${live.some(id=>id!=='duration')?'<button type="button" data-review-fill>Review</button>':''}`;
+ }
+ function clearAutofill(){for(const id of filled)if(el(id).value===auto[id]&&id!=='category'&&id!=='duration'){el(id).value='';el(id).classList.remove('auto-filled')}auto={};filled=[];renderFilled()}
+ el('orbitFilled').addEventListener('click',e=>{if(!e.target.closest('[data-review-fill]'))return;el('activityExtras').open=true;el('activityExtras').scrollIntoView({block:'start',behavior:'smooth'})});
+ for(const id of ['notes','driverTitle','duration'])el(id).addEventListener('input',e=>{if(e.isTrusted){el(id).classList.remove('auto-filled');renderFilled()}});
+ el('category').addEventListener('change',()=>{baseline.categoryTouched=true;el('category').classList.remove('auto-filled');renderFilled()});
+
  // --- Choosing a place runs the guided lookup. ---
  async function choose(place,{research=true}={}){
   if(!valid(place))return;
   ++generation;controller?.abort();clearTimeout(typing);setBusy(false);closeList();
   const title=el('title').value.trim();if(!title||title===autoTitle){el('title').value=place.name;autoTitle=place.name}
-  const {aliases,...picked}=place;draft=structuredClone(picked);finding=false;transfers={};advice=null;el('placeQuery').value='';message('');preview();
+  const {aliases,planning:hints,...picked}=place;draft=structuredClone(picked);finding=false;transfers={};advice=null;el('placeQuery').value='';message('');preview();autofill(draft,hints||{});
   const orbitOn=shared(),steps=[{id:'locate',label:'Pinpointing it on the map'},{id:'travel',label:'Working out travel times from your other stops'}];
   if(orbitOn&&research&&!draft.research)steps.push({id:'research',label:'Orbit is finding the address, opening hours and booking info'});
   if(orbitOn&&schedule)steps.push({id:'check',label:'Orbit is checking how it fits your day'});
@@ -133,7 +163,7 @@
    step('travel','active');await updateJourney(signal);step('travel','done');
    if(steps.some(s=>s.id==='research')){
     step('research','active');
-    try{const data=await orbit({query:researchQuery(draft),country:el('placeCountry').value},signal,65000);const best=Array.isArray(data.places)?data.places.find(valid):null;if(best){draft=mergeResearch(draft,best);preview()}else notes.push(String(data.message||'Orbit couldn’t confirm details with sources.'));step('research',best?'done':'skipped')}
+    try{const data=await orbit({query:researchQuery(draft),country:el('placeCountry').value},signal,65000);const best=Array.isArray(data.places)?data.places.find(valid):null;if(best){const {planning:found,...facts}=best;draft=mergeResearch(draft,facts);preview();autofill(draft,found||{})}else notes.push(String(data.message||'Orbit couldn’t confirm details with sources.'));step('research',best?'done':'skipped')}
     catch(e){if(signal.aborted)throw e;notes.push(e.message);step('research','failed')}
    }
    if(steps.some(s=>s.id==='check')){step('check','active');await checkPlan(signal);step('check',advice&&!advice.error?'done':'failed')}
@@ -243,6 +273,7 @@
   if(advice.error){box.innerHTML=`<div class="orbit-card orbit-error"><p>${escape(advice.error)}</p><button type="button" class="orbit-button" data-orbit-check>Try again</button></div>`;return}
   box.innerHTML=`<div class="orbit-card verdict-${escape(advice.verdict)}${stale?' is-stale':''}"><p class="orbit-head"><span class="verdict">${escape(labels[advice.verdict]||'Orbit’s view')}</span><span class="orbit-by">✦ Orbit</span></p><p class="orbit-headline">${escape(advice.headline)}</p>${advice.reasons?.length?`<ul>${advice.reasons.map(r=>`<li>${escape(r)}</li>`).join('')}</ul>`:''}${advice.suggestion?`<p class="orbit-suggestion"><strong>Try:</strong> ${escape(advice.suggestion)}</p>`:''}${stale?'<p class="orbit-stale">You changed the time or place since Orbit checked.</p><button type="button" class="orbit-button" data-orbit-check>Re-check with Orbit</button>':''}<p class="field-help">AI suggestion — use your own judgement.</p></div>`;
  }
+ el('orbitTurnOn').onclick=()=>{el('editor').close();document.getElementById('share').click()};
  el('orbitAdvice').onclick=e=>{if(e.target.closest('[data-orbit-check]'))recheck()};
 
  // --- Selected place panel. ---
@@ -251,7 +282,7 @@
   box.innerHTML=draft?`<div class="selected-place"><div class="selected-head"><span class="selected-label">Selected place</span><div class="selected-tools"><button type="button" id="changePlace">${finding?'Keep this place':'Change'}</button><button type="button" id="removePlace">Remove</button></div></div>${html(draft)}<div class="selected-actions"><button type="button" id="correctPlace">Edit details</button>${draft.research?'':'<button type="button" id="researchPlace" class="orbit-button">✦ Research with Orbit</button>'}</div></div>`:'';
   if(!draft)return;
   el('changePlace').onclick=()=>{finding=!finding;preview();if(finding){el('placeQuery').focus();onType()}else closeList()};
-  el('removePlace').onclick=()=>{draft=null;finding=false;advice=null;journey=null;transfers={};reschedule();if(el('title').value.trim()===autoTitle)autoTitle='';preview();renderJourney();renderAdvice();message('');el('placeQuery').focus()};
+  el('removePlace').onclick=()=>{draft=null;finding=false;advice=null;journey=null;transfers={};clearAutofill();reschedule();if(el('title').value.trim()===autoTitle)autoTitle='';preview();renderJourney();renderAdvice();message('');el('placeQuery').focus()};
   el('correctPlace').onclick=()=>{finding=true;preview();el('placeManual').open=true;el('manualPlaceName').value=draft.name;el('manualPlaceAddress').value=draft.address||'';el('manualPlaceDescription').value=draft.description||'';el('manualPlaceBooking').value=draft.bookingUrl||'';el('manualPlaceName').focus()};
   el('researchPlace')?.addEventListener('click',()=>{if(!shared()){message('Open your private shared trip link first (Trip options → Share trip) to use Orbit.');return}choose(draft)});
  }
@@ -259,7 +290,7 @@
  // --- Editor lifecycle and events. ---
  function open(card){
   ++generation;controller?.abort();flow?.abort();flow=null;clearTimeout(typing);clearTimeout(loadingTimer);el('orbitLoading').hidden=true;el('form').removeAttribute('aria-busy');
-  draft=card?.place&&valid(card.place)?structuredClone(card.place):null;finding=false;advice=null;journey=null;autoTitle='';near=null;transfers={};
+  draft=card?.place&&valid(card.place)?structuredClone(card.place):null;finding=false;advice=null;journey=null;autoTitle='';near=null;transfers={};auto={};filled=[];baseline={isNew:!card,duration:Number(el('duration').value),categoryTouched:!!card};for(const id of ['notes','driverTitle','category','duration'])el(id).classList.remove('auto-filled');el('orbitFilled').hidden=true;el('orbitStatus').hidden=shared();
   el('placeQuery').value='';el('placeManual').open=false;el('manualPlaceMessage').textContent='';for(const id of ['manualPlaceName','manualPlaceAddress','manualPlaceDescription','manualPlaceBooking'])el(id).value='';
   el('placeCountry').value=/changi|singapore|樟宜/i.test(card?.title||'')?'sg':'tw';setBusy(false);closeList();message('');preview();renderJourney();renderAdvice();
  }

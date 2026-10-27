@@ -20,9 +20,9 @@ with sync_playwright() as p:
  farm=lambda:page.locator('.activity').filter(has=page.get_by_role('heading',name='Flying Cow Ranch',exact=True))
  # Known places are suggested from the activity, chosen explicitly, then pinned and measured.
  expand_card(farm());farm().locator('[data-place-edit]').click();expect(page.locator('#placeResults')).to_contain_text('苗栗縣通霄鎮南和里166號');assert page.locator('#placeSelected').inner_text()==''
- page.locator('.place-option').first.click();expect(page.locator('#placeSelected')).to_contain_text('Admission ticket');expect(page.locator('#orbitLoading')).to_be_hidden()
+ page.locator('.place-option').first.click();expect(page.locator('#placeSelected')).to_contain_text('Admission ticket');expect(page.locator('#form')).not_to_have_attribute('aria-busy','true')
  expect(page.locator('#placeSelected .maps-button')).to_have_attribute('href',__import__('re').compile(r'^https://www\.google\.com/maps/search/\?api=1&query='))
- expect(page.locator('#orbitAdvice')).to_contain_text('shared trip link');assert not orbit,'Orbit must not be called without a private shared trip'
+ expect(page.locator('#orbitAdvice')).to_contain_text('shared trip link');assert not orbit,'Orbit must not be called without a private shared trip';assert page.locator('#driverTitle').input_value()=='飛牛牧場';expect(page.locator('#orbitStatus')).to_be_visible()
  page.locator('#saveActivity').click();expect(farm().locator('.place-info')).to_contain_text('Flying Cow Ranch')
  saved=page.evaluate("state.days[1].cards.find(c=>c.id==='activity-2-1').place");assert saved['id']=='flying-cow' and 'aliases' not in saved and isinstance(saved['lat'],(int,float))
  page.reload();page.wait_for_selector('.activity');expand_card(farm());expect(farm().locator('.place-address')).to_contain_text('166號')

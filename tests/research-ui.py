@@ -1,5 +1,6 @@
 from playwright.sync_api import sync_playwright,expect
 base='http://127.0.0.1:8000'
+planning={'category':'food','visitMinutes':105,'tips':'Book the observatory online to skip the queue.','tipsZh':''}
 place={'name':'Taipei 101','nameZh':'台北101','address':'臺北市信義區信義路五段7號','description':'A city landmark with an observation deck.','descriptionZh':'設有觀景台的城市地標。','openingHours':'Daily 10:00–21:00','openingHoursZh':'每日 10:00–21:00','source':'https://www.taipei-101.com.tw/','bookingUrl':'https://www.taipei-101.com.tw/','bookingNote':'Check the observatory ticket and visit date.','bookingNoteZh':'請確認觀景台門票及日期。','bookingLabel':'Official tickets & booking','research':'Orbit','checked':'2026-10-26','sources':[{'title':'Visitor information','url':'https://www.taipei-101.com.tw/'}]}
 verdict={'evaluation':{'verdict':'tight','headline':'Doable if you leave on time.','reasons':['26 min drive to the hotel'],'suggestion':'Shorten the visit by 15 minutes.'}}
 feature={'type':'Feature','geometry':{'type':'Point','coordinates':[121.565,25.033]},'properties':{'osm_type':'W','osm_id':101,'name':'Taipei 101','city':'Taipei','country':'Taiwan','osm_value':'attraction'}}
@@ -9,7 +10,7 @@ with sync_playwright() as p:
  calls=[]
  def respond(route):
   body=route.request.post_data_json;calls.append(body)
-  route.fulfill(json=verdict if body.get('action')=='evaluate' else {'places':[place],'message':'Researched by Orbit.'})
+  route.fulfill(json=verdict if body.get('action')=='evaluate' else {'places':[{**place,'planning':planning}],'message':'Researched by Orbit.'})
  ctx.route('**/functions/v1/research-place',respond)
  page.goto(base);page.wait_for_selector('.activity')
  def open_at(time='16:30'):
@@ -20,7 +21,7 @@ with sync_playwright() as p:
  page.locator('#activityCancel').click();page.evaluate("window.history.replaceState(null,'','/#room=11111111-1111-1111-1111-111111111111&key='+'a'.repeat(64))")
  # Choosing a map result researches it and checks the plan behind a loading screen, sending only what each step needs.
  open_at();page.locator('#title').fill('');page.locator('#placeQuery').fill('Taipei 101');expect(page.locator('[data-place-result]')).to_have_count(1);page.locator('[data-place-result]').click()
- expect(page.locator('#orbitLoading')).to_be_hidden();expect(page.locator('#placeSelected')).to_contain_text('Daily 10:00–21:00');expect(page.locator('#placeSelected')).to_contain_text('台北101');expect(page.locator('#orbitAdvice')).to_contain_text('Tight but doable')
+ expect(page.locator('#form')).not_to_have_attribute('aria-busy','true');expect(page.locator('#placeSelected')).to_contain_text('Daily 10:00–21:00');expect(page.locator('#placeSelected')).to_contain_text('台北101');expect(page.locator('#orbitAdvice')).to_contain_text('Tight but doable')
  research,check=calls[0],calls[1];assert set(research)=={'query','country','roomId','roomKey'} and research['query'].startswith('Taipei 101');assert set(check)=={'action','plan','roomId','roomKey'} and check['plan']['start']=='16:30' and check['plan']['next']['travelMinutes']==15 and check['plan']['next']['place']=='Jolley Hotel'
  assert 'notes' not in str(check['plan']) and page.locator('#researchPlace').count()==0;assert page.locator('#title').input_value()=='Taipei 101'
  # Changing the time marks Orbit's verdict stale; re-checking sends one new plan check.
@@ -28,7 +29,7 @@ with sync_playwright() as p:
  page.locator('#saveActivity').click();assert page.evaluate("state.days[5].cards.find(c=>c.title==='Taipei 101').place.research")=='Orbit';assert page.evaluate("state.days[5].cards.find(c=>c.title==='Taipei 101').place.openingHours")=='Daily 10:00–21:00'
  # Research with Orbit from the search box offers sourced candidates; an already researched choice is only checked, not researched again.
  calls.clear();open_at(None);page.locator('#placeQuery').fill('Taipei 101 observatory');expect(page.locator('[data-ask-orbit]')).to_be_visible();page.locator('[data-ask-orbit]').click();expect(page.locator('.combo-heading')).to_have_text('Orbit found');page.locator('[data-place-result]').first.click()
- expect(page.locator('#orbitLoading')).to_be_hidden();expect(page.locator('#orbitAdvice')).to_contain_text('Tight');assert [c.get('action') for c in calls]==[None,'evaluate'],calls
+ expect(page.locator('#form')).not_to_have_attribute('aria-busy','true');expect(page.locator('#orbitAdvice')).to_contain_text('Tight');assert [c.get('action') for c in calls]==[None,'evaluate'],calls
  page.locator('#activityCancel').click()
  # Quota errors are explained; the map result stays selected and the form stays usable.
  ctx.unroute('**/functions/v1/research-place');ctx.route('**/functions/v1/research-place',lambda r:r.fulfill(status=429,json={'error':'Daily research limit reached.'}))
@@ -36,11 +37,20 @@ with sync_playwright() as p:
  # Skip stops waiting; a late response after skipping or closing never changes the form.
  ctx.unroute('**/functions/v1/research-place');pending=[];ctx.route('**/functions/v1/research-place',lambda r:pending.append(r))
  open_at();page.locator('#placeQuery').fill('Taipei 101');expect(page.locator('[data-place-result]')).to_have_count(1);page.locator('[data-place-result]').click();expect(page.locator('#orbitLoading')).to_be_visible();expect(page.locator('#orbitSteps [data-state=active]')).to_contain_text('Orbit is finding')
- page.locator('#orbitSkip').click();expect(page.locator('#orbitLoading')).to_be_hidden();expect(page.locator('#placeMessage')).to_contain_text('Skipped')
+ page.locator('#orbitSkip').click();expect(page.locator('#form')).not_to_have_attribute('aria-busy','true');expect(page.locator('#placeMessage')).to_contain_text('Skipped')
  for r in pending:
   try:r.fulfill(json={'places':[{**place,'name':'Late result'}]})
   except Exception:pass
  page.wait_for_timeout(300);expect(page.locator('#placeSelected')).not_to_contain_text('Late result');expect(page.locator('#placeSelected')).to_contain_text('Taipei 101');page.locator('#activityCancel').click()
+ # Orbit fills empty fields only, says what it filled, and never overwrites what the person typed.
+ ctx.unroute('**/functions/v1/research-place');ctx.route('**/functions/v1/research-place',respond)
+ open_at();expect(page.locator('#orbitStatus')).to_be_hidden();page.locator('#title').fill('');page.locator('#placeQuery').fill('Taipei 101');expect(page.locator('[data-place-result]')).to_have_count(1);page.locator('[data-place-result]').click();expect(page.locator('#form')).not_to_have_attribute('aria-busy','true')
+ assert page.locator('#notes').input_value().startswith('A city landmark') and 'Book the observatory' in page.locator('#notes').input_value();assert page.locator('#driverTitle').input_value()=='台北101';assert page.locator('#category').input_value()=='food';assert page.locator('#duration').input_value()=='105'
+ expect(page.locator('#orbitFilled')).to_contain_text('Food & treats');expect(page.locator('#orbitFilled')).to_contain_text('1 h 45 min')
+ page.locator('#removePlace').click();assert page.locator('#notes').input_value()=='' and page.locator('#driverTitle').input_value()=='';expect(page.locator('#orbitFilled')).to_be_hidden();page.locator('#activityCancel').click()
+ open_at();page.locator('#title').fill('Sunset at 101');page.locator('#durationMore').click();page.locator('#activityExtras>summary').click();page.locator('#notes').fill('Meet Grandma at the north door');page.locator('#category').select_option('shopping')
+ page.locator('#placeQuery').fill('Taipei 101');expect(page.locator('[data-place-result]')).to_have_count(1);page.locator('[data-place-result]').click();expect(page.locator('#form')).not_to_have_attribute('aria-busy','true')
+ assert page.locator('#title').input_value()=='Sunset at 101' and page.locator('#notes').input_value()=='Meet Grandma at the north door' and page.locator('#category').input_value()=='shopping' and page.locator('#duration').input_value()!='105';assert page.locator('#driverTitle').input_value()=='台北101';page.locator('#activityCancel').click()
  # Mobile layout during loading and after a verdict.
  ctx.unroute('**/functions/v1/research-place');ctx.route('**/functions/v1/research-place',respond)
  for width in [320,390,430,740]:
