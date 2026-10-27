@@ -128,3 +128,7 @@ test('an unsupported search tool version retries with the basic one; any other f
  }finally{console.error=err}
  assert.equal(fromClaude({content:[{type:'web_search_tool_result',content:{type:'web_search_tool_result_error',error_code:'max_uses_exceeded'}}]}).output.search_info.search_results.length,0);
 });
+test('closed places are reported, and empty answers are never cached',async()=>{
+ assert.equal(sanitizeResearch(qwen([{...place,status:'temporarily_closed'}])).places[0].status,'temporarily_closed');assert.equal(sanitizeResearch(qwen([{...place,status:'open'}])).places[0].status,undefined);assert.equal(sanitizeResearch(qwen([{...place,status:'bogus'}])).places[0].status,undefined);
+ const {handler,calls}=harness({providerContent:qwen([])});await handler(request());assert.equal(JSON.parse(calls.at(-1).options.body).p_result,null);
+});
