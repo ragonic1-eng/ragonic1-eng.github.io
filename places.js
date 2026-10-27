@@ -10,7 +10,7 @@
  function show(list,message){results=list;el('placeMessage').textContent=message;el('placeResults').innerHTML=list.map((p,i)=>`<button type="button" class="place-result" data-place-result="${i}"><strong>${escape(p.name)}</strong>${p.nameZh?`<span>${escape(p.nameZh)}</span>`:''}<small>${escape(p.address||'Street address not supplied — check the map')}</small><span class="place-use">Use this place ＋</span></button>`).join('')}
  function suggest(){const q=el('placeQuery').value.trim(),list=q?matches(q):inferred();show(list,list.length?'Suggested matches — choose the right location.':'Type a venue name and city, then Search.');summary()}
  function open(card){generation++;controller?.abort();draft=card?.place&&valid(card.place)?structuredClone(card.place):null;el('placeFields').open=false;el('placeQuery').value='';el('placeManual').open=false;el('manualPlaceMessage').textContent='';for(const id of ['manualPlaceName','manualPlaceAddress','manualPlaceDescription','manualPlaceBooking'])el(id).value='';el('placeCountry').value=/changi|singapore|樟宜/i.test(card?.title||'')?'sg':'tw';el('placeSearch').disabled=false;el('placeSearch').textContent='Search';el('placeSearch').removeAttribute('aria-busy');resetResearch();preview();suggest()}
- function resetResearch(){el('placeResearch').disabled=false;el('placeResearch').textContent='✦ Research with Claude';el('placeResearch').removeAttribute('aria-busy')}
+ function resetResearch(){el('placeResearch').disabled=false;el('placeResearch').textContent='✦ Research with Qwen';el('placeResearch').removeAttribute('aria-busy')}
  function cleanTitle(){return el('title').value.replace(/^.*[→➔]/,'').replace(/^(lunch at|dinner at|dinner|meet your|road trip to|early drive to|down the mountain to|up to the)\s+/i,'').split(/[·|]/)[0].trim()}
  async function search(){
   if(el('placeSearch').disabled)return;
@@ -33,17 +33,17 @@
   if(!roomId||!roomKey){show([], 'Open your private shared trip link first (Trip options → Share trip). Map search works without sharing.');return}
   if(query.length<2||query.length>200){show([], 'Enter a place name and city (2–200 characters).');el('placeQuery').focus();return}
   const token=++generation;controller?.abort();controller=new AbortController();const current=controller,timer=setTimeout(()=>current.abort(),65000),signal=current.signal;
-  el('placeSearch').disabled=false;el('placeSearch').textContent='Search';el('placeSearch').removeAttribute('aria-busy');const button=el('placeResearch');button.disabled=true;button.textContent='Researching sources…';button.setAttribute('aria-busy','true');show([], 'Claude is checking the address and booking information. This can take up to a minute.');
+  el('placeSearch').disabled=false;el('placeSearch').textContent='Search';el('placeSearch').removeAttribute('aria-busy');const button=el('placeResearch');button.disabled=true;button.textContent='Researching sources…';button.setAttribute('aria-busy','true');show([], 'Qwen is checking the address and booking information. This can take up to a minute.');
   try{
    const [config,appConfig]=await Promise.all([fetch('places-config.json',{signal}).then(r=>r.json()),fetch('config.json',{signal}).then(r=>r.json())]);
-   if(!config.researchUrl||appConfig.provider!=='supabase'||!config.researchUrl.startsWith(appConfig.supabaseUrl.replace(/\/$/,'')+'/functions/v1/'))throw Error('Claude research is not configured for this trip. Map search still works.');
+   if(!config.researchUrl||appConfig.provider!=='supabase'||!config.researchUrl.startsWith(appConfig.supabaseUrl.replace(/\/$/,'')+'/functions/v1/'))throw Error('Qwen research is not configured for this trip. Map search still works.');
    const response=await fetch(config.researchUrl,{method:'POST',headers:{'Content-Type':'application/json',apikey:appConfig.supabaseKey},body:JSON.stringify({query,country:el('placeCountry').value,roomId,roomKey}),signal,referrerPolicy:'no-referrer'});
-   let data;try{data=await response.json()}catch{throw Error('Claude research is temporarily unavailable. Try map search.')}
-   if(response.status===404)throw Error('Claude research is awaiting backend setup. Map search and known-place suggestions are ready.');
-   if(!response.ok)throw Error(typeof data.error==='string'?data.error:'Claude research is unavailable. Try map search.');
+   let data;try{data=await response.json()}catch{throw Error('Qwen research is temporarily unavailable. Try map search.')}
+   if(response.status===404)throw Error('Qwen research is awaiting backend setup. Map search and known-place suggestions are ready.');
+   if(!response.ok)throw Error(typeof data.error==='string'?data.error:'Qwen research is unavailable. Try map search.');
    if(!Array.isArray(data.places)||data.places.length>3||!data.places.every(valid))throw Error('The research result was incomplete. Please try a more specific place name.');
    if(token!==generation)return;show(data.places,(data.cached?'Recent research · ':'')+String(data.message||'Choose the correct place, then save your activity.'));
-  }catch(e){if(token===generation)show(matches(query),e.name==='AbortError'?'Research took too long. Try again later or use map search.':e.message==='Failed to fetch'?'Cannot reach Claude research. Check your connection or use map search.':e.message)}finally{clearTimeout(timer);if(token===generation)resetResearch()}
+  }catch(e){if(token===generation)show(matches(query),e.name==='AbortError'?'Research took too long. Try again later or use map search.':e.message==='Failed to fetch'?'Cannot reach Qwen research. Check your connection or use map search.':e.message)}finally{clearTimeout(timer);if(token===generation)resetResearch()}
  }
  el('placeResearch').onclick=research;
  el('placeSearch').onclick=search;el('placeQuery').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();search()}});
