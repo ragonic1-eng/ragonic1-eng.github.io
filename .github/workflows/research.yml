@@ -22,8 +22,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check deployment access
+        env:
+          SECRET_METADATA_INPUT: ${{ toJSON(secrets) }}
         run: |
           if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            python3 - <<'PYMETA'
+          import json, os
+          names = [name for name in json.loads(os.environ['SECRET_METADATA_INPUT']) if name.startswith(('SUPA', 'SUPER'))]
+          print('Supabase-related secret names (values omitted): ' + ', '.join(sorted(names)))
+          PYMETA
             echo 'Add SUPABASE_ACCESS_TOKEN to repository Actions secrets, then re-run this workflow. ANTHROPIC_API_KEY stays in Supabase Edge Function secrets.'
             exit 1
           fi
