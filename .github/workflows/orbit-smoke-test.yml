@@ -3,6 +3,11 @@ name: Orbit live check
 # with the public site key, then makes one research request and one plan check (two Qwen calls).
 on:
   workflow_dispatch:
+    inputs:
+      logs_only:
+        description: Only read recent Orbit errors (no Qwen calls)
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -14,6 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Research a place and check a plan
+        if: ${{ !inputs.logs_only }}
         run: |
           python3 - <<'PY'
           import json, urllib.request, urllib.error
@@ -54,12 +60,18 @@ jobs:
           import json, os, urllib.parse, urllib.request
           token = os.environ.get('SUPABASE_ACCESS_TOKEN')
           if not token: print('No Supabase access token; skipping logs.'); raise SystemExit(0)
-          sql = "select timestamp, event_message from function_logs where event_message like '%\"orbit\"%' order by timestamp desc limit 8"
-          url = f"https://api.supabase.com/v1/projects/{os.environ['SUPABASE_PROJECT_REF']}/analytics/endpoints/logs.all?" + urllib.parse.urlencode({'sql': sql})
+          import datetime, urllib.error
+          clean = lambda v: ' '.join(str(v).replace(token, '[redacted]').split())[:900]
+          now = datetime.datetime.now(datetime.timezone.utc)
+          sql = "select timestamp, event_message from function_logs where event_message like '%orbit%' order by timestamp desc limit 8"
+          url = f"https://api.supabase.com/v1/projects/{os.environ['SUPABASE_PROJECT_REF']}/analytics/endpoints/logs.all?" + urllib.parse.urlencode({'sql': sql, 'iso_timestamp_start': (now - datetime.timedelta(hours=3)).isoformat(), 'iso_timestamp_end': now.isoformat()})
           try:
             request = urllib.request.Request(url, headers={'Authorization': 'Bearer ' + token, 'User-Agent': 'little-orbit-check/1.0'})
-            with urllib.request.urlopen(request, timeout=30) as response: rows = json.load(response).get('result') or []
-            for row in rows: print('::warning title=Orbit log::' + ' '.join(str(row.get('event_message')).replace(token, '[redacted]').split())[:900])
-            if not rows: print('No Orbit errors logged recently.')
-          except Exception as e: print('Could not read logs: ' + type(e).__name__)
+            with urllib.request.urlopen(request, timeout=30) as response: data = json.load(response)
+            rows = data.get('result') or []
+            if data.get('error'): print('::warning title=Log query::' + clean(data['error']))
+            for row in rows: print('::warning title=Orbit log::' + clean(row.get('event_message')))
+            if not rows: print('::notice title=Orbit log::No Orbit errors logged in the last 3 hours.')
+          except urllib.error.HTTPError as e: print('::warning title=Log query::HTTP ' + str(e.code) + ' ' + clean(e.read().decode('utf-8', 'replace')))
+          except Exception as e: print('::warning title=Log query::' + type(e).__name__ + ' ' + clean(e))
           PY
