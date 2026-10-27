@@ -128,3 +128,10 @@ input,select,textarea{font-weight:500}input::placeholder,textarea::placeholder{f
 #orbitSkip{font-size:13px;background:#fff}
 @keyframes pulse{50%{opacity:.45}}
 @media(max-width:420px){.place-fact{grid-template-columns:1fr;gap:1px}.form-step{padding:12px}.step-head h3{font-size:15px}.leg-link{padding:6px 8px}}
+
+/* Orbit status and auto-filled fields */
+.orbit-status{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 10px;padding:9px 10px 9px 12px;border-radius:12px;background:#f7f1fc;border:1px dashed #cdb5e0;font-size:13px;color:#5d4a70;line-height:1.45}
+.orbit-status button{min-height:38px;padding:6px 12px;font-size:13px;font-weight:700;background:#f0e2fa;border-color:#c1a0d5;color:#5a3f73}
+.orbit-filled{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px;padding:9px 10px 9px 12px;border-radius:12px;background:#f3ecfb;color:#553f6c;font-size:13px;line-height:1.45}
+.orbit-filled>span:nth-child(2){flex:1;min-width:160px}.orbit-filled button{min-height:36px;padding:5px 12px;font-size:13px;background:#fff}
+.auto-filled,.duration-input:has(.auto-filled){background:#faf5ff;border-color:#b99bd3!important}

@@ -64,3 +64,7 @@ test('plan checks reject incomplete plans before any paid call and refuse invali
 test('QWEN_BASE_URL copied with an API path still reaches the native endpoint',async()=>{
  for(const value of ['https://dashscope.aliyuncs.com/compatible-mode/v1','https://dashscope.aliyuncs.com/api/v1/',' https://dashscope.aliyuncs.com ']){const {handler,calls}=harness({env:{...secrets,QWEN_BASE_URL:value}});assert.equal((await handler(request())).status,200);assert.equal(calls.find(c=>c.url.includes('dashscope')).url,'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation')}
 });
+test('research returns bounded planning hints for the activity form',()=>{
+ const r=sanitizeResearch(qwen([{...place,category:'food',visitMinutes:100,tips:'Go early to avoid queues.'}]));assert.deepEqual(r.places[0].planning,{category:'food',visitMinutes:105,tips:'Go early to avoid queues.',tipsZh:''});
+ const bad=sanitizeResearch(qwen([{...place,category:'casino',visitMinutes:'all day',tips:7}]));assert.deepEqual(bad.places[0].planning,{category:'',visitMinutes:null,tips:'',tipsZh:''});
+});
