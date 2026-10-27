@@ -6,6 +6,7 @@ const trip={today:'2026-12-08',selectedDay:1,days:[{date:'2026-12-07',name:'Arri
 const body={roomId:'11111111-1111-1111-1111-111111111111',roomKey:'a'.repeat(64),messages:[{role:'user',text:'What is near the farm?'}],trip};
 const request=(payload=body,origin='https://ragonic1-eng.github.io')=>new Request('https://x.example',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(payload)});
 const tool=(name,input,id='t1')=>({type:'tool_use',id,name,input});
+let knowledgeReply=null;
 function harness({turns,claim={ok:true},env:e=env,google={places:[{id:'ChIJ_cafe_123456',displayName:{text:'SUHU Café'},formattedAddress:'Dahu',location:{latitude:24.38,longitude:120.86},rating:4.7,userRatingCount:1884,googleMapsUri:'https://maps.google.com/?cid=1'}]}}){
  const calls=[];turns=[...turns];
  const handler=createChatHandler({env:k=>e[k],now:()=>Date.parse('2026-12-08T02:00:00Z'),fetcher:async(url,options={})=>{
@@ -15,6 +16,7 @@ function harness({turns,claim={ok:true},env:e=env,google={places:[{id:'ChIJ_cafe
   if(url.endsWith('orbit_google_cache_get'))return Response.json(null);
   if(url.endsWith('orbit_google_cache_put'))return Response.json({ok:true});
   if(url.includes('places:searchText'))return Response.json(google);
+  if(url.includes('orbit-knowledge.md'))return knowledgeReply?knowledgeReply():new Response('# Orbit knowledge\nThe kids love capybaras.');
   if(url.endsWith('/v1/messages')){const t=turns.shift();return t instanceof Response?t:Response.json(t)}
   throw Error('unexpected '+url);
  }});
@@ -53,6 +55,13 @@ test('an empty reply call is asked for again instead of showing nothing',async()
  const {handler,claude}=harness({turns:[{stop_reason:'tool_use',content:[tool('reply',{},'r1')]},{stop_reason:'tool_use',content:[tool('reply',{text:'Second try works.'},'r2')]}]});
  const data=await(await handler(request())).json();assert.equal(data.text,'Second try works.');
  const retry=claude()[1].messages.at(-1).content[0];assert.equal(retry.tool_use_id,'r1');assert.equal(retry.is_error,true);
+});
+test('the knowledge file is read once, capped, and kept for 5 minutes; Orbit still answers if it is unreachable',async()=>{
+ const turn=()=>({stop_reason:'tool_use',content:[tool('reply',{text:'ok'})]});
+ const h=harness({turns:[turn(),turn()]});await h.handler(request());await h.handler(request());
+ assert.equal(h.calls.filter(c=>c.url.includes('orbit-knowledge.md')).length,1);assert.match(h.claude()[0].system,/<knowledge>\n# Orbit knowledge\nThe kids love capybaras.\n<\/knowledge>/);
+ knowledgeReply=()=>new Response('x'.repeat(50000));const big=harness({turns:[turn()]});await big.handler(request());assert.equal(big.claude()[0].system.match(/x+/g).find(m=>m.length>1000).length,30000);
+ knowledgeReply=()=>new Response('gone',{status:404});const down=harness({turns:[turn()]});assert.equal((await down.handler(request())).status,200);assert.ok(!down.claude()[0].system.includes('<knowledge>'));knowledgeReply=null;
 });
 test('bad origins, bad trip links, quotas and missing setup stop before any AI call',async()=>{
  const {handler,claude}=harness({turns:[]});
