@@ -1,0 +1,32 @@
+name: Orbit usage today
+# Manual check of today's (UTC) counters behind the daily caps: Google Maps lookups, Orbit chat, research and memory.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN || secrets.SUPERBASE_SEC || secrets.SUPERBASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: iqpljuxtjngcisvokjkm
+    steps:
+      - name: Read today's counters
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+          token = os.environ['SUPABASE_ACCESS_TOKEN']
+          sql = ("select scope, used from public.orbit_research_budget where budget_day=(now() at time zone 'UTC')::date "
+                 "and (scope like 'google-%' or scope in ('global','chat','memory')) order by scope")
+          req = urllib.request.Request('https://api.supabase.com/v1/projects/' + os.environ['SUPABASE_PROJECT_REF'] + '/database/query', method='POST',
+            headers={'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'User-Agent': 'little-orbit-usage/1.0'}, data=json.dumps({'query': sql}).encode())
+          rows = json.load(urllib.request.urlopen(req, timeout=30))
+          caps = {'google-autocomplete': 300, 'google-details': 30, 'google-locate': 150, 'google-nearby': 30, 'global': 60, 'chat': 120, 'memory': 60}
+          names = {'google-autocomplete': 'Google search-as-you-type', 'google-details': 'Google place details', 'google-locate': 'Google map pins',
+                   'google-nearby': 'Orbit nearby searches (Google)', 'global': 'Orbit place research + plan checks', 'chat': 'Orbit chat questions', 'memory': 'Orbit memory saves'}
+          seen = {r['scope']: r['used'] for r in rows}
+          for scope, cap in caps.items():
+            used = seen.get(scope, 0)
+            level = 'warning' if used >= cap else 'notice'
+            print(f"::{level} title={names[scope]}::{used} of {cap} used today (UTC){' — LIMIT REACHED' if used >= cap else ''}")
+          PY
