@@ -13,7 +13,7 @@ const placeId=v=>typeof v==='string'&&/^[A-Za-z0-9_-]{10,300}$/.test(v)?v:'';
 // --- Input: the conversation and a compact copy of the trip (no trip key, no notes beyond a short excerpt). ---
 export function cleanTrip(trip){
  if(!trip||!Array.isArray(trip.days)||trip.days.length>7)return null;
- const days=trip.days.map((d,i)=>({day:i,date:/^\d{4}-\d{2}-\d{2}$/.test(d?.date)?d.date:'',name:text(d?.name,80),region:text(d?.region,80),
+ const days=trip.days.map((d,i)=>({day:i,label:'Day '+(i+1)+(/^\d{4}-\d{2}-\d{2}$/.test(d?.date)?' · '+new Date(d.date+'T12:00:00Z').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'}):''),date:/^\d{4}-\d{2}-\d{2}$/.test(d?.date)?d.date:'',name:text(d?.name,80),region:text(d?.region,80),
   cards:(Array.isArray(d?.cards)?d.cards:[]).slice(0,60).map(c=>{
    const card={id:id(c?.id),title:text(c?.title,120),start:clock(c?.start),end:clock(c?.end),category:CATEGORIES.includes(c?.category)?c.category:'kids'};
    if(text(c?.notes,160))card.notes=text(c.notes,160);
@@ -63,7 +63,8 @@ function cleanChange(c,trip){
  return change;
 }
 export function cleanReply(input,trip){
- const reply={text:text(input?.text,2000)||'Here’s what I found.'};
+ // Web-search citation markers ("[1]") mean nothing in the chat, so they are dropped.
+ const reply={text:text(input?.text,2000).replace(/\s?\[\d{1,2}\]/g,'')||'Here’s what I found.'};
  const points=(Array.isArray(input?.map?.points)?input.map.points:[]).slice(0,40).map(cleanPoint).filter(Boolean);
  if(points.length)reply.map={title:text(input.map.title,100),points};
  const places=(Array.isArray(input?.places)?input.places:[]).slice(0,8).map(p=>{const place=cleanPlace(p);if(!place)return null;const why=text(p?.why,240);return why?{...place,why}:place}).filter(Boolean);
@@ -84,7 +85,7 @@ In reply:
 - text: your answer.
 - map: points to plot. For trip places use kind "trip" and cardId; for new ideas use kind "suggestion". Only use coordinates from the trip JSON or find_places; never invent coordinates.
 - places: up to 6 suggested places from find_places, each with a short "why" for a family with young kids (distance, nap-friendly, stroller, toilets, rating).
-- changes: only when the person asks to add, move, change or remove activities, or clearly agrees to your suggestion. Use ops add (day index, start "HH:MM", title, duration minutes, category, optional notes and place from find_places), update (cardId and changed fields), move (cardId, day, start) or remove (cardId). Days are indexed 0–6 as in the trip JSON. Pick start times that fall in free time or "A little breathing room" cards and respect opening hours, meals and naps. The person will be asked to approve; never say a change is done. Add a one-line changeSummary.
+- changes: only when the person asks to add, move, change or remove activities, or clearly agrees to your suggestion. Use ops add (day index, start "HH:MM", title, duration minutes, category, optional notes and place from find_places), update (cardId and changed fields), move (cardId, day, start) or remove (cardId). In changes, "day" is the 0–6 index from the trip JSON; when talking to the person, always name days by their label or date (e.g. "Day 2 · Tue 8 Dec"), never by the index. Pick start times that fall in free time or "A little breathing room" cards and respect opening hours, meals and naps. The person will be asked to approve; never say a change is done. Add a one-line changeSummary.
 Categories: kids (attractions/activities), food, hotel, travel, shopping, break.`;
 
 const TOOLS=[
