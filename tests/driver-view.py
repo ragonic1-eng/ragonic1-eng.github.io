@@ -1,13 +1,13 @@
 import json,copy
 from pathlib import Path
 from playwright.sync_api import sync_playwright,expect
-from ui_helpers import expand_card,open_extras
+from ui_helpers import expand_card,open_extras,google_off
 base='http://127.0.0.1:8000'
 with sync_playwright() as p:
  b=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
  ctx=b.new_context(viewport={'width':390,'height':844},is_mobile=True,has_touch=True)
  errors=[]
- page=ctx.new_page();page.on('pageerror',lambda e:errors.append(str(e)));page.goto(base);page.wait_for_selector('.activity')
+ page=ctx.new_page();page.on('pageerror',lambda e:errors.append(str(e)));google_off(page);page.goto(base);page.wait_for_selector('.activity')
  # Actual editor saves custom Chinese and driver link opens with current share fragment.
  expand_card(page.locator('.activity').first);page.locator('.activity').first.get_by_label('Edit activity',exact=True).click();open_extras(page)
  page.locator('#driverTitle').fill('家門口集合，前往樟宜機場');page.locator('#driverNotes').fill('請於大廳等候。');page.locator('#saveActivity').click()

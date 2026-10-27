@@ -7,6 +7,7 @@ on:
       - 'supabase/functions/**'
       - 'supabase/research.sql'
       - 'supabase/setup.sql'
+      - 'supabase/google.sql'
       - 'supabase/config.toml'
       - '.github/workflows/research.yml'
 permissions:
@@ -44,7 +45,7 @@ jobs:
           url = 'https://api.supabase.com/v1/projects/' + os.environ['SUPABASE_PROJECT_REF'] + '/database/query'
           # An explicit User-Agent: Cloudflare in front of the API can reject Python's default one.
           # setup.sql (shared trips) must exist before research.sql; both are safe to re-run.
-          for name in ['supabase/setup.sql', 'supabase/research.sql']:
+          for name in ['supabase/setup.sql', 'supabase/research.sql', 'supabase/google.sql']:
             request = urllib.request.Request(url, method='POST', headers={
               'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'User-Agent': 'little-orbit-deploy/1.0'
             }, data=json.dumps({'query': pathlib.Path(name).read_text()}).encode())
@@ -58,7 +59,9 @@ jobs:
               fail(name + ': ' + type(e).__name__ + ': ' + str(e))
           PY
       - name: Deploy secured edge function
-        run: supabase functions deploy research-place --project-ref "$SUPABASE_PROJECT_REF" --use-api
+        run: |
+          supabase functions deploy research-place --project-ref "$SUPABASE_PROJECT_REF" --use-api
+          supabase functions deploy google-places --project-ref "$SUPABASE_PROJECT_REF" --use-api
       - name: Verify function and server-side key readiness
         run: |
           python3 - <<'PY'
@@ -74,4 +77,13 @@ jobs:
             except Exception:
               if attempt == 5: raise SystemExit('Function readiness check failed. Check function deployment and DASHSCOPE_API_KEY (or QWEN_API_KEY) in Supabase secrets.')
               time.sleep(5)
+          PY
+      - name: Check Google Maps search readiness
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+          url = 'https://' + os.environ['SUPABASE_PROJECT_REF'] + '.supabase.co/functions/v1/google-places'
+          with urllib.request.urlopen(url, timeout=15) as response: status = json.load(response)
+          if status.get('available') is True: print('::notice title=Google Maps::google-places is deployed and GOOGLE_MAPS_API_KEY is set.')
+          else: print('::warning title=Google Maps::google-places is deployed, but GOOGLE_MAPS_API_KEY is not in Supabase Edge Function secrets yet. Search falls back to the free map until it is.')
           PY

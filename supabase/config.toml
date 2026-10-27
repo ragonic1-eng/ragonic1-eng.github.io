@@ -3,3 +3,7 @@ project_id = "little-orbit"
 [functions.research-place]
 # Private trip capability is validated inside the function before any paid API call.
 verify_jwt = false
+
+[functions.google-places]
+# Public place search; daily caps inside the function keep Google usage within the free allowance.
+verify_jwt = false

@@ -1,9 +1,9 @@
-from ui_helpers import expand_card,open_options,close_options,open_library
+from ui_helpers import expand_card,open_options,close_options,open_library,google_off
 from playwright.sync_api import sync_playwright, expect
 import json
 with sync_playwright() as p:
  b=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox']);page=b.new_page(viewport={'width':390,'height':844});errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
- page.goto('http://127.0.0.1:8000');page.wait_for_selector('.activity')
+ google_off(page);page.goto('http://127.0.0.1:8000');page.wait_for_selector('.activity')
  page.locator('#mobileAdd').click();page.locator('#saveActivity').click();expect(page.locator('#activityError')).to_contain_text('activity name');assert page.locator('#title').get_attribute('aria-invalid')=='true'
  page.locator('#title').fill('Test responsive snack');page.locator('#duration').fill('0');page.locator('#saveActivity').click();expect(page.locator('#activityError')).to_contain_text('1 to 1440');assert page.locator('#title').input_value()=='Test responsive snack'
  page.locator('#duration').fill('10');page.locator('#activityStart').fill('12:45');page.locator('#saveActivity').click();expect(page.locator('#activityError')).to_contain_text('overlaps');page.locator('#scheduleActions button').first.click();expect(page.locator('#activityError')).to_be_hidden()

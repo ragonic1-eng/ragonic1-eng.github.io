@@ -1,4 +1,4 @@
-from ui_helpers import open_extras
+from ui_helpers import open_extras,google_off
 from ui_helpers import expand_card
 from playwright.sync_api import sync_playwright,expect
 with sync_playwright() as p:
@@ -6,7 +6,7 @@ with sync_playwright() as p:
  for width,height in [(320,568),(390,844),(430,932),(740,375)]:
   print('Checking',width,height,flush=True)
   page=b.new_page(viewport={'width':width,'height':height},is_mobile=True,has_touch=True);errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
-  page.goto('http://127.0.0.1:8000');page.wait_for_selector('.activity');page.emulate_media(reduced_motion='reduce')
+  google_off(page);page.goto('http://127.0.0.1:8000');page.wait_for_selector('.activity');page.emulate_media(reduced_motion='reduce')
   expect(page.locator('#mobileSaveStatus')).to_contain_text('Saved');expect(page.locator('#mobileAdd')).to_be_visible()
   # Reach add from the thumb toolbar without scrolling to the heading.
   page.locator('#mobileAdd').tap();expect(page.locator('#editor')).to_be_visible()

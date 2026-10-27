@@ -1,5 +1,6 @@
 from urllib.parse import urlparse,parse_qs
 from playwright.sync_api import sync_playwright
+from ui_helpers import google_off
 base='http://127.0.0.1:8000'
 def feature(name,lon,lat):return {'type':'Feature','geometry':{'type':'Point','coordinates':[lon,lat]},'properties':{'osm_type':'N','osm_id':1,'name':name,'country':'Taiwan','osm_value':'village'}}
 # A tiny stand-in for the free map: it knows villages and some big places, but not the small farm.
@@ -11,7 +12,7 @@ def photon(route):
 with sync_playwright() as p:
  b=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox']);ctx=b.new_context();page=ctx.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
  ctx.route('https://photon.komoot.io/**',photon);ctx.route('https://router.project-osrm.org/**',lambda r:r.abort())
- page.goto(base);page.wait_for_selector('.activity')
+ google_off(page);page.goto(base);page.wait_for_selector('.activity')
  locate=lambda place:page.evaluate('p=>orbitPlaces.locate(p)',place)
  # Not on the map by name: the address gives an approximate, labelled point (house number and village trimmed off).
  farm=locate({'name':'Red Glazed Tile Strawberry Farm','nameZh':'紅色琉璃瓦草莓園','address':'苗栗縣大湖鄉義和村淋漓坪96-6號'})

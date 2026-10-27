@@ -1,6 +1,7 @@
 import base64,json
 from urllib.parse import urlparse,parse_qs
 from playwright.sync_api import sync_playwright,expect
+from ui_helpers import google_off
 base='http://127.0.0.1:8000'
 PNG=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==')
 osrm_calls=[]
@@ -16,7 +17,7 @@ with sync_playwright() as p:
  b=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox']);errors=[]
  def context(vp,mobile=False):
   ctx=b.new_context(viewport=vp,is_mobile=mobile,has_touch=mobile,reduced_motion='reduce');ctx.route('https://router.project-osrm.org/**',osrm);ctx.route('https://photon.komoot.io/**',photon);ctx.route('https://tile.openstreetmap.org/**',lambda r:r.fulfill(body=PNG,content_type='image/png'))
-  page=ctx.new_page();page.on('pageerror',lambda e:errors.append(str(e)));page.goto(base);page.wait_for_selector('.activity');return ctx,page
+  page=ctx.new_page();page.on('pageerror',lambda e:errors.append(str(e)));google_off(page);page.goto(base);page.wait_for_selector('.activity');return ctx,page
  # A day with a fixed lunch and a run of three play stops in a wasteful order (A → far C → B).
  day=[card('m-a','Farm A','kids',60,place('Farm A',24.00,121.00)),card('m-c','Farm C','kids',60,place('Farm C',24.30,121.00)),card('m-b','Farm B','kids',60,place('Farm B',24.02,121.00)),card('m-lunch','Lunch','food',60),card('m-d','Farm D','kids',60,place('Farm D',24.05,121.00))]
  ctx,page=context({'width':1440,'height':900})
