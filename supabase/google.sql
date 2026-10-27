@@ -12,7 +12,7 @@ create or replace function public.orbit_claim_google(p_scope text,p_limit intege
 returns boolean language plpgsql security definer set search_path=pg_catalog,public as $$
 declare today date := (now() at time zone 'UTC')::date; used_now integer;
 begin
- if p_scope not in ('autocomplete','details','locate') or p_limit<1 then return false; end if;
+ if p_scope not in ('autocomplete','details','locate','nearby') or p_limit<1 then return false; end if;
  insert into public.orbit_research_budget values(today,'google-'||p_scope,1)
  on conflict(budget_day,scope) do update set used=orbit_research_budget.used+1 where orbit_research_budget.used<p_limit
  returning used into used_now;

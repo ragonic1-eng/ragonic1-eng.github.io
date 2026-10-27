@@ -178,3 +178,50 @@ body.map-open .map-toggle{display:none}
 .place-rating{margin:0 0 6px;font-weight:600;color:#3d342a}.place-rating>span:first-child{color:#e0a000}.place-rating span:last-child{font-weight:500;color:#6b6257}
 .place-attribution{margin:6px 0 0;font-size:11px;color:#6b6257}
 .place-hours{white-space:pre-line}
+/* Orbit chat: floating robot Spitz and its chat panel. */
+.orbit-pal{position:fixed;right:22px;bottom:22px;z-index:19;width:64px;height:64px;min-height:0;padding:4px;border-radius:50%;border:2px solid #d8c8ea;background:radial-gradient(circle at 35% 30%,#fff 0,#f6ecff 55%,#ead9fb 100%);box-shadow:0 8px 22px #54426c40;animation:orbit-float 3.2s ease-in-out infinite}
+.orbit-pal:hover{border-color:#b9a0d6}.orbit-pal:focus-visible{outline:3px solid #9b7fc2;outline-offset:3px}
+.orbit-pal .orbit-dog{width:100%;height:100%;display:block}
+.orbit-pal-hint{position:absolute;right:70px;bottom:18px;white-space:nowrap;background:#463f66;color:#fff;font-size:13px;font-weight:700;padding:6px 11px;border-radius:12px 12px 2px 12px;box-shadow:0 4px 12px #463f6640}
+.dog-antenna circle{animation:orbit-glow 1.8s ease-in-out infinite}.dog-eyes{animation:orbit-blink 5s infinite;transform-origin:32px 33px}
+@keyframes orbit-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes orbit-glow{0%,100%{fill:#ff8fc8}50%{fill:#ffd1e8}}
+@keyframes orbit-blink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.15)}}
+@media(prefers-reduced-motion:reduce){.orbit-pal,.dog-antenna circle,.dog-eyes,.orbit-dots i{animation:none}}
+body.orbit-chat-open .orbit-pal{animation:none;transform:scale(.92)}
+.orbit-chat{position:fixed;right:22px;bottom:96px;z-index:46;width:min(400px,calc(100vw - 24px));height:min(620px,calc(100vh - 130px));display:flex;flex-direction:column;background:#fffafd;border:1px solid #dccbea;border-radius:22px;box-shadow:0 18px 48px #46385e40;overflow:hidden}
+.orbit-chat[hidden]{display:none}
+.orbit-chat-head{display:flex;align-items:center;gap:10px;padding:10px 10px 10px 14px;background:linear-gradient(135deg,#f3e7ff,#ffe7f4);border-bottom:1px solid #ead3e7}
+.orbit-chat-face{width:40px;height:40px;flex:none;border-radius:50%;background:#fff;border:1px solid #dccbea;padding:2px}.orbit-chat-face svg{width:100%;height:100%}
+.orbit-chat-head div{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}.orbit-chat-head strong{color:#4e3d68;font-size:16px}.orbit-chat-head small{color:#6d6376;font-size:11.5px}
+.orbit-chat-tool{min-height:40px;min-width:40px;padding:6px;border-radius:12px;background:#fff;border-color:#e2d4ee;font-size:16px}
+.orbit-chat-log{flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:10px;overscroll-behavior:contain}
+.orbit-msg{max-width:88%;padding:9px 12px;border-radius:16px;font-size:14px;line-height:1.45;overflow-wrap:anywhere}.orbit-msg p{margin:0 0 6px}.orbit-msg p:last-child{margin-bottom:0}.orbit-msg ul{margin:4px 0;padding-left:18px}
+.orbit-me{align-self:flex-end;background:#766091;color:#fff;border-bottom-right-radius:4px}
+.orbit-bot{align-self:flex-start;background:#fff;border:1px solid #ecdcef;border-bottom-left-radius:4px;color:#343b4b}
+.orbit-failed{background:#fff3f3;border-color:#f1c7c7}
+.orbit-ideas{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.orbit-ideas button{min-height:36px;padding:6px 10px;font-size:13px;border-radius:999px;background:#f6effd;border-color:#dccbea;color:#55437a}
+.orbit-thinking{display:flex;align-items:center;gap:8px;color:#6d6376}
+.orbit-dots{display:inline-flex;gap:3px}.orbit-dots i{width:6px;height:6px;border-radius:50%;background:#9b7fc2;animation:orbit-dot 1s infinite}.orbit-dots i:nth-child(2){animation-delay:.15s}.orbit-dots i:nth-child(3){animation-delay:.3s}
+@keyframes orbit-dot{0%,100%{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}
+.orbit-map{height:210px;margin:8px -4px 2px;border-radius:12px;overflow:hidden;border:1px solid #e3d5ee}
+.orbit-pin{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#766091;color:#fff;font-weight:800;font-size:12px;border:2px solid #fff;box-shadow:0 2px 6px #0004}.orbit-pin.is-idea{background:#e1609f}
+.orbit-places{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.orbit-places li{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px 9px;border:1px solid #efe3f3;border-radius:12px;background:#fffafd}
+.orbit-places li>div:first-child{min-width:0;display:flex;flex-direction:column}.orbit-places small{color:#6d6376;font-size:12px}.orbit-rating{color:#b07a00;font-weight:700;font-size:12.5px}
+.orbit-place-actions{display:flex;gap:6px;flex:none;align-items:center}.orbit-place-actions a{font-size:12.5px;font-weight:700;color:#5b4a85}.orbit-place-actions button{min-height:34px;padding:4px 10px;font-size:12.5px;border-radius:10px}
+.orbit-changes{margin-top:8px;padding:10px;border-radius:12px;background:#f6effd;border:1px dashed #b9a3cf}.orbit-changes ul{margin:6px 0;padding-left:18px}
+.orbit-change-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}.orbit-change-actions button{min-height:40px;padding:7px 12px}
+.orbit-change-status{margin:6px 0 0;font-weight:700;color:#4e3d68}
+.orbit-share{margin-top:8px}
+.orbit-chat-form{display:flex;gap:8px;align-items:flex-end;padding:10px;border-top:1px solid #ead3e7;background:#fff}
+.orbit-chat-form textarea{flex:1;resize:none;min-height:44px;max-height:110px;padding:10px 12px;border-radius:14px;border:1px solid #d9c7e8;font-size:16px;line-height:1.35}
+.orbit-chat-form button{min-width:48px;border-radius:14px}
+@media(max-width:740px){
+ .orbit-pal{right:12px;bottom:calc(84px + env(safe-area-inset-bottom));width:56px;height:56px}
+ .orbit-pal-hint{right:62px;bottom:14px}
+ .orbit-chat{left:8px;right:8px;width:auto;bottom:calc(8px + env(safe-area-inset-bottom));height:min(78vh,calc(100vh - 70px));border-radius:20px}
+ body.orbit-chat-open .orbit-pal{display:none}
+}
+body.map-open .orbit-pal{display:none}
+.orbit-change-status button{min-height:34px;padding:4px 10px;margin-left:6px;font-size:12.5px;border-radius:10px}

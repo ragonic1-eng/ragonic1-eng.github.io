@@ -7,3 +7,7 @@ verify_jwt = false
 [functions.google-places]
 # Public place search; daily caps inside the function keep Google usage within the free allowance.
 verify_jwt = false
+
+[functions.orbit-chat]
+# Private trip capability is checked inside the function before any paid API call.
+verify_jwt = false
