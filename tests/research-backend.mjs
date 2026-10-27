@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createHandler,sanitizeResearch,cleanPlan,sanitizeEvaluation} from '../supabase/functions/_shared/research.mjs';
+import {createHandler,sanitizeResearch,cleanPlan,sanitizeEvaluation,sanitizeUnverified} from '../supabase/functions/_shared/research.mjs';
 const source='https://venue.example/visit';
 const place={name:'Example farm',nameZh:'示範農場',address:'1 Farm Road',description:'A family farm.',descriptionZh:'親子農場。',source,bookingUrl:source,bookingNote:'Tickets available on arrival.',bookingNoteZh:'可現場購票。'};
 const qwen=(places,results=[{index:1,url:source,title:'Venue visitor information'}])=>({output:{choices:[{finish_reason:'stop',message:{role:'assistant',content:'```json\n'+JSON.stringify({places})+'\n```'}}],search_info:{search_results:results}}});
@@ -85,4 +85,22 @@ test('failures return a short code and log the provider reason without keys',asy
 });
 test('keys pasted with spaces or quotes are cleaned before use',async()=>{
  const {handler,calls}=harness({env:{...secrets,DASHSCOPE_API_KEY:'  "sk-abc123"\n'}});assert.equal((await handler(request())).status,200);assert.equal(calls.find(c=>c.url.includes('dashscope')).options.headers.Authorization,'Bearer sk-abc123');
+});
+function relay(base,chunks){
+ const calls=[],sse=chunks.map(c=>'data: '+JSON.stringify({choices:[{delta:{content:c}}]})).join('\n\n')+'\n\ndata: [DONE]\n\n';
+ const handler=createHandler({env:k=>({...secrets,QWEN_BASE_URL:base})[k],fetcher:async(url,options)=>{calls.push({url,options});if(url.endsWith('orbit_claim_research'))return Response.json({claimed:true});if(url.endsWith('orbit_finish_research'))return Response.json({ok:true});return new Response(sse,{headers:{'Content-Type':'text/event-stream'}})}});
+ return {handler,calls};
+}
+test('OpenAI-compatible relays (infistar) get streamed chat requests; research is labelled unverified and never takes links from the model',async()=>{
+ const answer=JSON.stringify({places:[{name:'Taipei Zoo',nameZh:'臺北市立動物園',address:'Taipei',description:'A large city zoo.',openingHours:'Daily 09:00–17:00',source:'https://made-up.example',bookingUrl:'https://made-up.example/tickets',category:'kids',visitMinutes:180,tips:'Bring a stroller.'}]});
+ const {handler,calls}=relay('https://infistar.ai/v1',[answer.slice(0,40),answer.slice(40)]);
+ const r=await handler(request());assert.equal(r.status,200);const data=await r.json();const p=data.places[0];
+ const call=calls.find(c=>c.url.includes('infistar'));assert.equal(call.url,'https://infistar.ai/v1/chat/completions');const sent=JSON.parse(call.options.body);assert.equal(sent.stream,true);assert.equal(sent.model,'qwen-plus');assert.ok(!call.options.body.includes(body.roomKey));
+ assert.equal(p.verified,false);assert.equal(p.source,'');assert.equal(p.bookingUrl,'');assert.ok(!JSON.stringify(data).includes('made-up.example'));assert.equal(p.openingHours,'Daily 09:00–17:00');assert.deepEqual(p.planning,{category:'kids',visitMinutes:180,tips:'Bring a stroller.',tipsZh:''});assert.match(data.message,/not checked against a website/);
+});
+test('relay plan checks work and a host without /v1 gets the standard path',async()=>{
+ const {handler,calls}=relay('https://relay.example',[JSON.stringify({verdict:'Doable',headline:'Leave by 16:00.'})]);
+ const r=await handler(request({roomId:body.roomId,roomKey:body.roomKey,action:'evaluate',plan:{place:{name:'Taipei Zoo'},date:'2026-12-12',start:'14:00',end:'16:00'}}));
+ assert.equal(r.status,200);assert.equal((await r.json()).evaluation.verdict,'tight');assert.equal(calls.find(c=>c.url.includes('relay.example')).url,'https://relay.example/v1/chat/completions');
+ assert.equal(sanitizeUnverified({output:{choices:[{message:{content:'{"places":[{"name":""},{"name":"Ok"}]}'}}]}}).places.length,1);
 });

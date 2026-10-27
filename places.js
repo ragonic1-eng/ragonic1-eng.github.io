@@ -75,7 +75,14 @@
   finally{t.done()}
  }
  const researchQuery=p=>[p.nameZh||p.name,p.address].filter(Boolean).join(', ').slice(0,200);
- const mergeResearch=(base,found)=>({...base,...found,id:base.id||found.id,lat:base.lat,lon:base.lon});
+ // Verified research replaces map details. Unverified AI knowledge (relay mode) only fills gaps: the map's address and any
+ // researched catalogue facts win, but generic map descriptions are replaced.
+ function mergeResearch(base,found){
+  if(found.verified!==false)return {...base,...found,id:base.id||found.id,lat:base.lat,lon:base.lon};
+  const fromMap=/openstreetmap\.org/.test(base.source||''),merged={...base};
+  for(const [k,v] of Object.entries(found)){if(v===''||v===undefined||(Array.isArray(v)&&!v.length))continue;if(base[k]&&!(fromMap&&['description','descriptionZh','bookingNote'].includes(k)))continue;merged[k]=v}
+  return {...merged,id:base.id||found.id,lat:base.lat,lon:base.lon,research:found.research,verified:false};
+ }
 
  // --- Loading overlay. ---
  // Appears after a short delay so instant lookups don't flash a screen.

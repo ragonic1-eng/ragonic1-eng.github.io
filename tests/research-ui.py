@@ -51,6 +51,13 @@ with sync_playwright() as p:
  open_at();page.locator('#title').fill('Sunset at 101');page.locator('#durationMore').click();page.locator('#activityExtras>summary').click();page.locator('#notes').fill('Meet Grandma at the north door');page.locator('#category').select_option('shopping')
  page.locator('#placeQuery').fill('Taipei 101');expect(page.locator('[data-place-result]')).to_have_count(1);page.locator('[data-place-result]').click();expect(page.locator('#form')).not_to_have_attribute('aria-busy','true')
  assert page.locator('#title').input_value()=='Sunset at 101' and page.locator('#notes').input_value()=='Meet Grandma at the north door' and page.locator('#category').input_value()=='shopping' and page.locator('#duration').input_value()!='105';assert page.locator('#driverTitle').input_value()=='台北101';page.locator('#activityCancel').click()
+ # Relay mode (no web search): unverified AI details fill gaps, keep the map address, and are clearly labelled.
+ unverified={**{k:v for k,v in place.items() if k not in ('source','bookingUrl','sources')},'address':'AI guessed address','source':'','bookingUrl':'','research':'Orbit (AI knowledge)','verified':False,'planning':planning}
+ ctx.unroute('**/functions/v1/research-place');ctx.route('**/functions/v1/research-place',lambda r:r.fulfill(json=verdict if r.request.post_data_json.get('action')=='evaluate' else {'places':[unverified],'message':'Filled in by Orbit from AI knowledge.'}))
+ open_at();page.locator('#placeQuery').fill('Taipei 101');expect(page.locator('[data-place-result]')).to_have_count(1);page.locator('[data-place-result]').click();expect(page.locator('#form')).not_to_have_attribute('aria-busy','true')
+ expect(page.locator('#placeSelected .place-unverified')).to_be_visible();expect(page.locator('#placeSelected .place-address')).not_to_contain_text('AI guessed');expect(page.locator('#placeSelected')).to_contain_text('Daily 10:00–21:00');expect(page.locator('#placeSelected')).to_contain_text('A city landmark');assert page.locator('#driverTitle').input_value()=='台北101'
+ page.locator('#saveActivity').click();assert page.evaluate("state.days[5].cards.find(c=>c.place?.verified===false).place.lat")>0
+ ctx.unroute('**/functions/v1/research-place');ctx.route('**/functions/v1/research-place',respond)
  # Mobile layout during loading and after a verdict.
  ctx.unroute('**/functions/v1/research-place');ctx.route('**/functions/v1/research-place',respond)
  for width in [320,390,430,740]:
