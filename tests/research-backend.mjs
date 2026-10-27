@@ -61,3 +61,6 @@ test('plan checks reject incomplete plans before any paid call and refuse invali
  assert.equal(cleanPlan({...plan,start:'25:00'}),null);assert.equal(cleanPlan({...plan,previous:{travelMinutes:-4}}).previous.travelMinutes,null);
  const bad=harness({providerContent:evalReply({verdict:'perfect',headline:'Yes'})});const r=await bad.handler(request({roomId:body.roomId,roomKey:body.roomKey,action:'evaluate',plan}));assert.equal(r.status,503);assert.match((await r.json()).error,/could not check/);
 });
+test('QWEN_BASE_URL copied with an API path still reaches the native endpoint',async()=>{
+ for(const value of ['https://dashscope.aliyuncs.com/compatible-mode/v1','https://dashscope.aliyuncs.com/api/v1/',' https://dashscope.aliyuncs.com ']){const {handler,calls}=harness({env:{...secrets,QWEN_BASE_URL:value}});assert.equal((await handler(request())).status,200);assert.equal(calls.find(c=>c.url.includes('dashscope')).url,'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation')}
+});

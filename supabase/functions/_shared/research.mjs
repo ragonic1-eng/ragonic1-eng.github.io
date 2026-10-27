@@ -92,7 +92,8 @@ export function createHandler({env,fetcher=fetch,now=()=>Date.now()}) {
    if(claim.error)return reply(claim.status||503,{error:claim.error});
    if(claim.cached)return reply(200,{...claim.result,cached:true});if(claim.claimed!==true)throw Error('BACKEND');claimed=true;
    const modelRequest=evaluate?{model:MODEL,input:{messages:[{role:'system',content:EVAL_SYSTEM},{role:'user',content:JSON.stringify(plan)}]},parameters:{result_format:'message',max_tokens:700}}:{model:MODEL,input:{messages:[{role:'system',content:SYSTEM},{role:'user',content:JSON.stringify({placeQuery:query,area:body.country==='tw'?'Taiwan':body.country==='sg'?'Singapore':'Worldwide',researchDate:new Date(now()).toISOString().slice(0,10)})}]},parameters:{result_format:'message',max_tokens:3000,enable_search:true,search_options:{forced_search:true,enable_source:true,enable_citation:true,citation_format:'[ref_<number>]',search_strategy:'max'}}};
-   const base=(env('QWEN_BASE_URL')||DEFAULT_BASE).replace(/\/$/,'');
+   // Accept the host alone or a URL copied from Alibaba's docs with an API path on the end.
+   const base=(env('QWEN_BASE_URL')||DEFAULT_BASE).trim().replace(/\/+$/,'').replace(/\/(compatible-mode|api)\/v1$/,'');
    const response=await fetcher(base+'/api/v1/services/aigc/text-generation/generation',{method:'POST',headers:{Authorization:'Bearer '+apiKey(),'Content-Type':'application/json'},body:JSON.stringify(modelRequest),signal:AbortSignal.timeout(45000)});
    if(!response.ok)throw Error(response.status===429?'PROVIDER_LIMIT':response.status===401||response.status===403?'PROVIDER_AUTH':'PROVIDER');
    const result=await response.json();if(result?.output?.choices?.[0]?.finish_reason==='length')throw Error('INCOMPLETE');
