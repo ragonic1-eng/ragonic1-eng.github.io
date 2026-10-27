@@ -8,6 +8,7 @@ on:
       - 'supabase/research.sql'
       - 'supabase/setup.sql'
       - 'supabase/google.sql'
+      - 'supabase/chat.sql'
       - 'supabase/config.toml'
       - '.github/workflows/research.yml'
 permissions:
@@ -45,7 +46,7 @@ jobs:
           url = 'https://api.supabase.com/v1/projects/' + os.environ['SUPABASE_PROJECT_REF'] + '/database/query'
           # An explicit User-Agent: Cloudflare in front of the API can reject Python's default one.
           # setup.sql (shared trips) must exist before research.sql; both are safe to re-run.
-          for name in ['supabase/setup.sql', 'supabase/research.sql', 'supabase/google.sql']:
+          for name in ['supabase/setup.sql', 'supabase/research.sql', 'supabase/google.sql', 'supabase/chat.sql']:
             request = urllib.request.Request(url, method='POST', headers={
               'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'User-Agent': 'little-orbit-deploy/1.0'
             }, data=json.dumps({'query': pathlib.Path(name).read_text()}).encode())
@@ -62,6 +63,7 @@ jobs:
         run: |
           supabase functions deploy research-place --project-ref "$SUPABASE_PROJECT_REF" --use-api
           supabase functions deploy google-places --project-ref "$SUPABASE_PROJECT_REF" --use-api
+          supabase functions deploy orbit-chat --project-ref "$SUPABASE_PROJECT_REF" --use-api
       - name: Verify function and server-side key readiness
         run: |
           python3 - <<'PY'

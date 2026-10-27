@@ -28,4 +28,12 @@ for(const role of ['anon','authenticated']){
  assert.deepEqual(fns,[],role);
  assert.equal((await db.query(`select has_table_privilege($1,'public.orbit_google_cache','select') as ok`,[role])).rows[0].ok,false);
 }
+// Orbit chat: only real trip links, 40 questions per trip per day; the nearby-search scope is allowed.
+for(let i=0;i<2;i++)await db.exec(await readFile(new URL('../supabase/chat.sql',import.meta.url),'utf8'));
+const trip='00000000-0000-0000-0000-000000000009',key='b'.repeat(64);await db.query(`insert into orbit_trips values($1,extensions.digest($2,'sha256'))`,[trip,key]);
+const chat=async k=>(await db.query('select public.orbit_claim_chat($1,$2) as r',[trip,k])).rows[0].r;
+assert.equal((await chat('c'.repeat(64))).status,401);
+for(let i=0;i<40;i++)assert.equal((await chat(key)).ok,true);
+assert.equal((await chat(key)).status,429);assert.equal(await claim('nearby',2),true);
+assert.equal((await db.query(`select has_function_privilege('anon','public.orbit_claim_chat(uuid,text)','execute') as ok`)).rows[0].ok,false);
 console.log('google database tests passed');
