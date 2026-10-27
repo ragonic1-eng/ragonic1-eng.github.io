@@ -18,11 +18,29 @@
  // --- Data: the selected day's stops, their map points and the route between them. ---
  function stops(){const d=state.days[day];let t=d.start;return d.cards.map((c,i)=>{const s={card:c,index:i,start:t,end:t+c.duration};t+=c.duration;return s})}
  async function point(card){
-  const p=card.place;if(!p)return null;if(hasPoint(p))return {lat:p.lat,lon:p.lon};
+  const p=card.place;if(!p)return guess(card);if(hasPoint(p))return {lat:p.lat,lon:p.lon};
   const key=[p.nameZh||p.name,p.address].join('|');if(geo[key])return geo[key];
   const found=await window.orbitPlaces?.locate(p).catch(()=>null);
   if(found){geo[key]=found;trim(geo,300);write(GEO,geo)}
   return found||null;
+ }
+ // Stops without a place are looked up by the name in their title, only when it looks like a real place name
+ // (Chinese characters, or two capitalised words like "Schokolake Country House"). Such pins are marked as guesses.
+ const misses=new Set();
+ const PLAIN=/^(the|a|an|at|to|in|on|and|back|hotel|homestay|room|breakfast|lunch|dinner|evening|morning|airport|leisurely|hello|meet|wake|check|private|final|bento|downtime|rest|nap)$/i;
+ function guessName(card){
+  if(['break','travel'].includes(card.category))return '';
+  const name=window.orbitPlaces?.placeName?.(card.title)||'';
+  if(/[\u3400-\u9fff]/.test(name))return name;
+  const words=name.split(/\s+/);return words.some((w,i)=>/^[A-Z][\w’'-]+$/.test(w)&&!PLAIN.test(w)&&/^[A-Z][\w’'-]+$/.test(words[i+1]||'')&&!PLAIN.test(words[i+1]))?name:'';
+ }
+ async function guess(card){
+  const name=guessName(card);if(!name)return null;const key='title|'+name;
+  if(geo[key])return {...geo[key],guess:true};if(misses.has(key))return null;
+  // A miss may just be a network blip, so it's only remembered until the page reloads.
+  const found=await window.orbitPlaces?.locate({name}).catch(()=>null);
+  if(!found){misses.add(key);return null}
+  geo[key]={lat:found.lat,lon:found.lon};trim(geo,300);write(GEO,geo);return {...geo[key],guess:true};
  }
  async function route(points){
   const key=points.map(p=>p.lon.toFixed(5)+','+p.lat.toFixed(5)).join(';');if(routes[key])return routes[key];
@@ -41,6 +59,9 @@
  async function compute(){
   const my=++token,all=stops(),points=await Promise.all(all.map(s=>s.card.category==='break'?null:point(s.card)));
   if(my!==token)return;
+  // A guessed pin more than 80 km from every confirmed stop of the day is probably the wrong place, so it's dropped.
+  const sure=points.filter(p=>p&&!p.guess);
+  for(let i=0;i<points.length;i++)if(points[i]?.guess&&sure.length&&sure.every(p=>crow(p,points[i])>80))points[i]=null;
   const pinned=all.map((s,i)=>({...s,point:points[i]})).filter(s=>s.point);
   const r=pinned.length>1?await route(pinned.map(s=>s.point)):{legs:[],line:[]};
   if(my!==token)return;
@@ -49,16 +70,62 @@
  }
 
  // --- Timeline: drive time between consecutive stops that are on the map. ---
+ // Drives are reserved in the plan as slim travel rows. Each pair of pinned stops gets the real drive time: inside the
+ // travel row when there is one, otherwise as a connector line. Short drives get a one-tap fix.
+ const BUFFER=10,needFor=leg=>Math.ceil((leg.minutes+BUFFER)/5)*5;
+ function pairs(){
+  if(!last||last.day!==day)return [];
+  return last.pinned.slice(1).map((b,i)=>{
+   const a=last.pinned[i],leg=last.legs[i];if(!leg||leg.km<.05)return null;
+   const between=last.all.slice(a.index+1,b.index).map(s=>s.card);
+   // With another (unmapped) stop in between, the drive is shown for information but the time can't be judged.
+   const blocked=between.some(c=>c.category!=='break'&&!isLeg(c)),free=b.start-a.end,need=needFor(leg);
+   return {a,b,leg,between,free,need,short:!blocked&&free<need-2,legCard:blocked?null:between.find(isLeg),via:b.index-a.index>1};
+  }).filter(Boolean);
+ }
  function drawConnectors(){
-  document.querySelectorAll('#timeline .leg-connector').forEach(n=>n.remove());
-  if(!last||last.day!==day)return;
-  last.pinned.slice(1).forEach((b,i)=>{
-   const a=last.pinned[i],leg=last.legs[i];if(!leg||leg.km<.05)return;
-   const row=[...document.querySelectorAll('#timeline .timeline-row')].find(r=>r.dataset.id===b.card.id);if(!row)return;
-   const free=b.start-a.end,short=leg.minutes>free+2;
-   row.insertAdjacentHTML('beforebegin',`<div class="leg-connector${short?' is-short':''}"><span class="leg-car" aria-hidden="true">🚗</span><span class="leg-text"><b>${leg.estimated?'≈ ':''}${span(leg.minutes)}</b> · ${km(leg.km)}${b.index-a.index>1?`<small> from ${escape(a.card.place?.name||a.card.title)}</small>`:''}${short?` <span class="leg-warn">only ${span(free)} planned</span>`:''}</span><a href="${escape(PlaceCore.directions(a.point,b.point))}" target="_blank" rel="noopener noreferrer" aria-label="Driving directions from ${escape(a.card.title)} to ${escape(b.card.title)}">Route ↗</a></div>`);
+  document.querySelectorAll('#timeline .leg-connector,#timeline .leg-info').forEach(n=>n.remove());
+  const total=el('dayDriving');
+  if(!last||last.day!==day){if(total)total.hidden=true;return}
+  const list=pairs(),guessed=x=>x.a.point.guess||x.b.point.guess;
+  for(const x of list){
+   const route=`<a href="${escape(PlaceCore.directions(x.a.point,x.b.point))}" target="_blank" rel="noopener noreferrer" aria-label="Driving directions from ${escape(x.a.card.title)} to ${escape(x.b.card.title)}">Route ↗</a>`;
+   const facts=`<b>${x.leg.estimated||guessed(x)?'≈ ':''}${span(x.leg.minutes)}</b> drive · ${km(x.leg.km)}${x.via&&!x.legCard?`<small> from ${escape(x.a.card.place?.name||x.a.card.title)}</small>`:''}`;
+   const fix=x.short?`<span class="leg-warn">Needs ~${span(x.need)} with parking and the kids; ${x.free>0?'only '+span(x.free):'no time'} planned.</span> <button type="button" class="leg-fix" data-fix-drive="${escape(x.b.card.id)}">${x.legCard?'Make it '+span(x.legCard.duration+x.need-x.free):'＋ Add '+span(x.need)+' drive'}</button>`:'';
+   const note=guessed(x)?'<small class="leg-guess">Location guessed from the title — add a place to be sure.</small>':'';
+   if(x.legCard){
+    const row=[...document.querySelectorAll('#timeline .timeline-row')].find(r=>r.dataset.id===x.legCard.id);
+    row?.querySelector('.activity')?.insertAdjacentHTML('beforeend',`<p class="leg-info${x.short?' is-short':''}">${facts} ${route}${fix?'<br>'+fix:''}${note}</p>`);
+   }else{
+    const row=[...document.querySelectorAll('#timeline .timeline-row')].find(r=>r.dataset.id===x.b.card.id);
+    row?.insertAdjacentHTML('beforebegin',`<div class="leg-connector${x.short?' is-short':''}"><span class="leg-car" aria-hidden="true">🚗</span><span class="leg-text">${facts}${fix?' '+fix:''}${note}</span>${route}</div>`);
+   }
+  }
+  if(total){
+   const minutes=list.reduce((n,x)=>n+x.leg.minutes,0),short=list.filter(x=>x.short).length;
+   total.hidden=!list.length;
+   total.innerHTML=list.length?`🚗 About <b>${span(minutes)}</b> of driving between mapped stops${short?` · <span class="leg-warn">${short} drive${short>1?'s don’t':' doesn’t'} fit</span> <button type="button" class="leg-fix" data-fix-drive="all">Fix ${short>1?'all':'it'}</button>`:''}`:'';
+  }
+ }
+ // Makes room for drives: a travel row grows by what's missing; otherwise a new travel row takes the free time in between
+ // and later activities move by the shortfall. All fixes land as one undoable change.
+ function fixDrives(list){
+  const work=list.filter(x=>x.short);if(!work.length)return;
+  mutate(()=>{
+   const cards=state.days[day].cards;
+   for(const x of work){
+    const at=cards.findIndex(c=>c.id===x.b.card.id),from=cards.findIndex(c=>c.id===x.a.card.id);if(at<0||from<0)continue;
+    const legCard=cards.slice(from+1,at).find(isLeg);
+    if(legCard){legCard.duration+=x.need-x.free;continue}
+    const name=x.b.card.place?.name||window.orbitPlaces?.placeName?.(x.b.card.title)||x.b.card.title;
+    cards.splice(from+1,at-from-1,{id:crypto.randomUUID(),title:`Drive to ${name}`,notes:`About ${span(x.leg.minutes)} by car (${km(x.leg.km)}), plus ${BUFFER} min for parking and getting the kids in and out. Added automatically.`,category:'travel',leg:true,duration:x.need});
+   }
   });
  }
+ document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-fix-drive]');if(!b)return;
+  const list=pairs();fixDrives(b.dataset.fixDrive==='all'?list:list.filter(x=>x.b.card.id===b.dataset.fixDrive));
+ });
 
  // --- Suggest a shorter order within runs of movable stops (play and shopping), keeping meals, hotels and drives fixed. ---
  function permutations(list){if(list.length<2)return [list];return list.flatMap((x,i)=>permutations([...list.slice(0,i),...list.slice(i+1)]).map(p=>[x,...p]))}
@@ -92,8 +159,9 @@
   layer=L.layerGroup().addTo(map);
  }
  function popup(s,n){
-  const p=s.card.place,hours=p.openingHours;
-  return `<div class="map-popup"><strong>${n}. ${escape(s.card.title)}</strong><span class="map-popup-time">${clock(s.start)}–${clock(s.end)}</span>${p.name&&p.name!==s.card.title?`<span class="map-popup-place">${escape(p.name)}${p.nameZh&&p.nameZh!==p.name?' · '+escape(p.nameZh):''}</span>`:''}${p.description?`<p>${escape(p.description.slice(0,160))}${p.description.length>160?'…':''}</p>`:''}${hours?`<p>🕘 ${escape(hours)}</p>`:''}<div class="map-popup-actions"><button type="button" data-map-show="${escape(s.card.id)}">Show in plan</button><a href="${escape(PlaceCore.maps(p))}" target="_blank" rel="noopener noreferrer">Google Maps ↗</a></div></div>`;
+  // Guessed pins have no saved place yet: link to the point and say it's a guess.
+  const p=s.card.place||{name:'',lat:s.point.lat,lon:s.point.lon},hours=p.openingHours;
+  return `<div class="map-popup"><strong>${n}. ${escape(s.card.title)}</strong><span class="map-popup-time">${clock(s.start)}–${clock(s.end)}</span>${p.name&&p.name!==s.card.title?`<span class="map-popup-place">${escape(p.name)}${p.nameZh&&p.nameZh!==p.name?' · '+escape(p.nameZh):''}</span>`:''}${p.description?`<p>${escape(p.description.slice(0,160))}${p.description.length>160?'…':''}</p>`:''}${hours?`<p>🕘 ${escape(hours)}</p>`:''}${s.point.guess?'<p class="leg-guess">Location guessed from the title — add a place to be sure.</p>':''}<div class="map-popup-actions"><button type="button" data-map-show="${escape(s.card.id)}">Show in plan</button><a href="${escape(PlaceCore.maps(p))}" target="_blank" rel="noopener noreferrer">Google Maps ↗</a></div></div>`;
  }
  async function drawPanel(){
   const d=state.days[day];el('mapTitle').textContent=`Day ${day+1} · ${d.name}`;

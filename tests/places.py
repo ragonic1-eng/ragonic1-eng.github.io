@@ -34,9 +34,11 @@ with sync_playwright() as p:
  # Ambiguous mentions remain suggestions, never auto-attached.
  farm().locator('[data-place-edit]').click();page.locator('#title').fill('Flying Cow Ranch or Qingjing Farm');page.locator('#placeQuery').fill('');page.locator('#placeQuery').dispatch_event('input');expect(page.locator('[data-place-result]')).to_have_count(2);assert page.locator('#placeSelected').inner_text()==''
  # Live suggestions wait for typing to pause, send only the search text, are cached, and render remote text safely.
- photon_calls.clear();page.locator('#placeQuery').press_sequentially('Taipei 101',delay=20);expect(page.locator('[data-place-result]')).to_have_count(1);assert len(photon_calls)==1,photon_calls;q=photon_calls[0];assert q['q']==['Taipei 101'] and 'bbox' in q and not any('Flying' in v for vs in q.values() for v in vs)
+ photon_calls.clear();page.locator('#placeQuery').press_sequentially('Taipei 101',delay=20);expect(page.locator('[data-place-result]')).to_have_count(1)
+ # Count only typing searches (6 results); the map may pin other stops in the background (3 results).
+ typed=[c for c in photon_calls if c['limit']==['6']];assert len(typed)==1,photon_calls;q=typed[0];assert q['q']==['Taipei 101'] and 'bbox' in q and not any('Flying' in v for vs in q.values() for v in vs)
  assert page.locator('#placeResults script').count()==0;expect(page.locator('#placeResults')).to_contain_text('<script>')
- page.locator('#placeQuery').fill('');page.locator('#placeQuery').fill('Taipei 101');expect(page.locator('[data-place-result]')).to_have_count(1);page.wait_for_timeout(450);assert len(photon_calls)==1
+ page.locator('#placeQuery').fill('');page.locator('#placeQuery').fill('Taipei 101');expect(page.locator('[data-place-result]')).to_have_count(1);page.wait_for_timeout(450);assert len([c for c in photon_calls if c['limit']==['6']])==1
  # Keyboard: arrow to the option and press Enter; the activity name fills from an empty title, and travel legs appear.
  page.locator('#title').fill('');page.locator('#placeQuery').press('ArrowDown');page.locator('#placeQuery').press('Enter');expect(page.locator('#placeSelected')).to_contain_text('Booking requirement not confirmed');assert page.locator('#placeSelected script').count()==0
  assert page.locator('#title').input_value().startswith('Taipei 101');expect(page.locator('#journey')).to_contain_text('km');assert route_calls
@@ -64,10 +66,12 @@ with sync_playwright() as p:
  ctx.unroute(PHOTON);ctx.route(PHOTON,photon);ctx.unroute(OSRM);ctx.route(OSRM,osrm)
  # A short connection offers a drive card, which is previewed and saved as its own "Getting around" card.
  page.locator('[data-day="5"]').click();page.evaluate("openEditor()");page.locator('#activityDay').select_option('5');page.locator('#activityStart').fill('16:30');page.locator('#activityStart').dispatch_event('input')
- page.locator('#placeQuery').fill('Taipei 101');expect(page.locator('[data-place-result]')).to_have_count(1);page.locator('[data-place-result]').click();expect(page.locator('.journey-summary')).to_contain_text('doesn’t fit')
- page.locator('[data-add-transfer]').first.click();expect(page.locator('.journey-summary')).to_contain_text('Travel fits');expect(page.locator('.drive-chip')).to_be_visible()
- page.locator('[data-drop-transfer]').click();expect(page.locator('[data-add-transfer]')).to_be_visible();page.locator('[data-add-transfer]').first.click()
- page.locator('#saveActivity').click();titles=page.evaluate("state.days[5].cards.map(c=>c.title)");i=titles.index('Taipei 101 <script>bad()</script>');assert titles[i+1].startswith('Drive to Jolley Hotel'),titles;assert page.evaluate(f"state.days[5].cards[{i+1}].category")=='travel'
+ page.locator('#placeQuery').fill('Taipei 101');expect(page.locator('[data-place-result]')).to_have_count(1);page.locator('[data-place-result]').click()
+ # The drive is added automatically when it doesn't fit; ✕ removes it (and it stays removed), the button adds it back.
+ expect(page.locator('.drive-chip')).to_be_visible();expect(page.locator('.journey-summary')).to_contain_text('drive time was added for you')
+ page.locator('[data-drop-transfer]').click();expect(page.locator('.journey-summary')).to_contain_text('doesn’t fit');expect(page.locator('[data-add-transfer]')).to_be_visible();page.wait_for_timeout(600);expect(page.locator('.drive-chip')).to_have_count(0)
+ page.locator('[data-add-transfer]').first.click();expect(page.locator('.drive-chip')).to_be_visible()
+ page.locator('#saveActivity').click();titles=page.evaluate("state.days[5].cards.map(c=>c.title)");i=titles.index('Taipei 101 <script>bad()</script>');assert titles[i+1].startswith('Drive to Jolley Hotel'),titles;assert page.evaluate(f"state.days[5].cards[{i+1}].category")=='travel';assert page.evaluate(f"state.days[5].cards[{i+1}].leg") is True;expect(page.locator(f'.timeline-row.is-leg[data-id="{page.evaluate(f"state.days[5].cards[{i+1}].id")}"]')).to_have_count(1)
  # Malicious imported place fields rejected, ordinary existing trips stay valid.
  assert page.evaluate("(()=>{const s=structuredClone(state);s.days[0].cards[0].place={name:'Bad',bookingUrl:'javascript:alert(1)'};try{validate(s);return false}catch{return true}})()")
  # Layout of the picker and reachable footer across mobile widths.

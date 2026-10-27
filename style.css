@@ -269,3 +269,20 @@ body.map-open .orbit-pal{display:none}
 
 .orbit-pal{transition:translate .18s ease-out}
 @media(prefers-reduced-motion:reduce){.orbit-pal{transition:none}}
+/* Drives between stops are slim travel rows, not full cards. */
+.timeline-row.is-leg .activity{min-height:0;padding:6px 52px 6px 36px;background:#f6f3fa;border:1px dashed #cbbfdc;border-left:1px dashed #cbbfdc;box-shadow:none;border-radius:12px}
+.timeline-row.is-leg .activity::before{content:'🚗';position:absolute;left:10px;top:9px;font-size:16px}
+.timeline-row.is-leg .card-timing{gap:4px;font-size:12px}
+.timeline-row.is-leg .card-start,.timeline-row.is-leg .card-timing strong{font-size:13px;letter-spacing:0;color:#6d6380;font-weight:700}
+.timeline-row.is-leg .card-start{text-decoration:none}
+.timeline-row.is-leg .card-timing .timing-duration{font-size:11.5px;padding:0 7px;background:#fff}
+.timeline-row.is-leg .card-main h3{font-size:13.5px;font-weight:650;color:#4f4563}
+.timeline-row.is-leg .drag-handle{display:none}
+.timeline-row.is-leg .activity-more>summary{bottom:50%;transform:translateY(50%);min-height:36px}
+.timeline-row.is-leg .activity-status{display:none}
+.leg-info{margin:4px 0 0;font-size:12.5px;color:#5b5470;line-height:1.5}
+.leg-info a,.leg-connector a{font-weight:700;color:#5b4a85;white-space:nowrap}
+.leg-info.is-short,.leg-connector.is-short{color:#8a3a2c}
+.leg-fix{min-height:34px;padding:3px 10px;margin:4px 0 0;font-size:12.5px;border-radius:10px;background:#fff;border-color:#e3b9b0;color:#7a3527;font-weight:700}
+.leg-guess{display:block;color:#8a7f96;font-size:11.5px}
+.day-driving{margin:2px 0 0;font-size:13px;color:#5b5470}.day-driving[hidden]{display:none}

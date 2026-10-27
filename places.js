@@ -3,7 +3,7 @@
  const el=id=>document.getElementById(id),{escape,valid,html}=PlaceCore;
  // Bounding boxes keep suggestions in the chosen area (minLon,minLat,maxLon,maxLat).
  const AREAS={tw:[119.3,21.8,122.1,25.4],sg:[103.6,1.15,104.1,1.48]};
- let catalogue=[],draft=null,options=[],active=-1,generation=0,typing,controller,flow,settingsRequest,schedule=null,journey=null,journeyToken=0,journeyTimer,advice=null,finding=false,autoTitle='',near=null,transfers={},auto={},baseline={},filled=[];
+ let catalogue=[],draft=null,options=[],active=-1,generation=0,typing,controller,flow,settingsRequest,schedule=null,journey=null,journeyToken=0,journeyTimer,advice=null,finding=false,autoTitle='',near=null,transfers={},declined=new Set(),auto={},baseline={},filled=[];
  const remoteCache=new Map(),routeCache=new Map(),pointCache=new Map();
  const norm=s=>String(s||'').normalize('NFKC').toLowerCase().replace(/[’']/g,'').trim();
  const known=text=>catalogue.filter(p=>p.aliases.some(a=>norm(text).includes(norm(a))));
@@ -249,7 +249,7 @@
   if(!valid(place))return;
   ++generation;controller?.abort();clearTimeout(typing);setBusy(false);closeList();
   const title=el('title').value.trim();if(!title||title===autoTitle){el('title').value=place.name;autoTitle=place.name}
-  const {aliases,planning:hints,...picked}=place;draft=structuredClone(picked);finding=false;transfers={};advice=null;el('placeQuery').value='';message('');preview();autofill(draft,hints||{});
+  const {aliases,planning:hints,...picked}=place;draft=structuredClone(picked);finding=false;transfers={};declined.clear();advice=null;el('placeQuery').value='';message('');preview();autofill(draft,hints||{});
   const fromGoogleSearch=!!draft.googleId&&!hasPoint(draft),orbitOn=shared(),steps=[fromGoogleSearch?{id:'google',label:'Getting the address, hours and photo from Google Maps'}:{id:'locate',label:'Pinpointing it on the map'},{id:'travel',label:'Working out travel times from your other stops'}];
   // Google already gives the address, hours and pin; Orbit's web research stays available from the place card.
   if(orbitOn&&research&&!draft.research&&!draft.googleId)steps.push({id:'research',label:'Orbit is searching the web for the address, hours and booking info (up to a minute)'});
@@ -302,7 +302,15 @@
   const prev=neighbour(-1),next=neighbour(1);journey={prev:prev&&{stop:prev,loading:true},next:next&&{stop:next,loading:true}};renderJourney();
   const leg=async(stop,outbound)=>{if(!stop)return null;const point=await stopPoint(stop.card,signal);if(!point||!hasPoint(draft))return {stop,point};return {stop,point,route:await travel(outbound?draft:point,outbound?point:draft,signal)}};
   const [a,b]=await Promise.all([leg(prev,false),leg(next,true)]);
-  if(token!==journeyToken)return;journey={prev:a,next:b};near=a?.point||null;renderJourney();renderAdvice();
+  if(token!==journeyToken)return;journey={prev:a,next:b};near=a?.point||null;
+  // Drive time is reserved automatically when it doesn't fit (route + 10 min for parking and the kids); ✕ removes it.
+  let added=false;
+  for(const [k,l] of [['prev',a],['next',b]]){
+   if(!l?.route||l.route.km<.05||transfers[k]||declined.has(k))continue;
+   const free=k==='prev'?schedule.start-l.stop.end:l.stop.start-schedule.end;
+   if(fit(free,l.route.minutes)?.level==='short'){transfers[k]=driveFor(l);added=true}
+  }
+  renderJourney();renderAdvice();if(added)reschedule();
  }
  function fit(free,need){
   if(need===undefined)return null;const spare=free-need;
@@ -324,7 +332,7 @@
  const driveFor=l=>roundUp(l.route.minutes+10);
  function transferCard(k,leg){
   const minutes=transfers[k];if(!minutes||!leg?.route)return null;const other=leg.stop.card.title,name=draft.name;
-  return {id:(typeof uid==='function'?uid():String(Math.random()).slice(2)),title:k==='prev'?`Drive to ${name}`:`Drive to ${other}`,notes:`About ${span(leg.route.minutes)} by car (${leg.route.km.toFixed(1)} km${leg.route.estimated?', rough estimate':''}) ${k==='prev'?'from '+other:'from '+name}, plus time for parking and getting everyone ready. Added from the travel check.`,category:'travel',duration:minutes};
+  return {id:(typeof uid==='function'?uid():String(Math.random()).slice(2)),title:k==='prev'?`Drive to ${name}`:`Drive to ${other}`,notes:`About ${span(leg.route.minutes)} by car (${leg.route.km.toFixed(1)} km${leg.route.estimated?', rough estimate':''}) ${k==='prev'?'from '+other:'from '+name}, plus time for parking and getting everyone ready. Added automatically from the travel check.`,category:'travel',leg:true,duration:minutes};
  }
  function withTransfers(cards,id){
   if(!draft||!journey)return cards;const i=cards.findIndex(c=>c.id===id);if(i<0)return cards;
@@ -335,18 +343,18 @@
   const legs=[['prev',journey.prev],['next',journey.next]].filter(([,l])=>l?.route&&l.route.km>=.05).map(([k,l])=>{const free=k==='prev'?schedule.start-l.stop.end:l.stop.start-schedule.end;return {k,l,free,f:fit(free,l.route.minutes)}});
   const added=Object.entries(transfers).filter(([,m])=>m).map(([k,m])=>`<span class="drive-chip">🚗 ${span(m)} drive ${k==='prev'?'before':'after'} this stop<button type="button" data-drop-transfer="${k}" aria-label="Remove the ${span(m)} drive ${k==='prev'?'before':'after'} this stop">✕</button></span>`).join('');
   if(!legs.length)return added?`<div class="journey-summary is-ok"><div class="journey-fixes">${added}</div></div>`:'';
-  const short=legs.filter(x=>x.f.level==='short'),tight=legs.filter(x=>x.f.level==='tight');
+  const short=legs.filter(x=>x.f.level==='short'&&!transfers[x.k]),tight=legs.filter(x=>x.f.level==='tight'&&!transfers[x.k]);
   const fixes=[...short,...tight].filter(x=>!transfers[x.k]).map(x=>`<button type="button" data-add-transfer="${x.k}" data-minutes="${driveFor(x.l)}">＋ Add a ${span(driveFor(x.l))} drive ${x.k==='prev'?'from “'+escape(x.l.stop.card.title)+'”':'to “'+escape(x.l.stop.card.title)+'”'}</button>`).join('');
   const chips=added?`<div class="journey-fixes">${added}</div>`:'';
   if(short.length)return `<div class="journey-summary is-short"><p><strong>Travel doesn’t fit yet.</strong> ${short.map(x=>x.k==='prev'?`Getting here from “${escape(x.l.stop.card.title)}” takes ~${span(x.l.route.minutes)}, but there’s ${x.free>0?'only '+span(x.free):'no time'} between them.`:`Reaching “${escape(x.l.stop.card.title)}” takes ~${span(x.l.route.minutes)}, but there’s ${x.free>0?'only '+span(x.free):'no time'} before it starts.`).join(' ')}</p>${fixes?`<div class="journey-fixes">${fixes}</div><p class="journey-note">Adds a “Getting around” card; later activities move to make room.</p>`:''}${chips}</div>`;
   if(tight.length)return `<div class="journey-summary is-tight"><p><strong>Travel fits, just.</strong> Little buffer for traffic, parking or getting the kids ready.</p>${fixes?`<div class="journey-fixes">${fixes}</div>`:''}${chips}</div>`;
-  return `<div class="journey-summary is-ok"><p><strong>✓ Travel fits</strong> around your other stops.</p>${chips}</div>`;
+  return `<div class="journey-summary is-ok"><p><strong>✓ Travel fits</strong> ${added?'— drive time was added for you; later activities move to make room. Tap ✕ to remove it.':'around your other stops.'}</p>${chips}</div>`;
  }
  const reschedule=()=>el('activityStart').dispatchEvent(new Event('input',{bubbles:true}));
  el('journey').addEventListener('click',e=>{
   const add=e.target.closest('[data-add-transfer]'),drop=e.target.closest('[data-drop-transfer]');
   if(add){transfers[add.dataset.addTransfer]=Number(add.dataset.minutes);reschedule()}
-  if(drop){delete transfers[drop.dataset.dropTransfer];reschedule()}
+  if(drop){delete transfers[drop.dataset.dropTransfer];declined.add(drop.dataset.dropTransfer);reschedule()}
  });
  function renderJourney(){
   const box=el('journey');if(!draft||!schedule||!journey){box.innerHTML=draft?'':'<p class="journey-empty">Choose a place in step 1 to see travel times from your previous and next stops.</p>';return}
@@ -396,7 +404,7 @@
  // --- Editor lifecycle and events. ---
  function open(card){
   ++generation;controller?.abort();flow?.abort();flow=null;clearTimeout(typing);clearTimeout(loadingTimer);el('orbitLoading').hidden=true;el('form').removeAttribute('aria-busy');
-  draft=card?.place&&valid(card.place)?structuredClone(card.place):null;session='';finding=false;advice=null;journey=null;autoTitle='';near=null;transfers={};auto={};filled=[];baseline={isNew:!card,duration:Number(el('duration').value),categoryTouched:!!card};for(const id of ['notes','driverTitle','category','duration'])el(id).classList.remove('auto-filled');el('orbitFilled').hidden=true;el('orbitStatus').hidden=shared();
+  draft=card?.place&&valid(card.place)?structuredClone(card.place):null;session='';finding=false;advice=null;journey=null;autoTitle='';near=null;transfers={};declined.clear();auto={};filled=[];baseline={isNew:!card,duration:Number(el('duration').value),categoryTouched:!!card};for(const id of ['notes','driverTitle','category','duration'])el(id).classList.remove('auto-filled');el('orbitFilled').hidden=true;el('orbitStatus').hidden=shared();
   el('placeQuery').value='';el('placeManual').open=false;el('manualPlaceMessage').textContent='';for(const id of ['manualPlaceName','manualPlaceAddress','manualPlaceDescription','manualPlaceBooking'])el(id).value='';
   el('placeCountry').value=/changi|singapore|樟宜/i.test(card?.title||'')?'sg':'tw';setBusy(false);closeList();message('');preview();renderJourney();renderAdvice();
  }
@@ -430,6 +438,6 @@
  });
  // app.js reports the previewed day whenever the day, time or duration changes.
  function scheduleChanged(next){schedule=next;clearTimeout(journeyTimer);if(!draft){renderJourney();return}if(!next){journey=null;renderJourney();renderAdvice();return}journeyTimer=setTimeout(()=>updateJourney().catch(()=>{}),250)}
- window.orbitPlaces={open,value:()=>draft?structuredClone(draft):undefined,card,schedule:scheduleChanged,withTransfers,locate,settings};
+ window.orbitPlaces={open,value:()=>draft?structuredClone(draft):undefined,card,schedule:scheduleChanged,withTransfers,locate,settings,placeName};
  fetch('places.json',{cache:'no-cache'}).then(r=>{if(!r.ok)throw Error();return r.json()}).then(list=>{catalogue=list.filter(p=>valid(p)&&Array.isArray(p.aliases));if(typeof state!=='undefined'&&state){for(const node of document.querySelectorAll('[data-place-card]')){const c=state.days.flatMap(d=>d.cards).find(c=>c.id===node.dataset.placeCard);if(c)node.outerHTML=card(c)}}}).catch(()=>message('Known-place suggestions could not load. Map suggestions and manual entry still work.'));
 })();
