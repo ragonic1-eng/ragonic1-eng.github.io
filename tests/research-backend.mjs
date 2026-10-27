@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createHandler,sanitizeResearch,cleanPlan,sanitizeEvaluation,sanitizeUnverified} from '../supabase/functions/_shared/research.mjs';
+import {createHandler,sanitizeResearch,cleanPlan,sanitizeEvaluation,sanitizeUnverified,fromClaude} from '../supabase/functions/_shared/research.mjs';
 const source='https://venue.example/visit';
 const place={name:'Example farm',nameZh:'示範農場',address:'1 Farm Road',description:'A family farm.',descriptionZh:'親子農場。',source,bookingUrl:source,bookingNote:'Tickets available on arrival.',bookingNoteZh:'可現場購票。'};
 const qwen=(places,results=[{index:1,url:source,title:'Venue visitor information'}])=>({output:{choices:[{finish_reason:'stop',message:{role:'assistant',content:'```json\n'+JSON.stringify({places})+'\n```'}}],search_info:{search_results:results}}});
@@ -95,7 +95,7 @@ test('OpenAI-compatible relays (infistar) get streamed chat requests; research i
  const answer=JSON.stringify({places:[{name:'Taipei Zoo',nameZh:'臺北市立動物園',address:'Taipei',description:'A large city zoo.',openingHours:'Daily 09:00–17:00',source:'https://made-up.example',bookingUrl:'https://made-up.example/tickets',category:'kids',visitMinutes:180,tips:'Bring a stroller.'}]});
  const {handler,calls}=relay('https://infistar.ai/v1',[answer.slice(0,40),answer.slice(40)]);
  const r=await handler(request());assert.equal(r.status,200);const data=await r.json();const p=data.places[0];
- const call=calls.find(c=>c.url.includes('infistar'));assert.equal(call.url,'https://infistar.ai/v1/chat/completions');const sent=JSON.parse(call.options.body);assert.equal(sent.stream,true);assert.equal(sent.model,'qwen-plus');assert.ok(!call.options.body.includes(body.roomKey));
+ assert.equal(calls.find(c=>c.url.endsWith('/v1/messages'))?.url,'https://infistar.ai/v1/messages');const call=calls.find(c=>c.url.endsWith('/chat/completions'));assert.equal(call.url,'https://infistar.ai/v1/chat/completions');const sent=JSON.parse(call.options.body);assert.equal(sent.stream,true);assert.equal(sent.model,'qwen-plus');assert.ok(!call.options.body.includes(body.roomKey));
  assert.equal(p.verified,false);assert.equal(p.source,'');assert.equal(p.bookingUrl,'');assert.ok(!JSON.stringify(data).includes('made-up.example'));assert.equal(p.openingHours,'Daily 09:00–17:00');assert.deepEqual(p.planning,{category:'kids',visitMinutes:180,tips:'Bring a stroller.',tipsZh:''});assert.match(data.message,/not checked against a website/);
 });
 test('relay plan checks work and a host without /v1 gets the standard path',async()=>{
@@ -103,4 +103,28 @@ test('relay plan checks work and a host without /v1 gets the standard path',asyn
  const r=await handler(request({roomId:body.roomId,roomKey:body.roomKey,action:'evaluate',plan:{place:{name:'Taipei Zoo'},date:'2026-12-12',start:'14:00',end:'16:00'}}));
  assert.equal(r.status,200);assert.equal((await r.json()).evaluation.verdict,'tight');assert.equal(calls.find(c=>c.url.includes('relay.example')).url,'https://relay.example/v1/chat/completions');
  assert.equal(sanitizeUnverified({output:{choices:[{message:{content:'{"places":[{"name":""},{"name":"Ok"}]}'}}]}}).places.length,1);
+});
+function claudeRelay(replies){
+ const calls=[],quiet=console.error;
+ const handler=createHandler({env:k=>({...secrets,QWEN_BASE_URL:'https://infistar.ai/v1'})[k],fetcher:async(url,options)=>{calls.push({url,options});if(url.endsWith('orbit_claim_research'))return Response.json({claimed:true});if(url.endsWith('orbit_finish_research'))return Response.json({ok:true});if(url.endsWith('/v1/messages')){const r=replies.shift();return typeof r==='number'?new Response('{"error":{"type":"invalid_request_error"}}',{status:r}):Response.json(r)}
+  return new Response('data: '+JSON.stringify({choices:[{delta:{content:JSON.stringify({places:[{name:'Memory farm'}]})}}]})+'\n\ndata: [DONE]\n\n')}});
+ return {handler,calls};
+}
+const searched={stop_reason:'end_turn',content:[{type:'server_tool_use',name:'web_search',input:{query:'farm'}},{type:'web_search_tool_result',content:[{type:'web_search_result',url:source,title:'Venue visitor information'}]},{type:'text',text:'```json\n'+JSON.stringify({places:[{...place,openingHours:'Daily 09:00–17:00'}]})},{type:'text',text:'\n```'}]};
+test('relay research uses Claude web search through the relay and returns verified, sourced places',async()=>{
+ const err=console.error;console.error=()=>{};try{
+ const {handler,calls}=claudeRelay([searched]);const data=await(await handler(request())).json();
+ const call=calls.find(c=>c.url==='https://infistar.ai/v1/messages');const sent=JSON.parse(call.options.body);assert.equal(sent.model,'claude-opus-5-5');assert.equal(sent.tools[0].type,'web_search_20260209');assert.equal(call.options.headers['x-api-key'],secrets.DASHSCOPE_API_KEY);assert.ok(!call.options.body.includes(body.roomKey));
+ assert.equal(data.places[0].verified,undefined);assert.equal(data.places[0].sources[0].url,source);assert.equal(data.places[0].openingHours,'Daily 09:00–17:00');assert.ok(!calls.some(c=>c.url.endsWith('/chat/completions')));
+ }finally{console.error=err}
+});
+test('an unsupported search tool version retries with the basic one; any other failure falls back to unverified AI knowledge',async()=>{
+ const err=console.error,logs=[];console.error=m=>logs.push(m);try{
+ const retry=claudeRelay([400,searched]);const ok=await(await retry.handler(request())).json();assert.equal(ok.places[0].sources[0].url,source);assert.deepEqual(retry.calls.filter(c=>c.url.endsWith('/v1/messages')).map(c=>JSON.parse(c.options.body).tools[0].type),['web_search_20260209','web_search_20250305']);
+ for(const reply of [404,{stop_reason:'end_turn',content:[{type:'text',text:JSON.stringify({places:[place]})}]},{stop_reason:'pause_turn',content:[]}]){
+  const {handler,calls}=claudeRelay([reply,reply]);const data=await(await handler(request())).json();assert.equal(data.places[0].name,'Memory farm');assert.equal(data.places[0].verified,false);assert.ok(calls.some(c=>c.url.endsWith('/chat/completions')));
+ }
+ assert.ok(logs.some(l=>l.includes('no-search-results'))&&logs.some(l=>l.includes('http-404'))&&logs.some(l=>l.includes('pause_turn')));
+ }finally{console.error=err}
+ assert.equal(fromClaude({content:[{type:'web_search_tool_result',content:{type:'web_search_tool_result_error',error_code:'max_uses_exceeded'}}]}).output.search_info.search_results.length,0);
 });
