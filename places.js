@@ -87,9 +87,9 @@
  // --- Loading overlay. ---
  // Appears after a short delay so instant lookups don't flash a screen.
  let loadingTimer;
- function showLoading(title,steps){
+ function showLoading(title,steps,{now=false}={}){
   el('orbitLoadingTitle').textContent=title;el('orbitSteps').innerHTML=steps.map(s=>`<li data-step="${s.id}" data-state="pending"><span class="step-mark" aria-hidden="true"></span><span>${escape(s.label)}</span></li>`).join('');
-  el('form').setAttribute('aria-busy','true');clearTimeout(loadingTimer);loadingTimer=setTimeout(()=>{el('orbitLoading').hidden=false;el('orbitSkip').focus({preventScroll:true})},250);
+  el('form').setAttribute('aria-busy','true');clearTimeout(loadingTimer);loadingTimer=setTimeout(()=>{el('orbitLoading').hidden=false;el('orbitSkip').focus({preventScroll:true})},now?0:250);
  }
  function step(id,state){const item=el('orbitSteps').querySelector(`[data-step="${id}"]`);if(item)item.dataset.state=state}
  function hideLoading(){clearTimeout(loadingTimer);el('form').removeAttribute('aria-busy');if(el('orbitLoading').hidden)return;el('orbitLoading').hidden=true;el('form').removeAttribute('aria-busy');(draft?el('placeSelected').querySelector('button'):el('placeQuery'))?.focus({preventScroll:true})}
@@ -97,7 +97,11 @@
 
  // --- Suggestions list (combobox). ---
  function setBusy(on){el('placeFinder').classList.toggle('is-searching',on)}
- function message(text){el('placeMessage').textContent=text}
+ // Messages also appear at the top of an open suggestion list, which would otherwise cover them.
+ function message(text){
+  el('placeMessage').textContent=text;const list=el('placeResults');list.querySelector('.combo-note')?.remove();
+  if(text&&!list.hidden)list.insertAdjacentHTML('afterbegin',`<p class="combo-note" role="status">${escape(text)}</p>`);
+ }
  function closeList(){el('placeResults').hidden=true;el('placeQuery').setAttribute('aria-expanded','false');el('placeQuery').removeAttribute('aria-activedescendant');active=-1}
  function renderOptions(list,heading=''){
   options=list;active=-1;const q=el('placeQuery').value.trim();
@@ -184,10 +188,10 @@
   const title=el('title').value.trim();if(!title||title===autoTitle){el('title').value=place.name;autoTitle=place.name}
   const {aliases,planning:hints,...picked}=place;draft=structuredClone(picked);finding=false;transfers={};advice=null;el('placeQuery').value='';message('');preview();autofill(draft,hints||{});
   const orbitOn=shared(),steps=[{id:'locate',label:'Pinpointing it on the map'},{id:'travel',label:'Working out travel times from your other stops'}];
-  if(orbitOn&&research&&!draft.research)steps.push({id:'research',label:'Orbit is finding the address, opening hours and booking info'});
+  if(orbitOn&&research&&!draft.research)steps.push({id:'research',label:'Orbit is searching the web for the address, hours and booking info (up to a minute)'});
   if(orbitOn&&schedule)steps.push({id:'check',label:'Orbit is checking how it fits your day'});
   flow?.abort();const current=flow=new AbortController(),signal=current.signal,notes=[];
-  showLoading('Getting '+place.name+' ready…',steps);
+  showLoading('Getting '+place.name+' ready…',steps,{now:steps.some(s=>s.id==='research')});
   try{
    step('locate','active');const point=await locate(draft,signal);if(point)Object.assign(draft,point);step('locate',point?'done':'skipped');if(!point)notes.push('Couldn’t pin it on the map, so travel times are unavailable.');
    step('travel','active');await updateJourney(signal);step('travel','done');
@@ -202,11 +206,11 @@
  }
  async function askOrbit(){
   const q=el('placeQuery').value.trim();if(q.length<2){message('Type a place name first.');return}
-  if(!shared()){message('Open your private shared trip link first (Trip options → Share trip) to use Orbit. Map suggestions work without sharing.');return}
+  if(!shared()){closeList();el('orbitStatus').hidden=false;message('Orbit only works on your shared trip. Tap “Turn on Orbit” above, then try again.');return}
   ++generation;controller?.abort();clearTimeout(typing);setBusy(false);closeList();
-  flow?.abort();const current=flow=new AbortController();showLoading('Researching “'+q+'”…',[{id:'research',label:'Orbit is looking this place up'}]);step('research','active');
-  try{const data=await orbit({query:q,country:el('placeCountry').value},current.signal,110000);const found=(Array.isArray(data.places)?data.places:[]).filter(valid);if(flow!==current)return;renderOptions(found,'Orbit found');message(found.length?(data.cached?'Recent research · ':'')+'Choose the right place.':String(data.message||'No supported match found. Try a more specific name.'))}
-  catch(e){if(flow===current)message(e.message)}
+  flow?.abort();const current=flow=new AbortController();showLoading('Researching “'+q+'”…',[{id:'research',label:'Orbit is searching the web — this can take up to a minute'}],{now:true});step('research','active');
+  try{const data=await orbit({query:q,country:el('placeCountry').value},current.signal,110000);const found=(Array.isArray(data.places)?data.places:[]).filter(valid);if(flow!==current)return;if(found.length){renderOptions(found,'Orbit found');message((data.cached?'Recent research · ':'')+'Choose the right place.')}else{closeList();message(String(data.message||'Orbit couldn’t find this place. Add the town (e.g. “大湖”) or enter it yourself.'))}}
+  catch(e){if(flow===current){closeList();message(e.message)}}
   finally{if(flow===current){flow=null;hideLoading();el('placeQuery').focus({preventScroll:true})}}
  }
 

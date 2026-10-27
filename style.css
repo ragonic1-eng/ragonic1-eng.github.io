@@ -169,3 +169,4 @@ body.map-open .map-toggle{display:none}
 }
 @media(max-width:1199px){.map-toggle{right:auto;left:50%;transform:translateX(-50%)}.map-toggle:active:not(:disabled){transform:translateX(-50%) scale(.97)}}
 @media(max-width:740px){.map-toggle{bottom:calc(92px + env(safe-area-inset-bottom));padding:9px 16px}}
+.combo-note{margin:4px 4px 6px;padding:8px 10px;border-radius:10px;background:#fff6e3;color:#6f4b10;font-size:13px;line-height:1.45}
