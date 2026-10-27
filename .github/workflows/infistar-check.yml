@@ -1,0 +1,47 @@
+name: Infistar model check (temporary)
+on:
+  push:
+    branches: [diag/infistar-models]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read public model list and docs
+        run: |
+          python3 - <<'PY'
+          import json, re, urllib.request
+          def get(url):
+            try:
+              req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (little-orbit check)', 'Accept': 'application/json,text/html'})
+              with urllib.request.urlopen(req, timeout=30) as r: return r.status, r.read().decode('utf-8', 'replace')
+            except Exception as e: return 0, type(e).__name__ + ' ' + str(e)[:200]
+          def note(title, msg): print('::notice title=' + title + '::' + ' '.join(str(msg).split())[:3800])
+          for host in ['https://infistar.cc', 'https://infistar.ai']:
+            status, body = get(host + '/api/pricing')
+            note('pricing ' + host, f'HTTP {status}, {len(body)} chars, starts: {body[:200]}')
+            try: data = json.loads(body)
+            except Exception: continue
+            items = data.get('data') if isinstance(data, dict) else data
+            if isinstance(items, dict): items = items.get('list') or items.get('models') or list(items.values())
+            names = sorted({(i.get('model_name') or i.get('id') or i.get('name')) for i in items if isinstance(i, dict)} - {None})
+            note('model count', len(names))
+            hits = [n for n in names if re.search(r'search|sonar|online|web|联网|grounding|perplexity', n, re.I)]
+            note('search-like models', hits or 'none')
+            note('qwen models', [n for n in names if 'qwen' in n.lower()])
+            note('claude models', [n for n in names if 'claude' in n.lower()][:40])
+            note('gemini models', [n for n in names if 'gemini' in n.lower()][:40])
+            types = {}
+            for i in items:
+              if isinstance(i, dict):
+                for t in i.get('supported_endpoint_types') or []: types[t] = types.get(t, 0) + 1
+            note('endpoint types', types)
+            for chunk in range(0, len(names), 70): note(f'all models {chunk}', ', '.join(names[chunk:chunk+70]))
+            break
+          for url in ['https://doc.infistar.ai/', 'https://doc.infistar.ai/api-overview', 'https://doc.infistar.ai/client-integrations']:
+            status, body = get(url)
+            text = re.sub(r'<[^>]+>', ' ', body)
+            found = sorted(set(m.lower() for m in re.findall(r'web[_ -]?search|联网搜索|联网|enable_search|/v1/responses|/v1/messages|search', text, re.I)))
+            note('doc ' + url.rsplit('/', 1)[-1] or 'home', f'HTTP {status}; mentions: {found or "none"}')
+          PY
