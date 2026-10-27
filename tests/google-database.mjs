@@ -36,8 +36,8 @@ assert.equal((await chat('c'.repeat(64))).status,401);
 for(let i=0;i<40;i++)assert.equal((await chat(key)).ok,true);
 assert.equal((await chat(key)).status,429);assert.equal(await claim('nearby',2),true);
 assert.equal((await db.query(`select has_function_privilege('anon','public.orbit_claim_chat(uuid,text)','execute') as ok`)).rows[0].ok,false);
-// Remember: 10 saved notes per trip per day, real trip links only.
+// Memory updates: 20 per trip per day, real trip links only.
 const memo=async k=>(await db.query('select public.orbit_claim_memory($1,$2) as r',[trip,k])).rows[0].r;
-assert.equal((await memo('c'.repeat(64))).status,401);for(let i=0;i<10;i++)assert.equal((await memo(key)).ok,true);assert.equal((await memo(key)).status,429);
+assert.equal((await memo('c'.repeat(64))).status,401);for(let i=0;i<20;i++)assert.equal((await memo(key)).ok,true);assert.equal((await memo(key)).status,429);
 assert.equal((await db.query(`select has_function_privilege('anon','public.orbit_claim_memory(uuid,text)','execute') as ok`)).rows[0].ok,false);
 console.log('google database tests passed');

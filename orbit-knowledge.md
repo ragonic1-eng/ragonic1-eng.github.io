@@ -5,7 +5,8 @@ tour agent: short, specific, and true. Anyone can edit it — the family, Claude
 
 Rules for this file:
 - It is public (the website is public). Never add passport or ID numbers, phone numbers, booking references, payment details or medical records. Simple food needs ("no peanuts") are fine.
-- Notes saved with Orbit's 🐾 Remember button land under "Remembered from chats"; tidy them into the right section now and then.
+- Orbit saves what the family tells it under "Remembered from chats" automatically (with an Undo in the chat), replacing notes that change.
+  Now and then, fold those notes into the right sections and delete duplicates.
 - Every fact about a place gets a date and a source: `(checked 2026-10-27, Google Maps)`. Remove facts that turn out wrong.
 - Keep it under about 30,000 characters; Orbit stops reading beyond that.
 - Live data wins: Orbit uses Google Maps for hours, ratings and pins. Use this file for what Google doesn't know —

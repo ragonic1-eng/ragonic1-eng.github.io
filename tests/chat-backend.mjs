@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createChatHandler,cleanTrip,cleanMessages,cleanReply,cleanNote,addMemory} from '../supabase/functions/_shared/chat.mjs';
+import {createChatHandler,cleanTrip,cleanMessages,cleanReply,cleanNote,addMemory,updateMemory} from '../supabase/functions/_shared/chat.mjs';
 const env={DASHSCOPE_API_KEY:'relay-secret',QWEN_BASE_URL:'https://infistar.ai/v1',GOOGLE_MAPS_API_KEY:'google-secret',SUPABASE_URL:'https://project.supabase.co',SUPABASE_SERVICE_ROLE_KEY:'service-secret'};
 const trip={today:'2026-12-08',selectedDay:1,days:[{date:'2026-12-07',name:'Arrive',region:'Taoyuan',cards:[{id:'hotel-1',title:'Jolley Hotel',start:'20:00',end:'23:00',category:'hotel',place:{name:'Jolley Hotel',lat:25.04,lon:121.53}}]},{date:'2026-12-08',name:'Dahu',region:'Miaoli',cards:[{id:'farm-1',title:'Strawberry farm',start:'10:00',end:'12:00',category:'kids',notes:'x'.repeat(500)}]}]};
 const body={roomId:'11111111-1111-1111-1111-111111111111',roomKey:'a'.repeat(64),messages:[{role:'user',text:'What is near the farm?'}],trip};
@@ -77,13 +77,16 @@ test('provider failures give a friendly error without leaking keys',async()=>{
  assert.match(data.error,/couldn’t answer/);assert.ok(!JSON.stringify(data).includes('relay-secret'));
 });
 
-// --- Remember this ---
-const FILE='# Orbit knowledge\n\n## The family\n\n- Two kids.\n\n## Regions on this trip\n\n- Dahu.\n';
-function memoryHarness({token='gh-secret',conflicts=0,claim={ok:true},file=FILE}={}){
- const calls=[];let current=file;
+// --- Passive memory ---
+const FILE='# Orbit knowledge\n\n## The family\n\n- Two kids.\n\n## Remembered from chats\n\n- The 2-year-old naps around 13:00–15:00. (remembered 2026-10-20)\n';
+function memoryHarness({token='gh-secret',conflicts=0,claim={ok:true},file=FILE,turns=[]}={}){
+ const calls=[];let current=file;turns=[...turns];
  const handler=createChatHandler({env:k=>({...env,ORBIT_GITHUB_TOKEN:token})[k],now:()=>Date.parse('2026-10-27T02:00:00Z'),fetcher:async(url,options={})=>{
   calls.push({url,options});
   if(url.endsWith('orbit_claim_memory'))return Response.json(claim);
+  if(url.endsWith('orbit_claim_chat'))return Response.json({ok:true});
+  if(url.includes('orbit-knowledge.md')&&url.includes('raw.githubusercontent'))return new Response(current);
+  if(url.endsWith('/v1/messages'))return Response.json(turns.shift());
   if(url.startsWith('https://api.github.com/')){
    if(options.method==='GET')return Response.json({sha:'sha-'+calls.length,content:Buffer.from(current).toString('base64')});
    if(conflicts-->0)return new Response('{}',{status:409});
@@ -93,28 +96,33 @@ function memoryHarness({token='gh-secret',conflicts=0,claim={ok:true},file=FILE}
  }});
  return {handler,calls,file:()=>current,github:()=>calls.filter(c=>c.url.startsWith('https://api.github.com/'))};
 }
-const remember=note=>request({roomId:body.roomId,roomKey:body.roomKey,action:'remember',note});
-test('an approved note is saved under "Remembered from chats" in orbit-knowledge.md on main',async()=>{
- const h=memoryHarness();const r=await h.handler(remember('  The 2-year-old naps around 13:00–15:00 '));assert.equal(r.status,200);
- assert.deepEqual(await r.json(),{saved:true,note:'The 2-year-old naps around 13:00–15:00'});
- assert.match(h.file(),/## Remembered from chats\n\n- The 2-year-old naps around 13:00–15:00 \(remembered 2026-10-27\)\n$/);assert.ok(h.file().startsWith(FILE.trimEnd()));
- const [get,put]=h.github();assert.match(get.url,/repos\/ragonic1-eng\/ragonic1-eng.github.io\/contents\/orbit-knowledge.md\?ref=main$/);assert.equal(get.options.headers.Authorization,'Bearer gh-secret');
- const sent=JSON.parse(put.options.body);assert.equal(sent.branch,'main');assert.equal(sent.sha,'sha-2');assert.match(sent.message,/^Orbit remembers: The 2-year-old/);
- const again=await(await h.handler(remember('The 2-year-old naps around 13:00–15:00'))).json();assert.equal(again.duplicate,true);
+const answer=input=>({stop_reason:'tool_use',content:[tool('reply',input)]});
+const forget=note=>request({roomId:body.roomId,roomKey:body.roomKey,action:'forget',note});
+test('notes Orbit picks up are saved without asking, replacing the note they supersede, in one commit',async()=>{
+ const h=memoryHarness({turns:[answer({text:'Got it.',remember:['The 2-year-old naps around 14:00–16:00.','Both kids dislike spicy food.'],replaces:['The 2-year-old naps around 13:00–15:00. (remembered 2026-10-20)']})]});
+ const data=await(await h.handler(request())).json();
+ assert.deepEqual(data.remembered,['The 2-year-old naps around 14:00–16:00.','Both kids dislike spicy food.']);assert.deepEqual(data.forgot,['The 2-year-old naps around 13:00–15:00.']);assert.equal(data.remember,undefined);
+ assert.ok(!h.file().includes('13:00–15:00'));assert.match(h.file(),/- The 2-year-old naps around 14:00–16:00\. \(remembered 2026-10-27\)\n- Both kids dislike spicy food\. \(remembered 2026-10-27\)\n$/);
+ const puts=h.github().filter(c=>c.options.method==='PUT');assert.equal(puts.length,1);const sent=JSON.parse(puts[0].options.body);assert.equal(sent.branch,'main');assert.match(sent.message,/^Orbit remembers: The 2-year-old naps around 14:00/);
+ assert.equal(puts[0].options.headers.Authorization,'Bearer gh-secret');assert.match(h.github()[0].url,/contents\/orbit-knowledge.md\?ref=main$/);
 });
-test('a conflicting edit is retried once with the newest file',async()=>{
- const h=memoryHarness({conflicts:1});assert.equal((await h.handler(remember('Likes ducks'))).status,200);assert.equal(h.github().length,4);assert.match(h.file(),/- Likes ducks/);
+test('Undo forgets a remembered note; conflicts retry once; nothing new means no commit',async()=>{
+ const h=memoryHarness({conflicts:1});const r=await h.handler(forget('The 2-year-old naps around 13:00–15:00.'));assert.deepEqual(await r.json(),{forgotten:true,note:'The 2-year-old naps around 13:00–15:00.'});
+ assert.ok(!h.file().includes('naps'));assert.equal(h.github().length,4);
+ const same=memoryHarness({turns:[answer({text:'ok',remember:['The 2-year-old naps around 13:00–15:00.']})]});const data=await(await same.handler(request())).json();
+ assert.equal(data.remembered,undefined);assert.equal(same.github().filter(c=>c.options.method==='PUT').length,0);
 });
-test('private-looking notes, missing token, quotas and bad links never reach GitHub',async()=>{
- for(const note of ['Call 0912 345 678','Booking ABC12345678 ok','mail me at a@b.com','see https://x.com','x']){const h=memoryHarness();assert.equal((await h.handler(remember(note))).status,400,note);assert.equal(h.github().length,0)}
- const off=memoryHarness({token:''});const r=await off.handler(remember('Likes ducks'));assert.equal(r.status,503);assert.equal((await r.json()).code,'NOT_CONFIGURED');
- const capped=memoryHarness({claim:{status:429,error:'Plenty today'}});assert.equal((await capped.handler(remember('Likes ducks'))).status,429);assert.equal(capped.github().length,0);
- const full=memoryHarness({file:'x'.repeat(29990)});assert.equal((await full.handler(remember('Likes ducks a lot'))).status,413);
- const bad=memoryHarness();assert.equal((await bad.handler(request({action:'remember',roomId:body.roomId,roomKey:'nope',note:'Likes ducks'}))).status,401);assert.equal(bad.github().length,0);
+test('memory problems never break the answer, and private-looking notes are dropped',async()=>{
+ const off=memoryHarness({token:'',turns:[answer({text:'Hi',remember:['Likes ducks.']})]});const a=await(await off.handler(request())).json();assert.equal(a.text,'Hi');assert.deepEqual(a.memoryOff,['Likes ducks.']);assert.equal(off.github().length,0);
+ const capped=memoryHarness({claim:{status:429,error:'Plenty today'},turns:[answer({text:'Hi',remember:['Likes ducks.']})]});const b=await(await capped.handler(request())).json();assert.equal(b.text,'Hi');assert.match(b.memoryError,/plenty today/);assert.equal(capped.github().length,0);
+ const full=memoryHarness({file:FILE+'x'.repeat(29900),turns:[answer({text:'Hi',remember:['Likes ducks a lot.']})]});assert.match((await(await full.handler(request())).json()).memoryError,/full/);
+ const priv=memoryHarness({turns:[answer({text:'Hi',remember:['Call 0912 345 678','mail a@b.com']})]});const c=await(await priv.handler(request())).json();assert.equal(c.remembered,undefined);assert.equal(priv.github().length,0);
+ const bad=memoryHarness();assert.equal((await bad.handler(request({action:'forget',roomId:body.roomId,roomKey:'nope',note:'x y z'}))).status,401);assert.equal(bad.github().length,0);
 });
-test('notes are cleaned, the section is reused, and Orbit can suggest notes',()=>{
+test('notes are cleaned and the remembered section is updated in place',()=>{
  assert.deepEqual(cleanNote('## <b>Loves</b> `ducks`'),{note:'bLoves/b ducks'});assert.equal(cleanNote('Skip Hobbit Valley until 2026-12-08, naps 13:00–15:00').note,'Skip Hobbit Valley until 2026-12-08, naps 13:00–15:00');
- const once=addMemory(FILE,'A','2026-10-27'),twice=addMemory(once,'B','2026-10-28');assert.equal(twice.split('## Remembered from chats').length,2);assert.match(twice,/- A \(remembered 2026-10-27\)\n- B \(remembered 2026-10-28\)\n$/);
- const mid=addMemory('# K\n\n## Remembered from chats\n\n- A (remembered x)\n\n## Later\n- z\n','B','d');assert.match(mid,/- A \(remembered x\)\n- B \(remembered d\)\n\n## Later\n- z\n$/);
- const reply=cleanReply({text:'ok',remember:['The kids love capybaras.','Phone 0912345678','x','Third']},cleanTrip(trip));assert.deepEqual(reply.remember,['The kids love capybaras.']);
+ for(const n of ['Booking ABC12345678 ok','see https://x.com','x'])assert.ok(cleanNote(n).error,n);
+ const once=addMemory('# K\n\n## Places\n- a\n','A','2026-10-27'),twice=addMemory(once,'B','2026-10-28');assert.equal(twice.split('## Remembered from chats').length,2);assert.match(twice,/- A \(remembered 2026-10-27\)\n- B \(remembered 2026-10-28\)\n$/);
+ const mid=updateMemory('# K\n\n## Remembered from chats\n\n- A (remembered x)\n- B (remembered x)\n\n## Later\n- A (remembered x)\n',{add:['C'],remove:['A']},'d');assert.equal(mid,'# K\n\n## Remembered from chats\n\n- B (remembered x)\n- C (remembered d)\n\n## Later\n- A (remembered x)\n');
+ const reply=cleanReply({text:'ok',remember:['The kids love capybaras.','Phone 0912345678','x','Third'],replaces:['Old note. (remembered 2026-10-01)','']},cleanTrip(trip));assert.deepEqual(reply.remember,['The kids love capybaras.']);assert.deepEqual(reply.replaces,['Old note.']);
 });
