@@ -43,7 +43,7 @@ with sync_playwright() as p:
  page.locator('#toast').get_by_label('Dismiss message').tap()
  # Expanding a card reveals working edit/move/reminder controls; editing keeps other times.
  card=page.locator('.activity').first;card.locator('.activity-more>summary').tap();card.get_by_label('Edit activity',exact=True).tap();open_extras(page);page.locator('#notes').fill('My airport description');page.locator('#saveActivity').tap();assert page.evaluate("slotTime(state.days[0],state.days[0].cards.findIndex(c=>c.id==='activity-1-0'))")==945
- page.locator('#toast').get_by_label('Dismiss message').tap();card.get_by_label('Move card',exact=True).tap();page.locator('#moveCancel').tap()
+ page.locator('#toast').get_by_label('Dismiss message').tap();card.locator('.card-more>summary').tap();card.get_by_label('Move card',exact=True).tap();page.locator('#moveCancel').tap()
  page.locator('#mobileAdd').tap();page.locator('#title').fill('Minimal test');page.locator('#activityStart').fill('11:00');page.locator('#duration').fill('20');page.locator('#saveActivity').tap();expect(page.get_by_role('heading',name='Minimal test',exact=True)).to_be_visible()
  touch_tap(page,client,'#mobileUndo');page.reload();page.wait_for_selector('.activity');assert page.evaluate("state.days[0].cards[0].notes")=='My airport description'
  # Compact overview and full settings remain available at all supported widths.

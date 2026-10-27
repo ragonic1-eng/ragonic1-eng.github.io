@@ -20,7 +20,7 @@ with sync_playwright() as p:
   expect(card.locator('.card-timing')).to_contain_text('11:30');expect(card.locator('.timing-duration')).to_have_text('40m')
   expand_card(card)
   for action in ['edit','move','up','down','remove']:
-   box=card.locator(f'.card-actions [data-action="{action}"]').bounding_box();assert box['width']>=44 and box['height']>=44,(width,action,box)
+   box=card.locator(f'.card-primary [data-action="{action}"], .card-actions [data-action="{action}"]').first.bounding_box();assert box['width']>=44 and box['height']>=44,(width,action,box)
   card.get_by_label('Edit activity',exact=True).evaluate("el=>el.scrollIntoView({block:'center'})");card.get_by_label('Edit activity',exact=True).tap();expect(page.locator('#notes')).to_have_value('Meet at the taxi stand. Bring the stroller.');open_extras(page);page.locator('#notes').fill('Updated on mobile');page.locator('#saveActivity').tap();page.locator('#toast').get_by_role('button',name='Dismiss message').tap()
   assert page.evaluate("slotTime(state.days[0],state.days[0].cards.findIndex(c=>c.id==='home-to-airport'))")==750
   assert page.evaluate("slotTime(state.days[0],state.days[0].cards.findIndex(c=>c.id==='activity-1-0'))")==945
