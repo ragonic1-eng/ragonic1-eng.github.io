@@ -101,7 +101,7 @@
  function closeList(){el('placeResults').hidden=true;el('placeQuery').setAttribute('aria-expanded','false');el('placeQuery').removeAttribute('aria-activedescendant');active=-1}
  function renderOptions(list,heading=''){
   options=list;active=-1;const q=el('placeQuery').value.trim();
-  const option=(p,i)=>`${p.weak&&!list[i-1]?.weak?'<p class="combo-heading weak-heading">Not an exact match — check before choosing</p>':''}<button type="button" role="option" id="placeOption${i}" class="place-option${p.weak?' is-weak':''}" data-place-result="${i}" aria-selected="false"><span class="option-icon" aria-hidden="true">${p.research?'✦':'⌖'}</span><span class="option-text"><strong>${escape(p.name)}${p.nameZh&&p.nameZh!==p.name?` <span lang="zh-Hant">${escape(p.nameZh)}</span>`:''}</strong><small>${escape(p.address||'Address to be confirmed')}</small></span></button>`;
+  const option=(p,i)=>`${p.weak&&!list[i-1]?.weak?'<p class="combo-heading weak-heading">Not an exact match — check before choosing</p>':''}<button type="button" role="option" id="placeOption${i}" class="place-option${p.weak?' is-weak':''}" data-place-result="${i}" aria-selected="false"><span class="option-icon" aria-hidden="true">${p.research?'✦':'⌖'}</span><span class="option-text"><strong>${escape(p.name)}${p.nameZh&&p.nameZh!==p.name?` <span lang="zh-Hant">${escape(p.nameZh)}</span>`:''}</strong><small>${escape([/openstreetmap\.org/.test(p.source||'')?p.description:'',p.address||'Address to be confirmed'].filter(Boolean).join(' · '))}</small></span></button>`;
   // One input: when the map has no exact match, Orbit (the AI) comes first and Enter asks it.
   const orbitFirst=q.length>=3&&!list.some(p=>!p.weak);
   const ask=q.length>=2?`<button type="button" role="option" id="placeOptionAsk" class="place-option ask-orbit${orbitFirst?' is-first':''}" data-ask-orbit><span class="option-icon" aria-hidden="true">✦</span><span class="option-text"><strong>Find “${escape(q)}” with Orbit</strong><small>${orbitFirst?'Not found exactly on the map. Orbit will work out which place you mean.':'Ask Orbit (AI) to work out which place you mean'}</small></span></button>`:'';
@@ -352,6 +352,6 @@
  });
  // app.js reports the previewed day whenever the day, time or duration changes.
  function scheduleChanged(next){schedule=next;clearTimeout(journeyTimer);if(!draft){renderJourney();return}if(!next){journey=null;renderJourney();renderAdvice();return}journeyTimer=setTimeout(()=>updateJourney().catch(()=>{}),250)}
- window.orbitPlaces={open,value:()=>draft?structuredClone(draft):undefined,card,schedule:scheduleChanged,withTransfers};
+ window.orbitPlaces={open,value:()=>draft?structuredClone(draft):undefined,card,schedule:scheduleChanged,withTransfers,locate,settings};
  fetch('places.json').then(r=>{if(!r.ok)throw Error();return r.json()}).then(list=>{catalogue=list.filter(p=>valid(p)&&Array.isArray(p.aliases));if(typeof state!=='undefined'&&state){for(const node of document.querySelectorAll('[data-place-card]')){const c=state.days.flatMap(d=>d.cards).find(c=>c.id===node.dataset.placeCard);if(c)node.outerHTML=card(c)}}}).catch(()=>message('Known-place suggestions could not load. Map suggestions and manual entry still work.'));
 })();

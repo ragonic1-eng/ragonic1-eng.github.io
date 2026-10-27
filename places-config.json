@@ -2,5 +2,6 @@
   "enabled": true,
   "suggestUrl": "https://photon.komoot.io/api/",
   "routeUrl": "https://router.project-osrm.org/route/v1/driving/",
-  "researchUrl": "https://iqpljuxtjngcisvokjkm.supabase.co/functions/v1/research-place"
+  "researchUrl": "https://iqpljuxtjngcisvokjkm.supabase.co/functions/v1/research-place",
+  "tileUrl": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 }

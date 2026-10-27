@@ -104,6 +104,18 @@ Saved places keep `lat`/`lon` and `openingHours`/`openingHoursZh` alongside the 
 
 Validation: `tests/places.py` (suggestions, debounce/cache, keyboard, escaping, travel legs and fallback estimate, map outage, manual entry, stale responses, drive cards, driver view, persistence, mobile layout) and `tests/research-ui.py` (Orbit prerequisite, minimal payloads, loading steps, stale verdict re-check, Research with Orbit candidates, quota errors, skip and late responses, mobile layouts). Photon, OSRM and Orbit are mocked; this test environment cannot reach those hosts.
 
+## Day map
+
+Wide screens show a live map beside the itinerary; tablets and phones open it full screen with the **🗺 Map** button.
+
+- Each stop with a place is a **numbered pin** in visit order, coloured by activity type, joined by the driving route (one OSRM request per day, cached on the device). Tap a pin for what the place is, its time slot and opening hours, **Show in plan** and **Google Maps**.
+- The timeline shows **🚗 drive time and distance** between consecutive pinned stops, with a warning when the planned gap is shorter than the drive, and a Route link to Google Maps directions.
+- **Not on the map yet** lists stops without a place; each opens the place search pre-filled from the card. Saved places without coordinates are located once with the map search and remembered on the device.
+- **Optimise route** suggests a shorter order within runs of play and shopping stops, keeping meals, hotels, drives and the day's first stop fixed. It previews the order and saving (estimated), applies as one change, and can be undone.
+- If routing is unavailable, straight-line estimates are shown with ≈ and a dashed line.
+
+Map tiles: © OpenStreetMap contributors (`tileUrl` in `places-config.json`); routes: OSRM. Leaflet 1.9.4 is bundled in `vendor/leaflet` (BSD-2-Clause). Validation: `tests/map-view.py`.
+
 ## Orbit: AI venue research and plan checks
 
 Orbit is the app's name for its Qwen-powered helper. It works on **private shared trips** only. The browser calls the Supabase edge function, which holds the Qwen (Alibaba Cloud Model Studio) key and enforces authorization, persistent daily quotas, caching, and source checking. Research sends only the place name and address; a plan check sends only the chosen place, its date and times, and the names and times of the stops just before and after it, never the trip key, notes or the rest of the itinerary. Setup and activation checks are in [DEPLOY.md](DEPLOY.md#orbit-qwen-place-research-and-plan-checks). Publishing the website alone does not activate the edge function; deployment and an authenticated live request must succeed separately. Places researched earlier with Claude or Qwen keep their saved details.
