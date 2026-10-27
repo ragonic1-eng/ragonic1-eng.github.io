@@ -5,7 +5,7 @@
   function publicKey(key){if(key.startsWith('sb_publishable_'))return true;try{return JSON.parse(atob(key.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).role==='anon'}catch{return false}}
   function auth(){return {Authorization:'Bearer '+room.key,'Content-Type':'application/json'}}
   async function request(action,payload={}){
-    if(!config)config=await fetch('config.json').then(r=>{if(!r.ok)throw Error('Sharing configuration is missing.');return r.json()});
+    if(!config)config=await fetch('config.json',{cache:'no-cache'}).then(r=>{if(!r.ok)throw Error('Sharing configuration is missing.');return r.json()});
     let url,options;
     if(config.provider==='supabase'){
       if(config.supabaseKey&&!publicKey(config.supabaseKey))throw Error('Use a public publishable or anon key. Secret keys cannot be used in a browser.');

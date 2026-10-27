@@ -13,7 +13,7 @@
  const today=()=>new Date().toISOString().slice(0,10);
  const clock=m=>{m=((Math.round(m)%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')};
  const span=m=>{m=Math.max(0,Math.round(m));return m<60?m+' min':Math.floor(m/60)+' h'+(m%60?' '+m%60+' min':'')};
- const settings=()=>settingsRequest??=fetch('places-config.json').then(r=>{if(!r.ok)throw Error();return r.json()}).catch(()=>{settingsRequest=null;return {}});
+ const settings=()=>settingsRequest??=fetch('places-config.json',{cache:'no-cache'}).then(r=>{if(!r.ok)throw Error();return r.json()}).catch(()=>{settingsRequest=null;return {}});
  function room(){const p=new URLSearchParams(location.hash.slice(1));return {roomId:p.get('room'),roomKey:p.get('key')}}
  const shared=()=>{const r=room();return !!(r.roomId&&r.roomKey)};
  function timeout(signal,ms){const local=new AbortController(),stop=()=>local.abort();signal?.addEventListener('abort',stop);const timer=setTimeout(stop,ms);return {signal:local.signal,done(){clearTimeout(timer);signal?.removeEventListener('abort',stop)}}}
@@ -40,7 +40,7 @@
  let googleCheck,session='';
  const newSession=()=>{session=crypto.randomUUID().replaceAll('-','')};
  async function googleApi(payload,signal){
-  const [config,app]=await Promise.all([settings(),fetch('config.json',{signal}).then(r=>r.json())]);
+  const [config,app]=await Promise.all([settings(),fetch('config.json',{signal,cache:'no-cache'}).then(r=>r.json())]);
   if(!config.googleUrl||app.provider!=='supabase'||!config.googleUrl.startsWith(app.supabaseUrl.replace(/\/$/,'')+'/functions/v1/'))throw Error('off');
   const response=await fetch(config.googleUrl,{method:payload?'POST':'GET',headers:{apikey:app.supabaseKey,...(payload?{'Content-Type':'application/json'}:{})},body:payload?JSON.stringify(payload):undefined,signal,referrerPolicy:'no-referrer'});
   let data;try{data=await response.json()}catch{throw Error('Google Maps search is unavailable right now.')}
@@ -116,7 +116,7 @@
   const {roomId,roomKey}=room();if(!roomId||!roomKey)throw Error('Open your private shared trip link first (Trip options → Share trip) to use Orbit.');
   const t=timeout(signal,ms);
   try{
-   const [config,app]=await Promise.all([settings(),fetch('config.json',{signal:t.signal}).then(r=>r.json())]);
+   const [config,app]=await Promise.all([settings(),fetch('config.json',{signal:t.signal,cache:'no-cache'}).then(r=>r.json())]);
    if(!config.researchUrl||app.provider!=='supabase'||!config.researchUrl.startsWith(app.supabaseUrl.replace(/\/$/,'')+'/functions/v1/'))throw Error('Orbit is not configured for this trip. Map search still works.');
    const response=await fetch(config.researchUrl,{method:'POST',headers:{'Content-Type':'application/json',apikey:app.supabaseKey},body:JSON.stringify({...payload,roomId,roomKey}),signal:t.signal,referrerPolicy:'no-referrer'});
    let data;try{data=await response.json()}catch{throw Error('Orbit is temporarily unavailable. Try again shortly.')}
@@ -423,5 +423,5 @@
  // app.js reports the previewed day whenever the day, time or duration changes.
  function scheduleChanged(next){schedule=next;clearTimeout(journeyTimer);if(!draft){renderJourney();return}if(!next){journey=null;renderJourney();renderAdvice();return}journeyTimer=setTimeout(()=>updateJourney().catch(()=>{}),250)}
  window.orbitPlaces={open,value:()=>draft?structuredClone(draft):undefined,card,schedule:scheduleChanged,withTransfers,locate,settings};
- fetch('places.json').then(r=>{if(!r.ok)throw Error();return r.json()}).then(list=>{catalogue=list.filter(p=>valid(p)&&Array.isArray(p.aliases));if(typeof state!=='undefined'&&state){for(const node of document.querySelectorAll('[data-place-card]')){const c=state.days.flatMap(d=>d.cards).find(c=>c.id===node.dataset.placeCard);if(c)node.outerHTML=card(c)}}}).catch(()=>message('Known-place suggestions could not load. Map suggestions and manual entry still work.'));
+ fetch('places.json',{cache:'no-cache'}).then(r=>{if(!r.ok)throw Error();return r.json()}).then(list=>{catalogue=list.filter(p=>valid(p)&&Array.isArray(p.aliases));if(typeof state!=='undefined'&&state){for(const node of document.querySelectorAll('[data-place-card]')){const c=state.days.flatMap(d=>d.cards).find(c=>c.id===node.dataset.placeCard);if(c)node.outerHTML=card(c)}}}).catch(()=>message('Known-place suggestions could not load. Map suggestions and manual entry still work.'));
 })();
