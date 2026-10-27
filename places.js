@@ -121,10 +121,21 @@
   const seen=new Set(local.map(p=>norm(p.name))),fresh=remote.filter(p=>!seen.has(norm(p.name)));
   return [...local,...fresh.filter(p=>exact(p,q)),...fresh.filter(p=>!exact(p,q)).map(p=>({...p,weak:true}))].slice(0,8);
  }
+ // Activity titles carry more than a place name ("紅色琉璃瓦草莓園 & SUHU Café (Dahu) · strawberries & lunch"). The map needs
+ // just the name: skip "Lunch ·"-style labels and trailing descriptions, prefer a Chinese name in brackets, take the first of "A & B".
+ const GENERIC=/^(breakfast|brunch|lunch|dinner|supper|snacks?|check[ -]?in|check[ -]?out|hotel rest|rest|pit stop|evening|nap|drive|depart|return)\b/i,CJK=/[\u3400-\u9fff]/;
+ function placeName(text){
+  const parts=String(text||'').split(/\s+[·|｜]\s+/).map(s=>s.trim()).filter(Boolean);
+  let name=parts.find(p=>!GENERIC.test(p))||parts[0]||'';
+  const bracket=name.match(/[(（]([^()（）]+)[)）]/);
+  name=bracket&&CJK.test(bracket[1])&&!CJK.test(name.replace(bracket[0],''))?bracket[1]:name.replace(/\s*[(（][^()（）]*[)）]/g,'');
+  name=name.split(/\s*[&＆+]\s*|\s+and\s+/i)[0].trim();
+  return name.length>=2?name:String(text||'').trim();
+ }
  function noExactMatch(q){if(q.length>=3&&!options.some(p=>!p.weak))message(`“${q}” isn’t on the free map exactly — small cafés often aren’t. Press Enter or tap “Find with Orbit”.`)}
  function onType(){
-  const q=el('placeQuery').value.trim(),token=++generation;controller?.abort();clearTimeout(typing);message('');
-  const local=q?matches(q):inferred();renderOptions(local,q?'':'Suggested from this activity');
+  const typed=el('placeQuery').value.trim(),q=placeName(typed),token=++generation;controller?.abort();clearTimeout(typing);message('');
+  const local=typed?matches(typed):inferred();renderOptions(local,q?'':'Suggested from this activity');
   if(q.length<3){setBusy(false);return}
   const key=el('placeCountry').value+':'+norm(q);
   if(remoteCache.has(key)){setBusy(false);renderOptions(merge(local,remoteCache.get(key),q));noExactMatch(q);return}
@@ -337,7 +348,7 @@
  document.addEventListener('click',e=>{
   const b=e.target.closest('[data-place-edit]');if(!b)return;const c=state.days[day].cards.find(c=>c.id===b.dataset.placeEdit);if(!c)return;
   openEditor(c);el('placeFields').scrollIntoView({block:'start'});
-  if(c.place){finding=true;preview()}el('placeQuery').focus({preventScroll:true});onType();
+  if(c.place){finding=true;preview()}else el('placeQuery').value=placeName(c.title);el('placeQuery').focus({preventScroll:true});onType();
  });
  // app.js reports the previewed day whenever the day, time or duration changes.
  function scheduleChanged(next){schedule=next;clearTimeout(journeyTimer);if(!draft){renderJourney();return}if(!next){journey=null;renderJourney();renderAdvice();return}journeyTimer=setTimeout(()=>updateJourney().catch(()=>{}),250)}
