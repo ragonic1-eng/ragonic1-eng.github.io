@@ -30,10 +30,13 @@ with sync_playwright() as p:
  page.locator('.timeline-row[data-id="f-hotel"] .activity h3').click()
  page.wait_for_function("()=>{const v=orbitMap.view();return Math.abs(v.lat-24.9936)<0.01&&Math.abs(v.lon-121.301)<0.01&&v.zoom>=14}")
  expect(page.locator('.leaflet-popup')).to_contain_text('Chao Motels');expect(page.locator('.timeline-row[data-id="f-hotel"]')).to_have_class(__import__('re').compile('is-map-selected'))
- # The flight frames the whole arc; a drive row frames both of its ends.
+ # The flight frames the whole arc.
  page.locator('.timeline-row[data-id="f-fly"] .activity h3').click();page.wait_for_function("()=>orbitMap.view().zoom<8")
  v=page.evaluate("orbitMap.view()");assert 5<v['lat']<22 and 105<v['lon']<120,v
- page.locator('.timeline-row[data-id="f-drive"] .activity h3').click();page.wait_for_function("()=>{const v=orbitMap.view();return v.lat>1.2&&v.lat<1.45&&v.lon>103.7&&v.lon<104.05}")
+ page.locator('.timeline-row[data-id="f-home"] .activity h3').click();page.wait_for_function("()=>{const v=orbitMap.view();return v.lat>1.2&&v.lat<1.45&&v.lon>103.7&&v.lon<104.05}")
+ # The drive isn't a card: it's a small line on Home that opens its travel time.
+ expect(page.locator('.timeline-row[data-id="f-drive"]')).to_have_count(0);line=page.locator('[data-leg="f-drive"]');expect(line).to_contain_text('40m to Changi Airport T3')
+ line.click();expect(page.locator('#editorTitle')).to_have_text('Edit travel time');page.locator('#activityCancel').click()
  # Controls on a card don't move the map; the desktop map needs no extra button.
  expect(page.locator('.map-focus').first).to_be_hidden()
  assert not errors,errors;ctx.close()

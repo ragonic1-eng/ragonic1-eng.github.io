@@ -25,12 +25,12 @@ with sync_playwright() as p:
   assert page.evaluate("slotTime(state.days[0],state.days[0].cards.findIndex(c=>c.id==='home-to-airport'))")==750
   assert page.evaluate("slotTime(state.days[0],state.days[0].cards.findIndex(c=>c.id==='activity-1-0'))")==945
   # Move to a specific position on a different day; details survive and only one card exists.
-  card.get_by_label('Move card',exact=True).evaluate("el=>el.scrollIntoView({block:'center'})");card.get_by_label('Move card',exact=True).tap();page.locator('#moveDay').select_option('1');next_id=page.evaluate('state.days[1].cards[0].id');page.locator('#movePosition').select_option(next_id);expect(page.locator('#movePreview')).to_contain_text('09:15–09:55')
+  card.get_by_label('Move card',exact=True).evaluate("el=>el.scrollIntoView({block:'center'})");card.get_by_label('Move card',exact=True).tap();page.locator('#moveDay').select_option('1');next_id=page.evaluate('state.days[1].cards.find(c=>!quietLeg(c)).id');page.locator('#movePosition').select_option(next_id);expect(page.locator('#movePreview')).to_contain_text('09:15–09:55')
   box=page.locator('#confirmMove').bounding_box();assert box['y']+box['height']<=height+1
   page.locator('#confirmMove').tap();expect(page.locator('#moveEditor')).not_to_be_visible();assert page.locator('[data-day="1"]').get_attribute('aria-current')=='date';assert page.evaluate("state.days.flatMap(d=>d.cards).filter(c=>c.title==='Mobile breakfast').length")==1
   assert page.evaluate("state.days[1].cards[0].notes")=='Updated on mobile';page.locator('#toast').get_by_role('button',name='Dismiss message').tap()
   # Reorder with touch controls and recover using the always available Undo.
-  card.get_by_label('Move later',exact=True).evaluate("el=>el.scrollIntoView({block:'center'})");card.get_by_label('Move later',exact=True).tap();assert page.evaluate("state.days[1].cards[1].title")=='Mobile breakfast';page.locator('#mobileUndo').tap();assert page.evaluate("state.days[1].cards[0].title")=='Mobile breakfast'
+  card.get_by_label('Move later',exact=True).evaluate("el=>el.scrollIntoView({block:'center'})");card.get_by_label('Move later',exact=True).tap();assert page.evaluate("state.days[1].cards.filter(c=>!quietLeg(c))[1].title")=='Mobile breakfast';page.locator('#mobileUndo').tap();assert page.evaluate("state.days[1].cards[0].title")=='Mobile breakfast'
   # Move within the same day using the destination picker; no duplicate or lost descriptions.
   page.locator('#toast').get_by_role('button',name='Dismiss message').tap();expand_card(card);card.get_by_label('Move card',exact=True).evaluate("el=>el.scrollIntoView({block:'center'})");card.get_by_label('Move card',exact=True).tap();page.locator('#movePosition').select_option('');page.locator('#confirmMove').tap();assert page.evaluate("state.days[1].cards.at(-1).title")=='Mobile breakfast'
   page.locator('#mobileNow').tap();assert page.evaluate('document.activeElement.classList.contains("activity")')

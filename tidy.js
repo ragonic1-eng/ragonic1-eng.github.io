@@ -1,4 +1,4 @@
-// One-off travel tidy-up for the current plan: turns travel that was stored as activity cards into proper travel rows
+// One-off travel tidy-up for the current plan: turns travel that was stored as activity cards into travel time between stops
 // (home → Changi T3 by car, a walk to the departure hall, flights, airport transfers) and fixes cards filed under the
 // wrong type. It reads the live plan, so personal edits stay; every change can be unticked, and all of them apply as
 // one undoable step for everyone on the shared trip.
@@ -22,7 +22,7 @@ window.travelTidy=(() => {
     const d=t.days.find(x=>x.date==='2026-12-07'),j=at(d,c=>c.id==='home-to-airport'||/^leave home/i.test(c.title));if(j<0)return;
     const flightCard=d.cards.find(flight),before=flightCard&&startOf(d,flightCard.id);
     d.cards.splice(j,1,make('Home · Monterey Park Condo','hotel',10,{notes:'Final bag check and load the car.',place:{...HOME}}),
-     leg('Drive to Changi Airport T3',40,'drive','About 30–35 min from West Coast Rise via the PIE or ECP, plus loading the car and the kids. The travel row shows the live drive time.'),
+     leg('Drive to Changi Airport T3',40,'drive','About 30–35 min from West Coast Rise via the PIE or ECP, plus loading the car and the kids. The route check shows the live drive time.'),
      make('Changi Airport T3 · drop-off','travel',10,{notes:'Unload bags, get a trolley and the stroller out.',place:{...T3}}),
      leg('Walk to T3 Departure Hall',15,'walk','From the drop-off kerb to the EVA Air check-in row with bags and kids.'));
     // Keep the flight where it was by giving the extra minutes back from airport playtime (never below an hour).
@@ -31,7 +31,7 @@ window.travelTidy=(() => {
    const f=first.cards.find(flight);
    if(f&&!f.leg)out.push({id:'flight216',day:'Mon 7 Dec',text:`Show “${f.title}” as a ✈️ flight travel row instead of an activity card.`,apply:t=>{const c=t.days.find(x=>x.date==='2026-12-07').cards.find(flight);if(c){c.leg=true;c.mode='flight'}}});
    const m=at(first,c=>/meet your private driver/i.test(c.title)),next=first.cards[m+1];
-   if(m>=0&&next&&!isLeg(next))out.push({id:'taoyuan',day:'Mon 7 Dec',text:'Add the evening drives in Taoyuan: 🚗 airport → convenience-store stop (25 min) and 🚗 store → Chao Motels (10 min). Check-in moves up to 35 min later (less if there’s free time in between). These are estimates; the travel rows show live times once the stops are on the map.',apply:t=>{
+   if(m>=0&&next&&!isLeg(next))out.push({id:'taoyuan',day:'Mon 7 Dec',text:'Add the evening drives in Taoyuan: 🚗 airport → convenience-store stop (25 min) and 🚗 store → Chao Motels (10 min). Check-in moves up to 35 min later (less if there’s free time in between). These are estimates; the route check shows live times once the stops are on the map.',apply:t=>{
     const d=t.days.find(x=>x.date==='2026-12-07'),k=at(d,c=>/meet your private driver/i.test(c.title));if(k<0)return;
     d.cards.splice(k+1,0,leg('Drive to a Taoyuan 7-Eleven / FamilyMart',25,'drive','From Taoyuan Airport Terminal 2 towards Chao Motels, stopping for bentos on the way.'));
     // The store → hotel hop uses free time in between first, so check-in only moves if there isn't enough.
@@ -54,7 +54,7 @@ window.travelTidy=(() => {
    if(!/^from\s+x\s+to\s+x$/i.test(c.title.trim()))return;
    const to=d.cards.slice(i+1).find(n=>n.category!=='break'&&!isLeg(n));if(!to)return;
    const name=window.orbitPlaces?.placeName?.(to.title)||to.place?.name||to.title;
-   out.push({id:'rename-'+c.id,day:dateLabel(d,{weekday:'short',day:'numeric',month:'short'}),text:`Rename “${c.title}” to “Drive to ${name}” and show it as a 🚗 travel row.`,apply:t=>{for(const x of t.days)for(const y of x.cards)if(y.id===c.id){y.title=`Drive to ${name}`;y.leg=true;y.mode='drive'}}});
+   out.push({id:'rename-'+c.id,day:dateLabel(d,{weekday:'short',day:'numeric',month:'short'}),text:`Rename “${c.title}” to “Drive to ${name}” so it shows as 🚗 travel time instead of a card.`,apply:t=>{for(const x of t.days)for(const y of x.cards)if(y.id===c.id){y.title=`Drive to ${name}`;y.leg=true;y.mode='drive'}}});
   });
   return out;
  }
@@ -65,7 +65,7 @@ window.travelTidy=(() => {
   const list=(state.travelTidy||0)>=VERSION||dismissed?[]:proposals(state);
   if(!list.length){box.hidden=true;return}
   box.hidden=false;
-  box.innerHTML=`<p><strong>🧳 Travel tidy-up: ${list.length} change${list.length>1?'s':''} ready.</strong> Travel that was saved as activity cards becomes travel rows. Untick anything you don’t want${/room=/.test(location.hash)?'; this updates the plan for everyone on your shared trip':''}. You can undo.</p><details class="tidy-list"><summary>Review the changes</summary><ul>${list.map(p=>`<li><label><input type="checkbox" data-tidy="${esc(p.id)}" checked> <span><b>${esc(p.day)}</b> · ${esc(p.text)}</span></label></li>`).join('')}</ul></details><div class="schedule-update-actions"><button type="button" class="primary" id="applyTidy">Apply selected</button><button type="button" id="dismissTidy">Not now</button></div>`;
+  box.innerHTML=`<p><strong>🧳 Travel tidy-up: ${list.length} change${list.length>1?'s':''} ready.</strong> Travel that was saved as activity cards becomes travel time between stops. Untick anything you don’t want${/room=/.test(location.hash)?'; this updates the plan for everyone on your shared trip':''}. You can undo.</p><details class="tidy-list"><summary>Review the changes</summary><ul>${list.map(p=>`<li><label><input type="checkbox" data-tidy="${esc(p.id)}" checked> <span><b>${esc(p.day)}</b> · ${esc(p.text)}</span></label></li>`).join('')}</ul></details><div class="schedule-update-actions"><button type="button" class="primary" id="applyTidy">Apply selected</button><button type="button" id="dismissTidy">Not now</button></div>`;
   $('applyTidy').onclick=()=>{
    const chosen=new Set([...box.querySelectorAll('[data-tidy]:checked')].map(i=>i.dataset.tidy)),picked=proposals(state).filter(p=>chosen.has(p.id));
    if(!picked.length){notify('Nothing selected. Tick at least one change, or tap “Not now”.',{error:true});return}

@@ -97,8 +97,9 @@
  }
 
  // --- Timeline: drive time between consecutive stops that are on the map. ---
- // Drives are reserved in the plan as slim travel rows. Each pair of pinned stops gets the real drive time: inside the
- // travel row when there is one, otherwise as a connector line. Short drives get a one-tap fix.
+ // Drives are reserved in the plan as quiet travel cards, shown as a "🚗 … to …" line on the stop before. Each pair of
+ // pinned stops gets the real drive time: under that line when there is one, otherwise as its own line on the stop
+ // before. Short drives get a one-tap fix.
  const BUFFER=10,needFor=leg=>Math.ceil((leg.minutes+BUFFER)/5)*5;
  function pairs(){
   if(!last||last.day!==day)return [];
@@ -118,15 +119,16 @@
   const list=pairs(),guessed=x=>x.a.point.guess||x.b.point.guess;
   for(const x of list){
    const route=`<a href="${escape(PlaceCore.directions(x.a.point,x.b.point))}" target="_blank" rel="noopener noreferrer" aria-label="Driving directions from ${escape(x.a.card.title)} to ${escape(x.b.card.title)}">Route ↗</a>`;
-   const facts=`<b>${x.leg.estimated||guessed(x)?'≈ ':''}${span(x.leg.minutes)}</b> drive · ${km(x.leg.km)}${x.via&&!x.legCard?`<small> from ${escape(x.a.card.place?.name||x.a.card.title)}</small>`:''}`;
+   const to=x.b.card.place?.name||x.b.card.title,facts=`<b>${x.leg.estimated||guessed(x)?'≈ ':''}${span(x.leg.minutes)}</b> drive · ${km(x.leg.km)}`;
    const fix=x.short?`<span class="leg-warn">Needs ~${span(x.need)} with parking and the kids; ${x.free>0?'only '+span(x.free):'no time'} planned.</span> <button type="button" class="leg-fix" data-fix-drive="${escape(x.b.card.id)}">${x.legCard?'Make it '+span(x.legCard.duration+x.need-x.free):'＋ Add '+span(x.need)+' drive'}</button>`:'';
    const note=guessed(x)?'<small class="leg-guess">Location guessed from the title — add a place to be sure.</small>':'';
-   if(x.legCard){
-    const row=[...document.querySelectorAll('#timeline .timeline-row')].find(r=>r.dataset.id===x.legCard.id);
-    row?.querySelector('.activity')?.insertAdjacentHTML('beforeend',`<p class="leg-info${x.short?' is-short':''}">${facts} ${route}${fix?'<br>'+fix:''}${note}</p>`);
+   const line=x.legCard&&[...document.querySelectorAll('#timeline .travel-line')].find(n=>n.dataset.legLine===x.legCard.id);
+   if(line){
+    line.classList.toggle('is-short',x.short);line.insertAdjacentHTML('beforeend',`<p class="leg-info${x.short?' is-short':''}">Route check: ${facts} ${route}${fix?'<br>'+fix:''}${note}</p>`);
    }else{
-    const row=[...document.querySelectorAll('#timeline .timeline-row')].find(r=>r.dataset.id===x.b.card.id);
-    row?.insertAdjacentHTML('beforebegin',`<div class="leg-connector${x.short?' is-short':''}"><span class="leg-car" aria-hidden="true">🚗</span><span class="leg-text">${facts}${fix?' '+fix:''}${note}</span>${route}</div>`);
+    // No travel time planned: say so on the stop before (it leaves from there).
+    const box=[...document.querySelectorAll('#timeline .timeline-row')].find(r=>r.dataset.id===x.a.card.id)?.querySelector('.travel-lines');
+    box?.insertAdjacentHTML('beforeend',`<div class="leg-connector${x.short?' is-short':''}"><span class="leg-car" aria-hidden="true">🚗</span><span class="leg-text">${facts} to ${escape(to)}${x.via?' <small>(after the stops in between)</small>':''}${fix?' '+fix:''}${note}</span>${route}</div>`);
    }
   }
   if(total){
@@ -135,7 +137,7 @@
    total.innerHTML=list.length?`🚗 About <b>${span(minutes)}</b> of driving between mapped stops${short?` · <span class="leg-warn">${short} drive${short>1?'s don’t':' doesn’t'} fit</span> <button type="button" class="leg-fix" data-fix-drive="all">Fix ${short>1?'all':'it'}</button>`:''}`:'';
   }
  }
- // Makes room for drives: a travel row grows by what's missing; otherwise a new travel row takes the free time in between
+ // Makes room for drives: planned travel grows by what's missing; otherwise new travel time takes the free time in between
  // and later activities move by the shortfall. All fixes land as one undoable change.
  function fixDrives(list){
   const work=list.filter(x=>x.short);if(!work.length)return;
