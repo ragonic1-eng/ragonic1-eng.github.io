@@ -15,6 +15,27 @@
  const estimate=(a,b)=>{const d=crow(a,b)*1.3;return {km:d,minutes:Math.round(d/40*60)+5,estimated:true}};
  let map,layer,last=null,token=0,timer,resizeTimer,suggestion=null;
 
+ // --- Flights: drawn as an arc between airports; ground routes are worked out separately on each side. ---
+ const AIRPORTS={SIN:{name:'Singapore Changi Airport',lat:1.3644,lon:103.9915},TPE:{name:'Taiwan Taoyuan International Airport',lat:25.0777,lon:121.2328}};
+ const CITY={singapore:'SIN',changi:'SIN',sin:'SIN',taipei:'TPE',taoyuan:'TPE',tpe:'TPE'};
+ const FLIGHTS={BR216:['SIN','TPE'],BR215:['TPE','SIN']};
+ const isFlight=c=>c.mode==='flight'||(c.category==='travel'&&!c.place&&!/check/i.test(c.title)&&/\bflight\b|\bEVA\b|\bBR ?\d{3}\b/i.test(c.title));
+ function flightRoute(c){
+  const code=(c.title.match(/\bBR ?(\d{3})\b/i)||[])[1],known=code&&FLIGHTS['BR'+code];if(known)return known;
+  const m=c.title.match(/([A-Za-z]+)\s*(?:→|->|to)\s*([A-Za-z]+)/);const a=m&&CITY[m[1].toLowerCase()],b=m&&CITY[m[2].toLowerCase()];
+  return a&&b&&a!==b?[a,b]:null;
+ }
+ function arc(a,b,steps=48){
+  // A gentle curve (quadratic Bézier) so the flight reads as a flight, not a road.
+  const mid={lat:(a.lat+b.lat)/2,lon:(a.lon+b.lon)/2},dx=b.lon-a.lon,dy=b.lat-a.lat,c={lat:mid.lat-dx*.18,lon:mid.lon+dy*.18};
+  return Array.from({length:steps+1},(_,i)=>{const t=i/steps,u=1-t;return [u*u*a.lat+2*u*t*c.lat+t*t*b.lat,u*u*a.lon+2*u*t*c.lon+t*t*b.lon]});
+ }
+ function flightsOf(all){
+  const seen=new Set(),out=[];
+  for(const s of all){const r=(isFlight(s.card)||/\bBR ?\d{3}\b/i.test(s.card.title))&&flightRoute(s.card);if(!r)continue;const key=r.join('-');if(seen.has(key))continue;seen.add(key);
+   const from=AIRPORTS[r[0]],to=AIRPORTS[r[1]];out.push({card:s.card,from:{...from,code:r[0]},to:{...to,code:r[1]},arc:arc(from,to)})}
+  return out;
+ }
  // --- Data: the selected day's stops, their map points and the route between them. ---
  function stops(){const d=state.days[day];let t=d.start;return d.cards.map((c,i)=>{const s={card:c,index:i,start:t,end:t+c.duration};t+=c.duration;return s})}
  async function point(card){
@@ -63,10 +84,16 @@
   const sure=points.filter(p=>p&&!p.guess);
   for(let i=0;i<points.length;i++)if(points[i]?.guess&&sure.length&&sure.every(p=>crow(p,points[i])>80))points[i]=null;
   const pinned=all.map((s,i)=>({...s,point:points[i]})).filter(s=>s.point);
-  const r=pinned.length>1?await route(pinned.map(s=>s.point)):{legs:[],line:[]};
+  // A flight splits the day: each side gets its own road route, and no drive is worked out across the sea.
+  const flightAt=all.filter(s=>isFlight(s.card)).map(s=>s.index),groups=[];let group=[];
+  for(const s of pinned){if(group.length&&flightAt.some(f=>f>group.at(-1).index&&f<s.index)){groups.push(group);group=[]}group.push(s)}
+  if(group.length)groups.push(group);
+  const legs=[],lines=[];
+  for(const g of groups){const r=g.length>1?await route(g.map(s=>s.point)):{legs:[],line:[]};legs.push(...r.legs,null);lines.push(r.line)}
+  legs.pop();
   if(my!==token)return;
-  last={day,all,pinned,legs:r.legs,line:r.line,unpinned:all.filter((s,i)=>!points[i]&&!['break','travel'].includes(s.card.category))};
-  suggestion=optimise(last);drawConnectors();drawPanel();
+  last={day,all,pinned,legs,lines,flights:flightsOf(all),unpinned:all.filter((s,i)=>!points[i]&&!['break','travel'].includes(s.card.category))};
+  suggestion=optimise(last);drawConnectors();addMapButtons();drawPanel();
  }
 
  // --- Timeline: drive time between consecutive stops that are on the map. ---
@@ -152,8 +179,10 @@
 
  // --- Map panel. ---
  const visible=()=>getComputedStyle(el('mapPanel')).display!=='none';
- async function ensureMap(){
-  if(map||!window.L)return;
+ // Set up once, even when two draws ask at the same moment (e.g. tapping 📍 Map before the map was ever shown).
+ let mapSetup=null;
+ function ensureMap(){if(map||!window.L)return Promise.resolve();return mapSetup??=createMap()}
+ async function createMap(){
   const config=await window.orbitPlaces.settings();
   map=L.map(el('map'),{zoomControl:true,scrollWheelZoom:true}).setView([23.7,121],7);
   L.tileLayer(config.tileUrl||'https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors · routes <a href="https://project-osrm.org/" target="_blank" rel="noopener">OSRM</a>'}).addTo(map);
@@ -172,15 +201,63 @@
   if(!visible())return;
   await ensureMap();if(!map||!last)return;
   map.invalidateSize();layer.clearLayers();
-  if(last.line.length>1)L.polyline(last.line,{color:'#9a7ab6',weight:4,opacity:.85,dashArray:last.legs.some(l=>l.estimated)?'6 8':null}).addTo(layer);
+  const dashed=last.legs.some(l=>l?.estimated)?'6 8':null;
+  for(const line of last.lines)if(line.length>1)L.polyline(line,{color:'#9a7ab6',weight:4,opacity:.85,dashArray:dashed}).addTo(layer);
+  markers={};
+  for(const f of last.flights){
+   L.polyline(f.arc,{color:'#e1609f',weight:3,opacity:.9,dashArray:'2 9',lineCap:'round'}).addTo(layer);
+   const mid=f.arc[Math.floor(f.arc.length/2)],label=`<div class="map-popup"><strong>✈️ ${escape(f.card.title)}</strong><span class="map-popup-place">${f.from.code} ${escape(f.from.name)} → ${f.to.code} ${escape(f.to.name)}</span><div class="map-popup-actions"><button type="button" data-map-show="${escape(f.card.id)}">Show in plan</button></div></div>`;
+   markers[f.card.id]=L.marker(mid,{title:f.card.title,icon:L.divIcon({className:'map-plane',html:'<span>✈️</span>',iconSize:[30,30],iconAnchor:[15,15]})}).bindPopup(label,{maxWidth:260}).addTo(layer);
+   for(const a of [f.from,f.to])L.marker([a.lat,a.lon],{title:a.name,icon:L.divIcon({className:'map-airport',html:`<span>${a.code}</span>`,iconSize:[40,22],iconAnchor:[20,11]})}).bindPopup(escape(a.name)).addTo(layer);
+  }
   last.pinned.forEach((s,i)=>{
    const color=(typeof CATS!=='undefined'&&CATS[s.card.category]?.color)||'#766091';
-   L.marker([s.point.lat,s.point.lon],{title:s.card.title,icon:L.divIcon({className:'map-pin',html:`<span style="background:${color}">${i+1}</span>`,iconSize:[30,30],iconAnchor:[15,15],popupAnchor:[0,-14]})}).bindPopup(popup(s,i+1),{maxWidth:260}).addTo(layer);
+   markers[s.card.id]=L.marker([s.point.lat,s.point.lon],{title:s.card.title,icon:L.divIcon({className:'map-pin',html:`<span style="background:${color}">${i+1}</span>`,iconSize:[30,30],iconAnchor:[15,15],popupAnchor:[0,-14]})}).bindPopup(popup(s,i+1),{maxWidth:260}).addTo(layer);
   });
-  el('mapEmpty').hidden=last.pinned.length>0;
-  if(last.pinned.length)map.fitBounds(L.latLngBounds(last.pinned.map(s=>[s.point.lat,s.point.lon])),{padding:[36,36],maxZoom:15});
+  const all=[...last.pinned.map(s=>[s.point.lat,s.point.lon]),...last.flights.flatMap(f=>[[f.from.lat,f.from.lon],[f.to.lat,f.to.lon]])];
+  el('mapEmpty').hidden=all.length>0;
+  // A redraw keeps the card the person selected in view instead of jumping back to the whole day.
+  if(!(selected&&focusCard(selected,{quiet:true,instant:true}))&&all.length)map.fitBounds(L.latLngBounds(all),{padding:[36,36],maxZoom:15,animate:false});
  }
- function refresh(){if(typeof state==='undefined'||!state)return;clearTimeout(timer);if(last&&last.day!==day){document.querySelectorAll('#timeline .leg-connector').forEach(n=>n.remove())}else drawConnectors();timer=setTimeout(()=>compute().catch(()=>{}),150)}
+ // --- Selecting a card shows it on the map: a stop flies to its pin, a drive frames both ends, a flight frames the arc. ---
+ let markers={},selected=null;
+ const still=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
+ function focusCard(id,{quiet=false,instant=false}={}){
+  if(!map||!last||last.day!==day||!visible())return false;
+  // A move made mid zoom-animation is dropped by Leaflet, so wait for it to finish.
+  if(map._animatingZoom){map.once('zoomend',()=>focusCard(id,{quiet,instant}));return true}
+  // Leaflet ignores a move made during its own zoom animation unless it is explicitly instant.
+  const calm=instant||still(),move=(bounds,point)=>{if(point){const z=Math.max(map.getZoom(),14);calm?map.setView(point,z,{animate:false}):map.flyTo(point,z,{duration:.8})}else calm?map.fitBounds(bounds,{padding:[40,40],maxZoom:14,animate:false}):map.flyToBounds(bounds,{padding:[40,40],maxZoom:14,duration:.8})};
+  const stop=last.pinned.find(s=>s.card.id===id),flight=last.flights.find(f=>f.card.id===id),drive=pairs().find(x=>x.legCard?.id===id);
+  if(stop)move(null,[stop.point.lat,stop.point.lon]);
+  else if(flight)move(L.latLngBounds(flight.arc));
+  else if(drive)move(L.latLngBounds([[drive.a.point.lat,drive.a.point.lon],[drive.b.point.lat,drive.b.point.lon]]));
+  else return false;
+  selected=id;
+  document.querySelectorAll('#timeline .timeline-row.is-map-selected').forEach(r=>r.classList.remove('is-map-selected'));
+  [...document.querySelectorAll('#timeline .timeline-row')].find(r=>r.dataset.id===id)?.classList.add('is-map-selected');
+  const marker=markers[id];
+  if(marker&&!quiet){map.once('moveend',()=>{marker.openPopup();const e=marker.getElement();e?.classList.remove('is-focus');void e?.offsetWidth;e?.classList.add('is-focus')});if(still())marker.openPopup()}
+  return true;
+ }
+ // Tapping a card (anywhere but its controls) selects it on a visible map.
+ document.addEventListener('click',e=>{
+  const card=e.target.closest('#timeline .activity');if(!card||e.target.closest('button,a,input,select,textarea,.drag-handle'))return;
+  focusCard(card.closest('.timeline-row')?.dataset.id);
+ });
+ // On phones the map is a sheet, so pinned cards get a 📍 Map button that opens it already showing the place.
+ async function showOnMap(id){if(!visible())setOpen(true);await drawPanel();focusCard(id)}
+ document.addEventListener('click',e=>{const b=e.target.closest('[data-map-focus]');if(b)showOnMap(b.dataset.mapFocus)});
+ function addMapButtons(){
+  if(!last||last.day!==day)return;
+  const ids=new Set([...last.pinned.map(s=>s.card.id),...last.flights.map(f=>f.card.id)]);
+  for(const row of document.querySelectorAll('#timeline .timeline-row')){
+   const bar=row.querySelector('.card-primary');if(!bar||!ids.has(row.dataset.id)||bar.querySelector('.map-focus'))continue;
+   bar.insertAdjacentHTML('afterbegin',`<button type="button" class="map-focus" data-map-focus="${escape(row.dataset.id)}" aria-label="Show ${escape(row.querySelector('h3')?.textContent||'this stop')} on the map">📍 Map</button>`);
+  }
+  if(selected)[...document.querySelectorAll('#timeline .timeline-row')].find(r=>r.dataset.id===selected)?.classList.add('is-map-selected');
+ }
+ function refresh(){if(typeof state==='undefined'||!state)return;if(last&&last.day!==day)selected=null;clearTimeout(timer);if(last&&last.day!==day){document.querySelectorAll('#timeline .leg-connector').forEach(n=>n.remove())}else {drawConnectors();addMapButtons()}timer=setTimeout(()=>compute().catch(()=>{}),150)}
 
  // --- Events. ---
  function setOpen(open){document.body.classList.toggle('map-open',open);el('mapToggle').setAttribute('aria-expanded',String(open));if(open){drawPanel();el('mapClose').focus({preventScroll:true})}else el('mapToggle').focus({preventScroll:true})}
@@ -202,5 +279,5 @@
  // Pin buttons reuse the editor's "Add a place" flow; on phones the map closes first.
  el('mapUnpinned').addEventListener('click',e=>{if(e.target.closest('[data-place-edit]')&&document.body.classList.contains('map-open'))setOpen(false)},true);
  addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(visible())drawPanel()},200)});
- window.orbitMap={refresh,current:()=>last};
+ window.orbitMap={refresh,current:()=>last,focus:focusCard,view:()=>map&&{lat:map.getCenter().lat,lon:map.getCenter().lng,zoom:map.getZoom()}};
 })();

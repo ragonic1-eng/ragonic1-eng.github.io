@@ -41,7 +41,7 @@ with sync_playwright() as p:
  ctx.unroute('https://router.project-osrm.org/**');ctx.route('https://router.project-osrm.org/**',lambda r:r.abort());page.evaluate("()=>{localStorage.removeItem('little-orbit-routes');state.days[2].cards[1].place.lat=24.4;render()}")
  expect(page.locator('.leg-connector').first).to_contain_text('≈')
  # Days without pins say so.
- page.evaluate("()=>{day=6;render()}");expect(page.locator('#mapEmpty')).to_be_visible();ctx.close()
+ page.evaluate("()=>{day=6;render()}");expect(page.locator('.map-plane')).to_have_count(1);expect(page.locator('#mapEmpty')).to_be_hidden();ctx.close()
  # Phones: a Map button opens a full-screen map that closes with ✕ or Escape and never causes sideways scrolling.
  for width in [320,390,768,1024]:
   ctx,page=context({'width':width,'height':844},mobile=width<741);page.evaluate("d=>{state.days[2].cards=d;day=2;render()}",day)

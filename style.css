@@ -316,3 +316,12 @@ button.danger{background:#a8473a;border-color:#a8473a;color:#fff;font-weight:750
 .delete-choice:has(input:checked){border-color:#9b7fc2;background:#f6effd}
 .delete-choice input{width:20px;height:20px;flex:none;margin-top:2px}
 .delete-choice span{display:flex;flex-direction:column;gap:2px;font-size:14px}.delete-choice small{color:#6d6376;font-size:12.5px}
+/* Flights and map focus. */
+.map-plane span{display:grid;place-items:center;width:30px;height:30px;font-size:20px;filter:drop-shadow(0 1px 2px #0005)}
+.map-airport span{display:grid;place-items:center;height:22px;padding:0 6px;border-radius:999px;background:#fff;border:2px solid #e1609f;color:#8a2f5c;font-size:11px;font-weight:800;box-shadow:0 1px 4px #0003}
+.map-pin.is-focus span,.map-plane.is-focus span{animation:map-pulse 1.4s ease-out 2}
+@keyframes map-pulse{0%{box-shadow:0 0 0 0 #9b7fc2aa;transform:scale(1)}40%{transform:scale(1.25)}100%{box-shadow:0 0 0 18px #9b7fc200;transform:scale(1)}}
+@media(prefers-reduced-motion:reduce){.map-pin.is-focus span,.map-plane.is-focus span{animation:none;outline:3px solid #9b7fc2}}
+.timeline-row.is-map-selected>.activity{box-shadow:0 0 0 3px #b9a0d6,var(--shadow)}
+.map-focus{color:#5b4a85}
+@media(min-width:1200px){.map-focus{display:none}}
