@@ -1,5 +1,5 @@
 -- Deploy after setup.sql. All counters/cache are private; only the edge function may call these RPCs.
--- Orbit research and plan checks share one allowance: 30 uncached requests per trip and 60 per project each UTC day.
+-- Orbit research, plan checks and family guides share one allowance: 80 uncached requests per trip and 150 per project each UTC day.
 create table if not exists public.orbit_research_cache (
  room_id uuid references public.orbit_trips(id) on delete cascade,
  query_hash text not null,
@@ -33,7 +33,7 @@ begin
  end if;
  select coalesce(max(used),0) into used_global from public.orbit_research_budget where budget_day=today and scope='global';
  select coalesce(max(used),0) into used_room from public.orbit_research_budget where budget_day=today and scope=p_id::text;
- if used_global>=60 or used_room>=30 then return jsonb_build_object('status',429,'error','Daily research limit reached. Use map search or try again tomorrow (UTC).'); end if;
+ if used_global>=150 or used_room>=80 then return jsonb_build_object('status',429,'error','Daily research limit reached. Use map search or try again tomorrow (UTC).'); end if;
  insert into public.orbit_research_budget values(today,'global',1),(today,p_id::text,1)
  on conflict(budget_day,scope) do update set used=orbit_research_budget.used+1;
  insert into public.orbit_research_cache values(p_id,p_hash,null,now())
@@ -48,7 +48,7 @@ returns jsonb language plpgsql security definer set search_path=pg_catalog,publi
 begin
  if p_result is null then delete from public.orbit_research_cache where room_id=p_id and query_hash=p_hash and result is null;
  else
-  if octet_length(p_result::text)>50000 or (jsonb_typeof(p_result->'places') is distinct from 'array' and jsonb_typeof(p_result->'evaluation') is distinct from 'object') then raise exception 'Invalid result'; end if;
+  if octet_length(p_result::text)>50000 or (jsonb_typeof(p_result->'places') is distinct from 'array' and jsonb_typeof(p_result->'evaluation') is distinct from 'object' and jsonb_typeof(p_result->'guide') is distinct from 'object') then raise exception 'Invalid result'; end if;
   update public.orbit_research_cache set result=p_result,updated_at=now() where room_id=p_id and query_hash=p_hash and result is null;
  end if;
  return jsonb_build_object('ok',true);

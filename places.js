@@ -224,7 +224,8 @@
   return !value.trim();
  }
  function autofill(place,hints={}){
-  const notes=place.research||place.id&&catalogue.some(c=>c.id===place.id)?[place.description,hints.tips&&'Tips: '+hints.tips].filter(Boolean).join('\n\n'):'';
+  // "Your notes" belong to the family: Orbit's research goes in its guide on the place instead.
+  const notes='';
   const values={notes,driverTitle:place.nameZh||'',category:hints.category||'',duration:hints.visitMinutes?String(Math.min(hints.visitMinutes,1440)):''};
   for(const [id,value] of Object.entries(values)){
    if(!value||!fillable(id))continue;
@@ -255,7 +256,8 @@
   if(orbitOn&&research&&!draft.research&&!draft.googleId)steps.push({id:'research',label:'Orbit is searching the web for the address, hours and booking info (up to a minute)'});
   if(orbitOn&&schedule)steps.push({id:'check',label:'Orbit is checking how it fits your day'});
   flow?.abort();const current=flow=new AbortController(),signal=current.signal,notes=[];
-  showLoading('Getting '+place.name+' ready…',steps,{now:steps.some(s=>s.id==='research')});
+  if(orbitOn&&research&&!draft.guide)steps.push({id:'guide',label:'Orbit is writing a family guide: things to do, costs and what to watch out for'});
+  showLoading('Getting '+place.name+' ready…',steps,{now:steps.some(s=>s.id==='research'||s.id==='guide')});
   try{
    let point=null;
    if(fromGoogleSearch){
@@ -272,6 +274,11 @@
     catch(e){if(signal.aborted)throw e;notes.push(e);step('research','failed')}
    }
    if(!point)notes.push('Couldn’t pin it on the map, so travel times are unavailable. To fix: tap “Edit details” and add the street address, or choose the place from the Google suggestions.');
+   if(steps.some(s=>s.id==='guide')){
+    step('guide','active');
+    try{const data=await guideFor(draft,activityDate(),signal);draft.guide=data;preview();step('guide','done')}
+    catch(e){if(signal.aborted)throw e;notes.push(e);step('guide','failed')}
+   }
    if(steps.some(s=>s.id==='check')){step('check','active');await checkPlan(signal);step('check',advice&&!advice.error?'done':'failed')}
   }catch{notes.push('Skipped. You can run Research with Orbit any time.')}
   finally{if(flow===current){flow=null;hideLoading();preview();renderJourney();renderAdvice();message(notes.filter(n=>typeof n==='string').join(' '),notes.find(n=>n instanceof Error),{retry:draft?()=>choose(draft):null})}}
@@ -430,7 +437,39 @@
   choose({...keep,name,address,description:el('manualPlaceDescription').value.trim(),bookingUrl,bookingLabel:'Saved booking link',bookingNote:'User-entered link; confirm the venue and date.'},{research:false});
  };
  el('editor').addEventListener('close',()=>{++generation;controller?.abort();flow?.abort();clearTimeout(typing);clearTimeout(journeyTimer)});
- function card(c){const found=known(c.title+' '+c.notes);return `<div class="place-on-card" data-place-card="${escape(c.id)}">${c.place?html(c.place):''}<button type="button" data-place-edit="${escape(c.id)}">${c.place?'Change place':found.length?'⌖ '+found.length+' place suggestion'+(found.length>1?'s':''):'⌖ Add a place'}</button></div>`}
+ // --- Orbit's family guide (things to do, costs, watch-outs, timing), stored on the place. ---
+ const activityDate=()=>typeof state!=='undefined'?state.days[Number(el('activityDay').value)]?.date||'':'';
+ async function guideFor(place,date,signal){
+  const data=await orbit({action:'guide',query:researchQuery(place),country:/singapore|新加坡/i.test(place.address||'')?'sg':'tw',date},signal,120000);
+  if(!data?.guide)throw Object.assign(Error('Orbit couldn’t write a guide for this place.'),{code:'INVALID_RESULT'});return data.guide;
+ }
+ const needsGuide=c=>c.place&&!c.place.guide&&!(typeof isLeg==='function'&&isLeg(c));
+ let guiding=false;
+ async function addGuides(ids,button){
+  if(guiding)return;
+  if(!shared()){notify('Turn on Orbit (your shared trip) to get Orbit’s guides.',{error:true,action:{label:'Turn on Orbit',run:()=>document.getElementById('share').click()}});return}
+  guiding=true;const found={};let failure=null,n=0;
+  for(const id of ids){
+   const at=state.days.findIndex(d=>d.cards.some(c=>c.id===id)),c=state.days[at]?.cards.find(c=>c.id===id);if(!c?.place)continue;
+   if(button){button.disabled=true;button.textContent=ids.length>1?`✦ Orbit is researching ${++n} of ${ids.length}…`:'✦ Orbit is researching… (up to a minute)'}
+   try{found[id]=await guideFor(c.place,state.days[at].date)}catch(e){failure=e;break}
+  }
+  guiding=false;
+  // All guides found so far land as one undoable change, even if a later one failed.
+  const done=Object.keys(found);
+  if(done.length)mutate(()=>{for(const d of state.days)for(const c of d.cards)if(found[c.id]&&c.place)c.place.guide=found[c.id]});else render();
+  if(failure){const p=Problems.describe(failure,'Orbit couldn’t write the guide.');notify(`${done.length?`Added ${done.length} guide${done.length>1?'s':''}. `:''}${p.title}${p.fix?' '+p.fix:''}`,{error:true})}
+ }
+ document.addEventListener('click',e=>{
+  const one=e.target.closest('[data-guide]');if(one){addGuides([one.dataset.guide],one);return}
+  const all=e.target.closest('#dayGuides button');if(all)addGuides(state.days[day].cards.filter(needsGuide).map(c=>c.id),all);
+ });
+ function dayGuides(){
+  const box=el('dayGuides');if(!box||typeof state==='undefined'||!state)return;
+  const missing=state.days[day].cards.filter(needsGuide).length;box.hidden=!missing||guiding;
+  box.innerHTML=missing?`<button type="button" class="orbit-button">✦ Get Orbit’s guides for ${missing} place${missing>1?'s':''} today</button>`:'';
+ }
+ function card(c){const found=known(c.title+' '+c.notes);return `<div class="place-on-card" data-place-card="${escape(c.id)}">${c.place?html(c.place):''}${needsGuide(c)?`<button type="button" class="orbit-button guide-button" data-guide="${escape(c.id)}">✦ Get Orbit’s guide</button>`:''}<button type="button" data-place-edit="${escape(c.id)}">${c.place?'Change place':found.length?'⌖ '+found.length+' place suggestion'+(found.length>1?'s':''):'⌖ Add a place'}</button></div>`}
  document.addEventListener('click',e=>{
   const b=e.target.closest('[data-place-edit]');if(!b)return;const c=state.days[day].cards.find(c=>c.id===b.dataset.placeEdit);if(!c)return;
   openEditor(c);el('placeFields').scrollIntoView({block:'start'});
@@ -438,6 +477,6 @@
  });
  // app.js reports the previewed day whenever the day, time or duration changes.
  function scheduleChanged(next){schedule=next;clearTimeout(journeyTimer);if(!draft){renderJourney();return}if(!next){journey=null;renderJourney();renderAdvice();return}journeyTimer=setTimeout(()=>updateJourney().catch(()=>{}),250)}
- window.orbitPlaces={open,value:()=>draft?structuredClone(draft):undefined,card,schedule:scheduleChanged,withTransfers,locate,settings,placeName};
+ window.orbitPlaces={open,value:()=>draft?structuredClone(draft):undefined,card,schedule:scheduleChanged,withTransfers,locate,settings,placeName,dayGuides};
  fetch('places.json',{cache:'no-cache'}).then(r=>{if(!r.ok)throw Error();return r.json()}).then(list=>{catalogue=list.filter(p=>valid(p)&&Array.isArray(p.aliases));if(typeof state!=='undefined'&&state){for(const node of document.querySelectorAll('[data-place-card]')){const c=state.days.flatMap(d=>d.cards).find(c=>c.id===node.dataset.placeCard);if(c)node.outerHTML=card(c)}}}).catch(()=>message('Known-place suggestions could not load. Map suggestions and manual entry still work.'));
 })();

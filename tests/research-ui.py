@@ -8,9 +8,13 @@ feature={'type':'Feature','geometry':{'type':'Point','coordinates':[121.565,25.0
 with sync_playwright() as p:
  b=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox']);ctx=b.new_context(viewport={'width':390,'height':844},is_mobile=True,has_touch=True,reduced_motion='reduce');page=ctx.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
  ctx.route('https://photon.komoot.io/**',lambda r:r.fulfill(json={'features':[{**feature,'geometry':{'type':'Point','coordinates':[121.52,25.06]}} if '101' not in r.request.url else feature]}));ctx.route('https://router.project-osrm.org/**',lambda r:r.fulfill(json={'routes':[{'distance':5200,'duration':900}]}))
- calls=[]
+ calls=[];guides=[]
+ GUIDE={'guide':{'kids':['Ride the fast lift to the 89th floor'],'costs':['Observatory about NT$600 for adults'],'checked':'2026-10-28','verified':True,'sources':[]}}
  def respond(route):
-  body=route.request.post_data_json;calls.append(body)
+  body=route.request.post_data_json
+  # Family guides are requested separately and tracked on their own.
+  if body.get('action')=='guide':guides.append(body);return route.fulfill(json=GUIDE)
+  calls.append(body)
   route.fulfill(json=verdict if body.get('action')=='evaluate' else {'places':[{**place,'planning':planning}],'message':'Researched by Orbit.'})
  ctx.route('**/functions/v1/research-place',respond)
  google_off(page);page.goto(base);page.wait_for_selector('.activity');use_previous_plan(page)
@@ -46,7 +50,8 @@ with sync_playwright() as p:
  # Orbit fills empty fields only, says what it filled, and never overwrites what the person typed.
  ctx.unroute('**/functions/v1/research-place');ctx.route('**/functions/v1/research-place',respond)
  open_at();expect(page.locator('#orbitStatus')).to_be_hidden();page.locator('#title').fill('');page.locator('#placeQuery').fill('Taipei 101');expect(page.locator('[data-place-result]')).to_have_count(1);page.locator('[data-place-result]').click();expect(page.locator('#form')).not_to_have_attribute('aria-busy','true')
- assert page.locator('#notes').input_value().startswith('A city landmark') and 'Book the observatory' in page.locator('#notes').input_value();assert page.locator('#driverTitle').input_value()=='台北101';assert page.locator('#category').input_value()=='food';assert page.locator('#duration').input_value()=='105'
+ # Your notes stay yours: Orbit's research shows in its guide on the place instead.
+ assert page.locator('#notes').input_value()=='';expect(page.locator('#placeSelected .place-guide')).to_contain_text('Ride the fast lift');assert guides and guides[-1]['query'].startswith('台北101') and guides[-1]['date']=='2026-12-12';assert page.locator('#driverTitle').input_value()=='台北101';assert page.locator('#category').input_value()=='food';assert page.locator('#duration').input_value()=='105'
  expect(page.locator('#orbitFilled')).to_contain_text('Food & treats');expect(page.locator('#orbitFilled')).to_contain_text('1 h 45 min')
  page.locator('#removePlace').click();assert page.locator('#notes').input_value()=='' and page.locator('#driverTitle').input_value()=='';expect(page.locator('#orbitFilled')).to_be_hidden();page.locator('#activityCancel').click()
  open_at();page.locator('#title').fill('Sunset at 101');page.locator('#durationMore').click();page.locator('#activityExtras>summary').click();page.locator('#notes').fill('Meet Grandma at the north door');page.locator('#category').select_option('shopping')
