@@ -14,7 +14,11 @@ with sync_playwright() as p:
   expand_card(brewery);btn=brewery.locator('.card-primary [data-action=remove]');expect(btn).to_be_visible();expect(btn).to_contain_text('Delete')
   # It asks first, and "Keep it" changes nothing.
   btn.click();dlg=page.locator('#deleteDialog');expect(dlg).to_be_visible();expect(dlg).to_contain_text('Delete “Puli Brewery (埔里酒廠)”?');expect(dlg).to_contain_text('8 Dec');expect(dlg).to_contain_text('15:15–15:50')
-  expect(page.locator('#deleteHint')).to_contain_text('later activities keep their times');expect(page.locator('#deleteCancel')).to_be_focused()
+  # It offers what to do with the freed time, naming the real neighbours (drives skipped) and their new times.
+  ch=page.locator('#deleteChoices');expect(ch.locator('input:checked')).to_have_value('keep')
+  expect(ch).to_contain_text('Leave it as free time');expect(ch).to_contain_text('Give it to “Schokolake Country House (Dahu)”');expect(ch).to_contain_text('It ends at 14:50 instead of 14:15')
+  expect(ch).to_contain_text('Give it to “Feeling 18 Bakery (18度C 生吐司)”');expect(ch).to_contain_text('It starts at 15:15 instead of 15:50');expect(ch).to_contain_text('Later activities start 35m earlier')
+  expect(page.locator('#deleteCancel')).to_be_focused()
   page.locator('#deleteCancel').click();expect(dlg).to_be_hidden();assert times()==before
   # Delete (default): the slot becomes free time, so later activities keep their times; Undo brings it back.
   btn.click();page.locator('#confirmDelete').click();expect(dlg).to_be_hidden()
@@ -22,9 +26,17 @@ with sync_playwright() as p:
   later={t:s for t,s in before};assert all(later.get(t)==s for t,s in after if t in later),'later activities keep their times'
   assert any(t=='A little breathing room' for t,_ in after)
   page.locator('#toast').get_by_role('button',name='Undo').click();assert times()==before
-  # Ticking "fill the gap" moves later activities earlier instead.
-  expand_card(brewery);brewery.locator('.card-primary [data-action=remove]').click();page.locator('#deleteCloseGap').check()
-  expect(page.locator('#deleteHint')).to_contain_text('35m earlier');page.locator('#confirmDelete').click()
+  dur=lambda t:page.evaluate("t=>state.days[1].cards.find(c=>c.title===t)?.duration",t)
+  # Give the time to the activity before: it runs longer, everything after keeps its time.
+  expand_card(brewery);brewery.locator('.card-primary [data-action=remove]').click();page.locator('#deleteChoices input[value=before]').check();page.locator('#confirmDelete').click()
+  assert dur('Schokolake Country House (Dahu)')==60+35 and dict(times())['Feeling 18 Bakery (18度C 生吐司)']==dict(before)['Feeling 18 Bakery (18度C 生吐司)']
+  page.locator('#toast').get_by_role('button',name='Undo').click();assert times()==before
+  # Give it to the next activity: it starts 35 min earlier and ends when it did.
+  expand_card(brewery);brewery.locator('.card-primary [data-action=remove]').click();page.locator('#deleteChoices input[value=after]').check();page.locator('#confirmDelete').click()
+  assert dict(times())['Feeling 18 Bakery (18度C 生吐司)']==dict(before)['Puli Brewery (埔里酒廠)'] and dur('Feeling 18 Bakery (18度C 生吐司)')==30+35
+  page.locator('#toast').get_by_role('button',name='Undo').click();assert times()==before
+  # Move everything after it earlier instead.
+  expand_card(brewery);brewery.locator('.card-primary [data-action=remove]').click();page.locator('#deleteChoices input[value=close]').check();page.locator('#confirmDelete').click()
   shifted=dict(times());assert shifted['Feeling 18 Bakery (18度C 生吐司)']==dict(before)['Feeling 18 Bakery (18度C 生吐司)']-35
   # Escape closes the question without deleting.
   first=page.locator('.activity').first;expand_card(first);first.locator('.card-primary [data-action=remove]').click();page.keyboard.press('Escape');expect(dlg).to_be_hidden();assert len(times())==len(shifted)
