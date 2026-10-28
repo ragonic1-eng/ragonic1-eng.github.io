@@ -47,7 +47,7 @@ window.Sounds=(() => {
  // Buttons and folds get a soft tick, except controls that make their own sound.
  document.addEventListener('click',e=>{
   const t=e.target.closest('button,summary,[role=option],a.maps-button');if(!t||t.disabled)return;
-  if(t.closest('#orbitPal,#soundToggle,[data-orbit-apply],#orbitChatSend,[data-action=remove],#undo,#mobileUndo,.drag-handle'))return;
+  if(t.closest('#orbitPal,#soundToggle,[data-orbit-apply],#orbitChatSend,#confirmDelete,#undo,#mobileUndo,.drag-handle'))return;
   play(t.tagName==='SUMMARY'?'fold':'tap');
  },true);
  // Card pick-up: mouse drag, or the touch drag's floating copy appearing.
@@ -56,7 +56,6 @@ window.Sounds=(() => {
  // app.js reports each saved change; one that follows a pick-up is a drop.
  function changed(){if(Date.now()-pickedAt<15000){pickedAt=0;play('drop')}}
  addEventListener('load',sync);
- document.addEventListener('click',e=>{if(e.target.closest('[data-action=remove]'))play('remove')},true);
  document.addEventListener('click',e=>{const b=e.target.closest('#soundToggle');if(b)setMuted(!muted)});
  return {play,changed,setMuted,get muted(){return muted},played};
 })();

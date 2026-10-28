@@ -21,7 +21,7 @@ with sync_playwright() as p:
  clear();page.locator('#mobileUndo').click();assert played()==['undo'],played()
  page.locator('#toast').get_by_label('Dismiss message').click();clear()
  page.locator('.activity-more>summary').first.click();assert played()==['fold'],played()
- clear();page.locator('.card-more>summary').first.click();page.locator('.activity').first.locator('[data-action=remove]').click();assert played()[-1]=='remove' and 'tap' not in played(),played()
+ clear();page.locator('.activity').first.locator('[data-action=remove]').click();page.locator('#confirmDelete').click();assert played()[-1]=='remove',played()
  # Orbit: hee-haw to open, a send blip, a chime for the answer, a softer close.
  page.evaluate("window.history.replaceState(null,'','/#room=11111111-1111-1111-1111-111111111111&key='+'a'.repeat(64))")
  clear();page.locator('#orbitPal').click();assert played()==['heehaw'],played()

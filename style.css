@@ -304,3 +304,9 @@ body.map-open .orbit-pal{display:none}
 .guide-button{margin:6px 0}
 .day-guides{margin:6px 0 0}.day-guides[hidden]{display:none}.day-guides button{min-height:40px;font-size:13px}
 .card-details>summary{font-weight:700;color:#5b4a75}
+/* Delete: on the card, with a confirmation. */
+.card-primary .delete-button{color:#975244;border-color:#e3c3bb;margin-left:auto}
+#deleteDialog{max-width:min(420px,calc(100vw - 24px))}
+#deleteDialog .checkbox{display:flex;gap:8px;align-items:flex-start;margin:10px 0 2px;font-size:14px}
+#deleteDialog .checkbox input{width:20px;height:20px;flex:none;margin-top:1px}
+button.danger{background:#a8473a;border-color:#a8473a;color:#fff;font-weight:750}button.danger:hover{background:#923b30}
