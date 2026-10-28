@@ -296,24 +296,30 @@
  // --- Travel legs and fit. ---
  function neighbour(dir){
   if(!schedule)return null;const {stops,index}=schedule;
-  // Transfers without a place ("Drive to…") are the journey itself, so measure from the stop before them.
-  for(let i=index+dir;i>=0&&i<stops.length;i+=dir){const s=stops[i];if(s.card.category==='break'||(s.card.category==='travel'&&!s.card.place))continue;return s}
+  // Transfers without a place ("Drive to…") are the journey itself, so measure from the stop before them. A flight is
+  // a stop of its own: travel is measured from the airport it lands at (or to the one it leaves from), never across it.
+  for(let i=index+dir;i>=0&&i<stops.length;i+=dir){const s=stops[i],ends=window.orbitMap?.flightEnds?.(s.card);if(ends){const airport=dir<0?ends.to:ends.from;return {...s,airport}}if(s.card.category==='break'||(s.card.category==='travel'&&!s.card.place))continue;return s}
   return null;
  }
- async function stopPoint(card,signal){
+ // Longer than this isn't a drive: there must be a flight or ferry in between, so nothing is added automatically.
+ const TOO_FAR={km:600,minutes:12*60},tooFar=r=>r&&(r.km>TOO_FAR.km||r.minutes>TOO_FAR.minutes);
+ async function stopPoint(card,signal,airport){
+  if(airport!==undefined)return airport&&{lat:airport.lat,lon:airport.lon};
   if(card.place)return locate(card.place,signal);
   const found=known(card.title+' '+card.notes);return found.length===1?locate(found[0],signal):null;
  }
  async function updateJourney(signal){
   const token=++journeyToken;if(!draft||!schedule){journey=null;renderJourney();return}
   const prev=neighbour(-1),next=neighbour(1);journey={prev:prev&&{stop:prev,loading:true},next:next&&{stop:next,loading:true}};renderJourney();
-  const leg=async(stop,outbound)=>{if(!stop)return null;const point=await stopPoint(stop.card,signal);if(!point||!hasPoint(draft))return {stop,point};return {stop,point,route:await travel(outbound?draft:point,outbound?point:draft,signal)}};
+  const leg=async(stop,outbound)=>{if(!stop)return null;const point=await stopPoint(stop.card,signal,stop.airport);if(!point||!hasPoint(draft))return {stop,point};let route=await travel(outbound?draft:point,outbound?point:draft,signal);
+   // Anywhere at the same airport counts as the same place (arrivals, check-in, the kerb).
+   if(stop.airport&&route&&route.km<5)route={...route,km:0,minutes:0};return {stop,point,route}};
   const [a,b]=await Promise.all([leg(prev,false),leg(next,true)]);
   if(token!==journeyToken)return;journey={prev:a,next:b};near=a?.point||null;
   // Drive time is reserved automatically when it doesn't fit (route + 10 min for parking and the kids); ✕ removes it.
   let added=false;
   for(const [k,l] of [['prev',a],['next',b]]){
-   if(!l?.route||l.route.km<.05||transfers[k]||declined.has(k))continue;
+   if(!l?.route||l.route.km<.05||tooFar(l.route)||transfers[k]||declined.has(k))continue;
    const free=k==='prev'?schedule.start-l.stop.end:l.stop.start-schedule.end;
    if(fit(free,l.route.minutes)?.level==='short'){transfers[k]=driveFor(l);added=true}
   }
@@ -328,15 +334,17 @@
  function legHTML(leg,outbound){
   const label=outbound?'Then to':'From';
   if(!leg)return `<li class="leg leg-none"><span class="leg-dir" aria-hidden="true">${outbound?'↓':'↑'}</span><div><strong>${outbound?'Last stop of the day':'First stop of the day'}</strong></div></li>`;
-  const {stop}=leg,title=escape(stop.card.title),free=outbound?stop.start-schedule.end:schedule.start-stop.end;
+  const {stop}=leg,free=outbound?stop.start-schedule.end:schedule.start-stop.end,airportName=stop.airport?.name,title=escape(stop.card.title)+(stop.airport!==undefined?escape(airportName?` (✈️ ${outbound?'leaves from':'lands at'} ${airportName})`:' (✈️ flight)'):'');
   if(leg.loading)return `<li class="leg is-loading"><span class="leg-dir" aria-hidden="true">${outbound?'↓':'↑'}</span><div><strong>${label} ${title}</strong><span class="leg-detail">Calculating travel time…</span></div></li>`;
-  if(!leg.route)return `<li class="leg"><span class="leg-dir" aria-hidden="true">${outbound?'↓':'↑'}</span><div><strong>${label} ${title}</strong><span class="leg-detail">${hasPoint(draft)?`Add a place to “${title}” to see the travel time.`:'Travel time appears once this place is on the map.'} ${free>0?span(free)+' free between them.':'No gap between them.'}</span></div></li>`;
-  const r=leg.route,f=r.km<.05?null:fit(free,r.minutes),from=outbound?draft:leg.point,to=outbound?leg.point:draft;
+  if(!leg.route)return `<li class="leg"><span class="leg-dir" aria-hidden="true">${outbound?'↓':'↑'}</span><div><strong>${label} ${title}</strong><span class="leg-detail">${stop.airport!==undefined?'Travel time is counted from the airport once the flight’s route is known (e.g. “EVA Air BR 216”).':hasPoint(draft)?`Add a place to “${title}” to see the travel time.`:'Travel time appears once this place is on the map.'} ${free>0?span(free)+' free between them.':'No gap between them.'}</span></div></li>`;
+  const r=leg.route,from=outbound?draft:leg.point,to=outbound?leg.point:draft;
+  if(tooFar(r))return `<li class="leg"><span class="leg-dir" aria-hidden="true">${outbound?'↓':'↑'}</span><div><strong>${label} ${title}</strong><span class="leg-detail">${r.km.toFixed(0)} km apart — too far to drive, so no drive time was added.</span><span class="fit fit-short">✕ Put the flight (or ferry) between these stops</span></div></li>`;
+  const f=r.km<.05?null:fit(free,r.minutes);
   return `<li class="leg"><span class="leg-dir" aria-hidden="true">${outbound?'↓':'↑'}</span><div><strong>${label} ${title}</strong><span class="leg-detail">${r.km<.05?'Same place':`${r.km.toFixed(r.km<10?1:0)} km · ~${span(r.minutes)} drive${r.estimated?' (rough estimate)':''}`} · ${span(free)} free ${outbound?'before it starts at '+clock(stop.start):'after it ends at '+clock(stop.end)}</span>${f?`<span class="fit fit-${f.level}">${f.level==='ok'?'✓':f.level==='tight'?'!':'✕'} ${escape(f.text)}</span>`:''}</div>${r.km>=.05?`<a class="leg-link" href="${escape(PlaceCore.directions(from,to))}" target="_blank" rel="noopener noreferrer" aria-label="Directions in Google Maps from ${outbound?escape(draft.name):title} to ${outbound?title:escape(draft.name)}">Route ↗</a>`:''}</li>`;
  }
  const roundUp=m=>Math.ceil(m/5)*5;
  // The day is packed back to back, so a drive only fits as its own card; later activities then shift.
- const driveFor=l=>roundUp(l.route.minutes+10);
+ const driveFor=l=>Math.min(1440,roundUp(l.route.minutes+10));
  function transferCard(k,leg){
   const minutes=transfers[k];if(!minutes||!leg?.route)return null;const other=leg.stop.card.title,name=draft.name;
   return {id:(typeof uid==='function'?uid():String(Math.random()).slice(2)),title:k==='prev'?`Drive to ${name}`:`Drive to ${other}`,notes:`About ${span(leg.route.minutes)} by car (${leg.route.km.toFixed(1)} km${leg.route.estimated?', rough estimate':''}) ${k==='prev'?'from '+other:'from '+name}, plus time for parking and getting everyone ready. Added automatically from the travel check.`,category:'travel',leg:true,duration:minutes};
@@ -347,7 +355,7 @@
   return [...cards.slice(0,i),...(before?[before]:[]),cards[i],...(after?[after]:[]),...cards.slice(i+1)];
  }
  function journeySummary(){
-  const legs=[['prev',journey.prev],['next',journey.next]].filter(([,l])=>l?.route&&l.route.km>=.05).map(([k,l])=>{const free=k==='prev'?schedule.start-l.stop.end:l.stop.start-schedule.end;return {k,l,free,f:fit(free,l.route.minutes)}});
+  const legs=[['prev',journey.prev],['next',journey.next]].filter(([,l])=>l?.route&&l.route.km>=.05&&!tooFar(l.route)).map(([k,l])=>{const free=k==='prev'?schedule.start-l.stop.end:l.stop.start-schedule.end;return {k,l,free,f:fit(free,l.route.minutes)}});
   const added=Object.entries(transfers).filter(([,m])=>m).map(([k,m])=>`<span class="drive-chip">🚗 ${span(m)} drive ${k==='prev'?'before':'after'} this stop<button type="button" data-drop-transfer="${k}" aria-label="Remove the ${span(m)} drive ${k==='prev'?'before':'after'} this stop">✕</button></span>`).join('');
   if(!legs.length)return added?`<div class="journey-summary is-ok"><div class="journey-fixes">${added}</div></div>`:'';
   const short=legs.filter(x=>x.f.level==='short'&&!transfers[x.k]),tight=legs.filter(x=>x.f.level==='tight'&&!transfers[x.k]);
@@ -371,7 +379,7 @@
  // --- Orbit's plan check. ---
  function plan(){
   if(!draft||!schedule)return null;
-  const leg=(l,key,time)=>l?{title:l.stop.card.title,place:l.stop.card.place?.name||(known(l.stop.card.title+' '+l.stop.card.notes).length===1?known(l.stop.card.title+' '+l.stop.card.notes)[0].name:''),[key]:clock(time),travelMinutes:l.route?.minutes,km:l.route?.km,estimated:!!l.route?.estimated}:null;
+  const leg=(l,key,time)=>l?{title:l.stop.airport!==undefined?`${l.stop.card.title} — a flight${l.stop.airport?` that ${key==='leaveAt'?'lands at':'leaves from'} ${l.stop.airport.name}`:''}; travel is from/to the airport, not across the sea`:l.stop.card.title,place:l.stop.airport?.name||l.stop.card.place?.name||(known(l.stop.card.title+' '+l.stop.card.notes).length===1?known(l.stop.card.title+' '+l.stop.card.notes)[0].name:''),[key]:clock(time),travelMinutes:l.route?.minutes,km:l.route?.km,estimated:!!l.route?.estimated}:null;
   return {place:{name:draft.name,address:draft.address||'',openingHours:draft.openingHours||'',description:draft.description||''},date:schedule.date,start:clock(schedule.start),end:clock(schedule.end),previous:leg(journey?.prev,'leaveAt',journey?.prev?.stop.end),next:leg(journey?.next,'startsAt',journey?.next?.stop.start)};
  }
  const planKey=()=>JSON.stringify(plan());
