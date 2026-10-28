@@ -31,3 +31,11 @@ test('a thin or empty answer is rejected rather than shown',()=>{
  const one={output:{choices:[{message:{content:JSON.stringify({kids:['x']})}}]}};assert.throws(()=>sanitizeGuide(one,{verified:false}),/INVALID_RESULT/);
  const noSources={output:{choices:[{message:{content:JSON.stringify(guide)}}]}};assert.throws(()=>sanitizeGuide(noSources,{verified:true}),/NO_SOURCES/);
 });
+
+test('a guide whose answer cites nothing lists the pages the search read; guides from memory never quote prices',async()=>{
+ const uncited={...claude,content:[claude.content[0],{type:'text',text:JSON.stringify({...guide,sources:[]})}]};
+ const {handler}=harness({claudeReply:uncited});const data=await(await handler(request(body))).json();
+ assert.equal(data.guide.verified,true);assert.deepEqual(data.guide.sources.map(s=>s.url),['https://flyblog.cc/dahu-red/']);
+ const h=harness({claudeReply:new Response('{}',{status:500}),chat:guide});await h.handler(request(body));
+ const sent=JSON.parse(h.calls.find(c=>c.url.endsWith('/chat/completions')).o.body);assert.match(sent.messages[0].content,/give no amounts at all/);
+});
