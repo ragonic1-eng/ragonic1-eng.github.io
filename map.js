@@ -281,5 +281,7 @@
  // Pin buttons reuse the editor's "Add a place" flow; on phones the map closes first.
  el('mapUnpinned').addEventListener('click',e=>{if(e.target.closest('[data-place-edit]')&&document.body.classList.contains('map-open'))setOpen(false)},true);
  addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(visible())drawPanel()},200)});
- window.orbitMap={refresh,current:()=>last,focus:focusCard,view:()=>map&&{lat:map.getCenter().lat,lon:map.getCenter().lng,zoom:map.getZoom()}};
+ // A flight's two airports, for the place editor's travel check (it measures from the airport you land at).
+ function flightEnds(c){if(!isFlight(c))return null;const r=flightRoute(c);return {flight:true,from:r&&{code:r[0],...AIRPORTS[r[0]]},to:r&&{code:r[1],...AIRPORTS[r[1]]}}}
+ window.orbitMap={refresh,current:()=>last,focus:focusCard,flightEnds,view:()=>map&&{lat:map.getCenter().lat,lon:map.getCenter().lng,zoom:map.getZoom()}};
 })();
