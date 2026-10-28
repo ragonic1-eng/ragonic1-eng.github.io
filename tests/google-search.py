@@ -34,7 +34,7 @@ with sync_playwright() as p:
  expect(sel.locator('.place-photo img')).to_have_attribute('src','https://lh3.googleusercontent.com/photo.jpg');expect(sel.locator('.maps-button')).to_have_attribute('href','https://maps.google.com/?cid=123')
  details=[c for c in calls if c['action']=='details'];assert details and details[0]['placeId']==ID and details[0]['sessionToken']==auto[-1]['sessionToken'],details
  assert page.locator('#title').input_value()=='Red Glazed Tile Strawberry Farm';assert page.locator('#driverTitle').input_value()=='紅色琉璃瓦草莓園'
- assert not any('query' in o for o in orbit),'Google places should not trigger web research';expect(page.locator('#journey')).to_be_visible()
+ assert not any('query' in o and o.get('action')!='guide' for o in orbit),'Google places should not trigger place research';assert sum(o.get('action')=='guide' for o in orbit)==1,'one family guide is requested';expect(page.locator('#journey')).to_be_visible()
  page.locator('#saveActivity').click()
  saved=page.evaluate("state.days[1].cards.find(c=>c.title==='Red Glazed Tile Strawberry Farm').place");assert saved['googleId']==ID and saved['lat']==24.3912 and saved['rating']==4.6,saved
  # The driver view shows the Chinese address.
