@@ -36,6 +36,8 @@ def use_previous_plan(page):
  trip['scheduleVersion']=2
  page.evaluate("t=>localStorage.setItem('little-orbit-v1',JSON.stringify(t))",trip);page.reload();page.wait_for_selector('.activity')
 
-def google_off(page):
+def google_off(page,tidy=False):
  # Tests never call the real Google Maps backend; suites that test Google search mock it themselves.
  page.route('**/functions/v1/google-places',lambda r:r.fulfill(json={'available':False}))
+ # The one-off travel tidy-up banner is hidden unless a suite tests it, so layouts start where they used to.
+ if not tidy:page.add_init_script("try{sessionStorage.setItem('little-orbit-tidy-dismissed','1')}catch(e){}")

@@ -22,7 +22,7 @@ jobs:
       - name: Prepare public site files
         run: |
           mkdir _site
-          cp index.html style.css app.js collaboration.js config.json trip.json privacy.html driver.html driver.css driver.js driver-zh.json place-core.js places.js places.json places-config.json map.js orbit-chat.js problems.js sounds.js _site/ && cp -r vendor _site/
+          cp index.html style.css app.js collaboration.js config.json trip.json privacy.html driver.html driver.css driver.js driver-zh.json place-core.js places.js places.json places-config.json map.js orbit-chat.js problems.js sounds.js tidy.js _site/ && cp -r vendor _site/
           # Each deploy gets new script/style URLs so phones never keep running an old version.
           v=${GITHUB_SHA::8}
           sed -i -E "s#(src|href)=\"([a-z-]+\.(js|css))\"#\1=\"\2?v=$v\"#g" _site/index.html _site/driver.html
