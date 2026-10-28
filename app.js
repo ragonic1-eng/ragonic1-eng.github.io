@@ -447,24 +447,33 @@ $('dragGuideClose').onclick=()=>{$('dragGuide').hidden=true;try{localStorage.set
 addEventListener('offline',()=>notify('You’re offline. Your changes are saved on this device and will sync when you reconnect.',{error:true}));
 addEventListener('online',()=>notify('Back online.'));
 
-// Deleting asks first. By default the card's time becomes free time, so later activities (and flights) keep their times;
-// ticking the box closes the gap instead. Either way it's one undoable change.
+// Deleting asks first, and offers what to do with the freed time: leave it free (later activities and flights keep
+// their times), give it to the activity before or after, or move everything after it earlier. One undoable change.
 let deleting=null;
+function deleteNeighbours(d,i){
+ const real=c=>c.category!=='break'&&!isLeg(c);
+ return {before:[...d.cards.slice(0,i)].reverse().find(real),after:d.cards.slice(i+1).find(real)};
+}
 function openDelete(card){
- deleting=card.id;const d=state.days.find(d=>d.cards.some(c=>c.id===card.id)),slot=slotTime(d,d.cards.findIndex(c=>c.id===card.id));
+ deleting=card.id;const d=state.days.find(d=>d.cards.some(c=>c.id===card.id)),i=d.cards.findIndex(c=>c.id===card.id),start=slotTime(d,i),gap=card.duration;
  $('deleteTitle').textContent=`Delete “${card.title}”?`;
- $('deleteWhat').textContent=`${fmt(slot)}–${fmt(slot+card.duration)} · ${dateLabel(d,{weekday:'short',day:'numeric',month:'short'})}`;
- $('deleteCloseGap').checked=false;deleteHint();$('deleteDialog').showModal();$('deleteCancel').focus();
+ $('deleteWhat').textContent=`${fmt(start)}–${fmt(start+gap)} · ${dateLabel(d,{weekday:'short',day:'numeric',month:'short'})}`;
+ const {before,after}=deleteNeighbours(d,i),at=c=>slotTime(d,d.cards.indexOf(c)),options=[
+  ['keep','☁️ Leave it as free time',`Later activities keep their times.`],
+  before&&['before',`⬆ Give it to “${before.title}”`,`It ends at ${fmt(at(before)+before.duration+gap)} instead of ${fmt(at(before)+before.duration)}.`],
+  after&&['after',`⬇ Give it to “${after.title}”`,`It starts at ${fmt(at(after)-gap)} instead of ${fmt(at(after))}.`],
+  i<d.cards.length-1&&['close',`⏩ Move everything after it earlier`,`Later activities start ${duration(gap)} earlier.`]
+ ].filter(Boolean);
+ $('deleteChoices').innerHTML='<legend>What should happen to its time?</legend>'+options.map(([v,label,hint],k)=>`<label class="delete-choice"><input type="radio" name="deleteTime" value="${v}"${k?'':' checked'}><span><b>${esc(label)}</b><small>${esc(hint)}</small></span></label>`).join('');
+ $('deleteDialog').showModal();$('deleteCancel').focus();
 }
-function deleteHint(){
- const card=state.days.flatMap(d=>d.cards).find(c=>c.id===deleting);if(!card)return;
- $('deleteHint').textContent=$('deleteCloseGap').checked?`Everything after it moves ${duration(card.duration)} earlier.`:'Its time becomes free time, so later activities keep their times. You can undo.';
-}
-$('deleteCloseGap').onchange=deleteHint;
 $('deleteCancel').onclick=()=>$('deleteDialog').close();
 $('deleteForm').onsubmit=e=>{
- e.preventDefault();const id=deleting,closeGap=$('deleteCloseGap').checked;$('deleteDialog').close();
+ e.preventDefault();const id=deleting,choice=$('deleteChoices').querySelector('input:checked')?.value||'keep';$('deleteDialog').close();
  window.Sounds?.play('remove');
- mutate(()=>{for(const d of state.days){const i=d.cards.findIndex(c=>c.id===id);if(i<0)continue;const gone=d.cards[i];
-  d.cards.splice(i,1,...(closeGap||gone.category==='break'?[]:[{id:uid(),title:'A little breathing room',notes:`Free time (was “${gone.title}”).`,category:'break',duration:gone.duration}]))}});
+ mutate(()=>{for(const d of state.days){const i=d.cards.findIndex(c=>c.id===id);if(i<0)continue;const gone=d.cards[i],{before,after}=deleteNeighbours(d,i);
+  // Giving the time to a neighbour keeps the day's total, so everything else stays where it was.
+  if(choice==='before'&&before){before.duration=Math.min(1440,before.duration+gone.duration);d.cards.splice(i,1)}
+  else if(choice==='after'&&after){after.duration=Math.min(1440,after.duration+gone.duration);d.cards.splice(i,1)}
+  else d.cards.splice(i,1,...(choice==='close'||gone.category==='break'?[]:[{id:uid(),title:'A little breathing room',notes:`Free time (was “${gone.title}”).`,category:'break',duration:gone.duration}]))}});
 };
