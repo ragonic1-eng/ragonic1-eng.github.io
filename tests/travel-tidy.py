@@ -23,8 +23,9 @@ with sync_playwright() as p:
  last=page.evaluate("Object.fromEntries(state.days[6].cards.map(c=>[c.title,[c.category,c.leg||false]]))")
  assert last['Wake up & final bag checks'][0]=='hotel' and last['Private airport transfer']==['travel',True] and last['Airport check-in · EVA Air BR 215'][0]=='travel',last
  renamed=page.evaluate("state.days[1].cards.find(c=>c.id==='my-from-x')");assert renamed['title']=='Drive to Schokolake Country House' and renamed['leg'] is True,renamed
- # The page shows the new rows: drive and walk icons on day 1, the flight as a slim row.
- page.locator('[data-day="0"]').click();expect(page.locator('.timeline-row.is-leg')).to_have_count(3);expect(page.locator('.timeline-row.mode-walk')).to_have_count(1);expect(page.locator('.timeline-row.mode-flight')).to_have_count(1)
+ # Drive and walk are small lines on the stop before (no cards); the flight stays a slim row.
+ page.locator('[data-day="0"]').click();expect(page.locator('.timeline-row.is-leg')).to_have_count(1);expect(page.locator('.timeline-row.mode-flight')).to_have_count(1)
+ expect(page.locator('.timeline-row').first.locator('.travel-line.mode-drive')).to_contain_text('40m to Changi Airport T3');expect(page.locator('.travel-line.mode-walk')).to_contain_text('15m to T3 Departure Hall')
  # One Undo reverts everything; after re-applying, the banner stays gone after a reload.
  page.locator('#mobileUndo').click();assert page.evaluate("state.days[0].cards[0].title")=='Leave home → Changi Airport';expect(tidy).to_be_visible()
  tidy.locator('#applyTidy').click();page.reload();page.wait_for_selector('.activity');expect(page.locator('#travelTidy')).to_be_hidden()
