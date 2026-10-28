@@ -79,8 +79,9 @@
    const a=last.pinned[i],leg=last.legs[i];if(!leg||leg.km<.05)return null;
    const between=last.all.slice(a.index+1,b.index).map(s=>s.card);
    // With another (unmapped) stop in between, the drive is shown for information but the time can't be judged.
-   const blocked=between.some(c=>c.category!=='break'&&!isLeg(c)),free=b.start-a.end,need=needFor(leg);
-   return {a,b,leg,between,free,need,short:!blocked&&free<need-2,legCard:blocked?null:between.find(isLeg),via:b.index-a.index>1};
+   // Walks and flights aren't drives, so they block the drive check like a stop would.
+   const drive=c=>isLeg(c)&&(c.mode||'drive')==='drive',blocked=between.some(c=>c.category!=='break'&&!drive(c)),free=b.start-a.end,need=needFor(leg);
+   return {a,b,leg,between,free,need,short:!blocked&&free<need-2,legCard:blocked?null:between.find(drive),via:b.index-a.index>1};
   }).filter(Boolean);
  }
  function drawConnectors(){
@@ -115,7 +116,7 @@
    const cards=state.days[day].cards;
    for(const x of work){
     const at=cards.findIndex(c=>c.id===x.b.card.id),from=cards.findIndex(c=>c.id===x.a.card.id);if(at<0||from<0)continue;
-    const legCard=cards.slice(from+1,at).find(isLeg);
+    const legCard=cards.slice(from+1,at).find(c=>isLeg(c)&&(c.mode||'drive')==='drive');
     if(legCard){legCard.duration+=x.need-x.free;continue}
     const name=x.b.card.place?.name||window.orbitPlaces?.placeName?.(x.b.card.title)||x.b.card.title;
     cards.splice(from+1,at-from-1,{id:crypto.randomUUID(),title:`Drive to ${name}`,notes:`About ${span(x.leg.minutes)} by car (${km(x.leg.km)}), plus ${BUFFER} min for parking and getting the kids in and out. Added automatically.`,category:'travel',leg:true,duration:x.need});
