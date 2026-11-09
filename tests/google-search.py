@@ -27,7 +27,7 @@ with sync_playwright() as p:
  page.evaluate("openEditor()");page.locator('#activityDay').select_option('1');page.locator('#title').fill('')
  page.locator('#placeQuery').press_sequentially('紅色琉璃瓦',delay=20);expect(page.locator('[data-place-result]')).to_have_count(2)
  expect(page.locator('[data-place-result]').first).to_contain_text('紅色琉璃瓦草莓園');expect(page.locator('.place-option.is-weak')).to_have_count(0);assert not photon,photon
- auto=[c for c in calls if c['action']=='autocomplete'];assert auto[-1]['input']=='紅色琉璃瓦' and auto[-1]['country']=='tw' and len(auto[-1]['sessionToken'])==32,auto
+ auto=[c for c in calls if c['action']=='autocomplete'];assert auto[-1]['roomId']=='11111111-1111-1111-1111-111111111111' and len(auto[-1]['roomKey'])==64,'Google calls carry the trip link (the server checks it)';assert auto[-1]['input']=='紅色琉璃瓦' and auto[-1]['country']=='tw' and len(auto[-1]['sessionToken'])==32,auto
  # Picking it loads Google's details: pin, hours, phone, rating, photo, Chinese name for the driver. No slow web research.
  page.locator('[data-place-result]').first.click();expect(page.locator('#form')).not_to_have_attribute('aria-busy','true')
  sel=page.locator('#placeSelected');expect(sel).to_contain_text('4.6');expect(sel).to_contain_text('812 Google reviews');expect(sel).to_contain_text('Tuesday: 9:00 AM');expect(sel).to_contain_text('0972 055 042');expect(sel).to_contain_text('Place details from Google Maps')
@@ -51,3 +51,11 @@ with sync_playwright() as p:
  assert not errors,errors
  b.close()
 print('google search tests passed')
+# Without a private trip link (e.g. a stranger on the public site), Google is never called: the free map is used.
+with sync_playwright() as p:
+ b=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox']);ctx=b.new_context(viewport={'width':390,'height':844});page=ctx.new_page()
+ hits=[];ctx.route('**/functions/v1/google-places',lambda r:(hits.append(r.request.method),r.fulfill(json={'available':True})))
+ ctx.route('https://photon.komoot.io/**',lambda r:r.fulfill(json={'features':[]}))
+ page.goto(base);page.wait_for_selector('.activity');page.evaluate("openEditor()");page.locator('#placeQuery').press_sequentially('Taipei Zoo',delay=20);page.wait_for_timeout(1500)
+ assert hits==[],hits;b.close()
+print('no-link google tests passed')

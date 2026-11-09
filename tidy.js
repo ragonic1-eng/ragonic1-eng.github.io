@@ -9,7 +9,7 @@ window.travelTidy=(() => {
  const leg=(title,duration,mode,notes)=>make(title,'travel',duration,{leg:true,mode,notes});
  const at=(d,test)=>d.cards.findIndex(test);
  const startOf=(d,id)=>{let t=d.start;for(const c of d.cards){if(c.id===id)return t;t+=c.duration}return null};
- const HOME={name:'Monterey Park Condominium',address:'West Coast Rise, Singapore',description:'Home.',checked:today()};
+ // No home address here: this file is public. Add the place on the card itself if you want it on the map.
  const T3={name:'Changi Airport Terminal 3',address:'65 Airport Boulevard, Singapore 819663',description:'EVA Air departs from Terminal 3 (flight trackers; confirm on your booking).',checked:today()};
  const flight=c=>c.category==='travel'&&!/check/i.test(c.title)&&/\bEVA\b|\bBR ?\d{3}\b|flight/i.test(c.title);
 
@@ -18,11 +18,11 @@ window.travelTidy=(() => {
   const out=[],day=date=>s.days.find(d=>d.date===date),first=day('2026-12-07'),last=day('2026-12-13');
   if(first){
    const i=at(first,c=>c.id==='home-to-airport'||/^leave home/i.test(c.title));
-   if(i>=0&&first.cards[i].category==='travel'&&!first.cards[i].leg)out.push({id:'home',day:'Mon 7 Dec',text:'Split “Leave home → Changi Airport” into: 🏠 Home · Monterey Park Condo (10 min) → 🚗 drive to Changi T3 (40 min) → 🛄 Changi T3 drop-off (10 min) → 🚶 walk to the T3 departure hall (15 min). Airport check-in & playtime is shortened so your flight time stays the same.',apply:t=>{
+   if(i>=0&&first.cards[i].category==='travel'&&!first.cards[i].leg)out.push({id:'home',day:'Mon 7 Dec',text:'Split “Leave home → Changi Airport” into: 🏠 Home (10 min) → 🚗 drive to Changi T3 (40 min) → 🛄 Changi T3 drop-off (10 min) → 🚶 walk to the T3 departure hall (15 min). Airport check-in & playtime is shortened so your flight time stays the same.',apply:t=>{
     const d=t.days.find(x=>x.date==='2026-12-07'),j=at(d,c=>c.id==='home-to-airport'||/^leave home/i.test(c.title));if(j<0)return;
     const flightCard=d.cards.find(flight),before=flightCard&&startOf(d,flightCard.id);
-    d.cards.splice(j,1,make('Home · Monterey Park Condo','hotel',10,{notes:'Final bag check and load the car.',place:{...HOME}}),
-     leg('Drive to Changi Airport T3',40,'drive','About 30–35 min from West Coast Rise via the PIE or ECP, plus loading the car and the kids. The route check shows the live drive time.'),
+    d.cards.splice(j,1,make('Home','hotel',10,{notes:'Final bag check and load the car.'}),
+     leg('Drive to Changi Airport T3',40,'drive','About 30–40 min across Singapore, plus loading the car and the kids. The route check shows the live drive time once Home has a place.'),
      make('Changi Airport T3 · drop-off','travel',10,{notes:'Unload bags, get a trolley and the stroller out.',place:{...T3}}),
      leg('Walk to T3 Departure Hall',15,'walk','From the drop-off kerb to the EVA Air check-in row with bags and kids.'));
     // Keep the flight where it was by giving the extra minutes back from airport playtime (never below an hour).

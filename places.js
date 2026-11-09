@@ -42,13 +42,15 @@
  async function googleApi(payload,signal){
   const [config,app]=await Promise.all([settings(),fetch('config.json',{signal,cache:'no-cache'}).then(r=>r.json())]);
   if(!config.googleUrl||app.provider!=='supabase'||!config.googleUrl.startsWith(app.supabaseUrl.replace(/\/$/,'')+'/functions/v1/'))throw Error('off');
-  const response=await fetch(config.googleUrl,{method:payload?'POST':'GET',headers:{apikey:app.supabaseKey,...(payload?{'Content-Type':'application/json'}:{})},body:payload?JSON.stringify(payload):undefined,signal,referrerPolicy:'no-referrer'});
+  const response=await fetch(config.googleUrl,{method:payload?'POST':'GET',headers:{apikey:app.supabaseKey,...(payload?{'Content-Type':'application/json'}:{})},body:payload?JSON.stringify({...payload,...room()}):undefined,signal,referrerPolicy:'no-referrer'});
   let data;try{data=await response.json()}catch{throw Object.assign(Error('Google Maps search is unavailable right now.'),{code:'GOOGLE'})}
+  // A trip link that isn't the family's can't use Google: switch to the free map for the rest of this visit.
+  if(response.status===401||response.status===403&&data?.code==='NOT_TRUSTED')googleCheck=Promise.resolve(false);
   if(!response.ok)throw Problems.fromResponse(response,data,'Google Maps search is unavailable right now.');
   return data;
  }
- // Checked once per page load; a missing key (or no backend) means the free map is used instead.
- const google=()=>googleCheck??=googleApi(null,AbortSignal.timeout(8000)).then(d=>d.available===true).catch(()=>false);
+ // Checked once per page load; a missing key (or no backend), or no private trip link, means the free map is used instead.
+ const google=()=>googleCheck??=(shared()?googleApi(null,AbortSignal.timeout(8000)).then(d=>d.available===true).catch(()=>false):Promise.resolve(false));
  const fromGoogle=s=>({id:'google-'+s.placeId,googleId:s.placeId,name:String(s.name).slice(0,200),address:String(s.address||'').slice(0,300),source:'https://www.google.com/maps',checked:today()});
  async function search(q,signal){
   if(await google()){if(!session)newSession();const data=await googleApi({action:'autocomplete',input:q,country:el('placeCountry').value,sessionToken:session,...(hasPoint(near)?{near:{lat:near.lat,lon:near.lon}}:{})},signal);return (data.suggestions||[]).map(fromGoogle).filter(valid)}

@@ -22,7 +22,7 @@ jobs:
         if: ${{ !inputs.logs_only }}
         run: |
           python3 - <<'PY'
-          import json, urllib.request, urllib.error
+          import json, os, urllib.request, urllib.error
           config = json.load(open('config.json'))
           base, key = config['supabaseUrl'].rstrip('/'), config['supabaseKey']
           def post(url, body):
@@ -38,6 +38,16 @@ jobs:
           status, trip = post(base + '/rest/v1/rpc/orbit_create_trip', {'p_trip': json.load(open('trip.json'))})
           if status != 200 or 'id' not in trip: note('error', 'Test trip', f'HTTP {status}: {trip}'); raise SystemExit(1)
           room = {'roomId': trip['id'], 'roomKey': trip['key']}
+          # New trips can't use Orbit until trusted (only the family's trip is). Trust this test trip, and delete it at the end.
+          def admin(sql):
+            request = urllib.request.Request('https://api.supabase.com/v1/projects/' + os.environ['SUPABASE_PROJECT_REF'] + '/database/query', method='POST',
+              headers={'Authorization': 'Bearer ' + os.environ['SUPABASE_ACCESS_TOKEN'], 'Content-Type': 'application/json', 'User-Agent': 'little-orbit-check/1.0'},
+              data=json.dumps({'query': sql}).encode())
+            with urllib.request.urlopen(request, timeout=30) as response: return json.load(response)
+          trip_id = str(trip['id'])
+          if len(trip_id) != 36 or any(c not in '0123456789abcdef-' for c in trip_id): note('error', 'Test trip', 'Unexpected trip id'); raise SystemExit(1)
+          try: admin(f"update public.orbit_trips set trusted=true where id='{trip_id}'")
+          except Exception as e: note('error', 'Test trip', 'Could not switch Orbit on for the test trip (check SUPABASE_ACCESS_TOKEN): ' + type(e).__name__); raise SystemExit(1)
           function = base + '/functions/v1/research-place'
           status, research = post(function, {**room, 'query': 'Taipei Zoo, Wenshan District, Taipei', 'country': 'tw'})
           places = research.get('places') or []
@@ -51,6 +61,8 @@ jobs:
           status, check = post(function, {**room, 'action': 'evaluate', 'plan': plan})
           if status == 200 and check.get('evaluation'): note('notice', 'Plan check OK', json.dumps(check['evaluation'], ensure_ascii=False))
           else: note('error', 'Plan check failed', f"HTTP {status}: {check}")
+          try: admin(f"delete from public.orbit_trips where id='{trip_id}'")
+          except Exception as e: note('warning', 'Test trip', 'Could not delete the test trip: ' + type(e).__name__)
           if not (places and check.get('evaluation')): raise SystemExit(1)
           PY
       - name: Recent Orbit errors from Supabase logs

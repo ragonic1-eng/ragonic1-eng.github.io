@@ -6,12 +6,14 @@ const db=new PGlite();
 await db.exec(`create role anon; create role authenticated; create role service_role; create schema extensions;
 -- A deterministic digest stub tests capability matching, not pgcrypto cryptography.
 create function extensions.digest(text,text) returns bytea language sql immutable as 'select decode(md5($1),''hex'')';
-create table public.orbit_trips(id uuid primary key,key_hash bytea);`);
+create table public.orbit_trips(id uuid primary key,key_hash bytea,trusted boolean not null default true);
+-- Same check as setup.sql (tested with the real file in trip-security.mjs).
+create function public.orbit_trusted_trip(p_id uuid,p_key text) returns boolean language sql stable as 'select exists(select 1 from public.orbit_trips where id=p_id and key_hash=extensions.digest(p_key,''sha256'') and trusted)';`);
 await db.exec(await readFile(new URL('../supabase/research.sql',import.meta.url),'utf8'));
 // Repeat migration to verify deploys are safe to rerun.
 await db.exec(await readFile(new URL('../supabase/research.sql',import.meta.url),'utf8'));
 const ids=[1,2,3].map(n=>`00000000-0000-0000-0000-${String(n).padStart(12,'0')}`),key='a'.repeat(64);
-for(const id of ids)await db.query(`insert into orbit_trips values($1,extensions.digest($2,'sha256'))`,[id,key]);
+for(const id of ids)await db.query(`insert into orbit_trips values($1,extensions.digest($2,'sha256'),true)`,[id,key]);
 const hash=n=>n.toString(16).padStart(64,'0');
 const claim=async(id,k,h)=>(await db.query('select orbit_claim_research($1,$2,$3) as r',[id,k,h])).rows[0].r;
 assert.equal((await claim(ids[0],'wrong',hash(1))).status,401);

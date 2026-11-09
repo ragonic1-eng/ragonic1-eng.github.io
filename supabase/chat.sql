@@ -7,6 +7,9 @@ begin
  if not exists(select 1 from public.orbit_trips where id=p_id and key_hash=extensions.digest(p_key,'sha256')) then
   return jsonb_build_object('status',401,'error','Open a valid private shared trip link to chat with Orbit.');
  end if;
+ if not public.orbit_trusted_trip(p_id,p_key) then
+  return jsonb_build_object('status',403,'error','Orbit is only switched on for the family’s own trip link. Open your usual shared link, or ask the trip owner to switch Orbit on for this one.');
+ end if;
  perform pg_advisory_xact_lock(716284093);
  select coalesce(max(used),0) into used_global from public.orbit_research_budget where budget_day=today and scope='chat';
  select coalesce(max(used),0) into used_room from public.orbit_research_budget where budget_day=today and scope='chat:'||p_id::text;
@@ -26,6 +29,9 @@ declare today date := (now() at time zone 'UTC')::date; used_global integer; use
 begin
  if not exists(select 1 from public.orbit_trips where id=p_id and key_hash=extensions.digest(p_key,'sha256')) then
   return jsonb_build_object('status',401,'error','Open a valid private shared trip link to save notes for Orbit.');
+ end if;
+ if not public.orbit_trusted_trip(p_id,p_key) then
+  return jsonb_build_object('status',403,'error','Orbit is only switched on for the family’s own trip link. Open your usual shared link, or ask the trip owner to switch Orbit on for this one.');
  end if;
  perform pg_advisory_xact_lock(716284094);
  select coalesce(max(used),0) into used_global from public.orbit_research_budget where budget_day=today and scope='memory';

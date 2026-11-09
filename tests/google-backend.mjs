@@ -5,11 +5,13 @@ const secrets={GOOGLE_MAPS_API_KEY:'test-google-key',SUPABASE_URL:'https://proje
 const ID='ChIJ_strawberry_farm_1234';
 const en={id:ID,displayName:{text:'Red Glazed Tile Strawberry Farm'},formattedAddress:'No. 96-6, Linliping, Dahu Township, Miaoli County, Taiwan 364',location:{latitude:24.3912,longitude:120.8721},googleMapsUri:'https://maps.google.com/?cid=123',regularOpeningHours:{weekdayDescriptions:['Monday: Closed','Tuesday: 9:00 AM – 5:30 PM']},websiteUri:'https://www.facebook.com/dahuRED',nationalPhoneNumber:'0972 055 042',rating:4.6,userRatingCount:812,businessStatus:'OPERATIONAL',primaryType:'farm',photos:[{name:`places/${ID}/photos/abc_DEF-1`,authorAttributions:[{displayName:'A visitor'}]}]};
 const zh={displayName:{text:'紅色琉璃瓦草莓園'},formattedAddress:'364苗栗縣大湖鄉義和村淋漓坪96-6號'};
-const request=(payload,origin='https://ragonic1-eng.github.io')=>new Request('https://backend.example',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(payload)});
-function harness({env=secrets,allow=true,cache=null,googleStatus=200}={}){
+const ROOM={roomId:'11111111-1111-1111-1111-111111111111',roomKey:'a'.repeat(64)};
+const request=(payload,origin='https://ragonic1-eng.github.io',room=ROOM)=>new Request('https://backend.example',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({...room,...payload})});
+function harness({env=secrets,allow=true,cache=null,googleStatus=200,trusted=true}={}){
  const calls=[];
  const handler=createGoogleHandler({env:k=>env[k],now:()=>Date.parse('2026-10-27T00:00:00Z'),fetcher:async(url,options={})=>{
   calls.push({url,options});
+  if(url.endsWith('orbit_trusted_trip'))return Response.json(trusted);
   if(url.endsWith('orbit_claim_google'))return Response.json(allow);
   if(url.endsWith('orbit_google_cache_get'))return Response.json(cache);
   if(url.endsWith('orbit_google_cache_put'))return Response.json({ok:true});
@@ -64,4 +66,11 @@ test('toPlace ignores unsafe links and closed places are flagged',()=>{
  const p=toPlace({...en,googleMapsUri:'javascript:alert(1)',websiteUri:'http://plain.example',businessStatus:'CLOSED_TEMPORARILY'},null,null,'2026-10-27');
  assert.equal(p.googleUrl,'');assert.equal(p.website,undefined);assert.equal(p.status,'temporarily_closed');assert.equal(p.nameZh,undefined);
  assert.equal(toPlace({displayName:{text:'No id'}},null,null,'2026-10-27'),null);
+});
+test('only the family’s trusted trip link can spend Google lookups',async()=>{
+ const none=harness();let r=await none.handler(request({action:'autocomplete',input:'紅色琉璃瓦',country:'tw'},undefined,{}));
+ assert.equal(r.status,401);assert.equal((await r.json()).code,'NO_TRIP');assert.equal(none.google().length,0);
+ const stranger=harness({trusted:false});r=await stranger.handler(request({action:'details',placeId:ID,country:'tw'}));
+ assert.equal(r.status,403);assert.equal((await r.json()).code,'NOT_TRUSTED');assert.equal(stranger.google().length,0);
+ assert.ok(!stranger.calls.some(c=>c.url.endsWith('orbit_claim_google')),'no allowance is used up either');
 });

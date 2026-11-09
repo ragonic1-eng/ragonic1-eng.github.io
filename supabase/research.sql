@@ -25,6 +25,9 @@ begin
  if not exists(select 1 from public.orbit_trips where id=p_id and key_hash=extensions.digest(p_key,'sha256')) then
   return jsonb_build_object('status',401,'error','Open a valid private shared trip link to research places.');
  end if;
+ if not public.orbit_trusted_trip(p_id,p_key) then
+  return jsonb_build_object('status',403,'error','Orbit is only switched on for the family’s own trip link. Open your usual shared link, or ask the trip owner to switch Orbit on for this one.');
+ end if;
  perform pg_advisory_xact_lock(716284092);
  select * into cached from public.orbit_research_cache where room_id=p_id and query_hash=p_hash;
  if found then

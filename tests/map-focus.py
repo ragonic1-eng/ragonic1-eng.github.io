@@ -7,7 +7,7 @@ def osrm(route):
  osrm_calls.append(route.request.url);pts=route.request.url.split('/driving/')[1].split('?')[0].split(';')
  route.fulfill(json={'code':'Ok','routes':[{'legs':[{'distance':20000,'duration':1800} for _ in pts[1:]],'geometry':{'type':'LineString','coordinates':[list(map(float,p.split(','))) for p in pts]}}]})
 place=lambda n,lat,lon:{'name':n,'address':n,'lat':lat,'lon':lon}
-day=[{'id':'f-home','title':'Home · Monterey Park Condo','notes':'','category':'hotel','duration':10,'place':place('Monterey Park Condominium',1.3125,103.7653)},
+day=[{'id':'f-home','title':'Home','notes':'','category':'hotel','duration':10,'place':place('Home',1.3521,103.8198)},
  {'id':'f-drive','title':'Drive to Changi Airport T3','notes':'','category':'travel','duration':40,'leg':True,'mode':'drive'},
  {'id':'f-t3','title':'Changi Airport T3 · drop-off','notes':'','category':'travel','duration':10,'place':place('Changi Airport Terminal 3',1.3554,103.9864)},
  {'id':'f-fly','title':'EVA Air BR 216 · Singapore → Taipei','notes':'','category':'travel','duration':270,'leg':True,'mode':'flight'},
