@@ -29,4 +29,12 @@ jobs:
             used = seen.get(scope, 0)
             level = 'warning' if used >= cap else 'notice'
             print(f"::{level} title={names[scope]}::{used} of {cap} used today (UTC){' — LIMIT REACHED' if used >= cap else ''}")
+          # Shared trips: counts only (never ids, links or contents — this log is public).
+          sql = ("select count(*) as total, count(*) filter (where revision>=10) as edited, count(*) filter (where updated_at>now()-interval '14 days') as recent, "
+                 "coalesce(max(revision),0) as most_edits, (select revision from public.orbit_trips order by updated_at desc limit 1) as latest_edits, "
+                 "count(*) filter (where created_at>now()-interval '1 day') as new_today, count(*) filter (where trusted) as trusted from public.orbit_trips")
+          req = urllib.request.Request('https://api.supabase.com/v1/projects/' + os.environ['SUPABASE_PROJECT_REF'] + '/database/query', method='POST',
+            headers={'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'User-Agent': 'little-orbit-usage/1.0'}, data=json.dumps({'query': sql}).encode())
+          t = json.load(urllib.request.urlopen(req, timeout=30))[0]
+          print(f"::notice title=Shared trips::{t['total']} in total · {t['edited']} with 10+ saves · {t['recent']} edited in 14 days · {t['new_today']} created today · most saves {t['most_edits']} · latest-edited trip has {t['latest_edits']} saves · {t['trusted']} trusted (can use Orbit and Google)")
           PY

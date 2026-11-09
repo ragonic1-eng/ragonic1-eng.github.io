@@ -50,3 +50,12 @@ Private SQL counters enforce at most **30 uncached Orbit requests per trip/day**
 `GET /functions/v1/research-place` reports key presence and the model, not proof that the key is valid or matches the region. Verify a real private-trip request before claiming the AI is live. Optional server secret `ALLOWED_ORIGIN` overrides the default GitHub Pages origin if the site moves.
 
 Tests: `node --test tests/research-backend.mjs`, `python3 tests/research-ui.py` (local static server on port 8000), and `node tests/research-database.mjs` after installing `@electric-sql/pglite` under `/tmp/orbit-research-db-test`. The backend tests use mocked Qwen responses; they do not prove the live API's response format.
+
+## Security: who can use what
+
+- **The trip itself.** The database tables can't be read with the public key. A shared trip opens only with its private link. The 64-character key after `key=` is stored only as a hash. Anyone holding the link can view and edit the trip, so share it only with family.
+- **Orbit and Google Maps (they cost money)** work only for **trusted** trips. When this was added, every existing trip that had been edited at least once was trusted. A new shared trip, for example one a stranger makes on the public site, can't use Orbit or Google Maps until you switch it on. To do that, run this in the Supabase SQL Editor, using the id after `room=` in its link:
+  `update public.orbit_trips set trusted=true where id='<trip id>';`
+- **New shared trips** are limited to 10 an hour and 30 a day, so nobody can flood the database.
+- **Secrets** live only in Supabase Edge Function secrets and GitHub Actions secrets, never in this repository: `GOOGLE_MAPS_API_KEY`, `DASHSCOPE_API_KEY`/`QWEN_API_KEY`, `ORBIT_GITHUB_TOKEN` and `SUPABASE_ACCESS_TOKEN`. Restrict the Google key to the Places API (New). If you add `ORBIT_GITHUB_TOKEN`, make it a fine-grained token for this one repository with only **Contents: read and write**.
+- **This repository and site are public.** Never put home addresses, booking references, passport numbers or phone numbers in any file here.

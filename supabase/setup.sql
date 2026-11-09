@@ -12,6 +12,25 @@ create table if not exists public.orbit_trips (
 alter table public.orbit_trips enable row level security;
 revoke all on public.orbit_trips from anon, authenticated;
 
+-- Only trusted trips (the family's) may use Orbit and Google Maps, which cost money. Anyone can still create and edit a
+-- shared trip, but a new one is untrusted until the owner runs, in the SQL Editor:
+--   update public.orbit_trips set trusted=true where id='<the id after room= in the link>';
+-- When the column is first added, every existing trip that was edited at least once is trusted; this never repeats.
+do $$ begin
+  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='orbit_trips' and column_name='trusted') then
+    alter table public.orbit_trips add column trusted boolean not null default false;
+    update public.orbit_trips set trusted=true where revision>=2;
+  end if;
+end $$;
+
+-- Service role only: is this a trusted trip with the right key?
+create or replace function public.orbit_trusted_trip(p_id uuid,p_key text)
+returns boolean language sql stable security definer set search_path = pg_catalog, public, extensions as $$
+  select exists(select 1 from public.orbit_trips where id=p_id and key_hash=extensions.digest(p_key,'sha256') and trusted);
+$$;
+revoke all on function public.orbit_trusted_trip(uuid,text) from public,anon,authenticated;
+grant execute on function public.orbit_trusted_trip(uuid,text) to service_role;
+
 create or replace function public.orbit_valid_trip(p_trip jsonb)
 returns boolean language plpgsql immutable set search_path = pg_catalog, public as $$
 declare d jsonb; c jsonb; b jsonb; ids text[] := '{}'; bid text[];
@@ -57,7 +76,8 @@ begin
   if not public.orbit_valid_trip(p_trip) then return jsonb_build_object('error','Invalid itinerary'); end if;
   -- Serializes creation-limit checks; ordinary editing is unaffected.
   perform pg_advisory_xact_lock(716284091);
-  if (select count(*) from public.orbit_trips where created_at>now()-interval '1 hour')>=100 then
+  if (select count(*) from public.orbit_trips where created_at>now()-interval '1 hour')>=10
+     or (select count(*) from public.orbit_trips where created_at>now()-interval '1 day')>=30 then
     return jsonb_build_object('error','Shared-trip creation limit reached. Try again later.');
   end if;
   edit_key := encode(extensions.gen_random_bytes(32),'hex');

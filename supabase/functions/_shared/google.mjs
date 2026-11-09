@@ -93,6 +93,10 @@ export function createGoogleHandler({env,fetcher=fetch,now=()=>Date.now()}){
    const raw=await req.text();if(raw.length>2000)return reply(413,{error:'Request too large.'});
    let body;try{body=JSON.parse(raw)}catch{return reply(400,{error:'Invalid request.'})}
    action=String(body?.action||'');const region=REGIONS[body.country];
+   // Google costs money: only the family's own (trusted) trip link may use it. The Origin check above stops other
+   // websites, but not scripts, so the trip link is the real lock.
+   if(!/^[0-9a-f-]{36}$/i.test(body?.roomId||'')||!/^[0-9a-f]{64}$/i.test(body?.roomKey||''))return reply(401,{error:'Open your private shared trip link to search Google Maps.',code:'NO_TRIP'});
+   if(await rpc('orbit_trusted_trip',{p_id:body.roomId,p_key:body.roomKey})!==true)return reply(403,{error:'Google Maps search is only switched on for the family’s own trip link.',code:'NOT_TRUSTED'});
    if(action==='autocomplete'){
     const input=text(body.input,120);if(input.length<2)return reply(400,{error:'Type at least 2 characters.'});
     if(!await allow('autocomplete'))return reply(429,{error:'Today’s Google Maps search limit is used up. Try again tomorrow or enter the place yourself.'});

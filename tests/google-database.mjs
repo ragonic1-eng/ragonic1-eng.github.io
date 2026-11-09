@@ -5,7 +5,9 @@ import assert from 'node:assert/strict';
 const db=new PGlite();
 await db.exec(`create role anon; create role authenticated; create role service_role; create schema extensions;
 create function extensions.digest(text,text) returns bytea language sql immutable as 'select decode(md5($1),''hex'')';
-create table public.orbit_trips(id uuid primary key,key_hash bytea);`);
+create table public.orbit_trips(id uuid primary key,key_hash bytea,trusted boolean not null default true);
+-- Same check as setup.sql (tested with the real file in trip-security.mjs).
+create function public.orbit_trusted_trip(p_id uuid,p_key text) returns boolean language sql stable as 'select exists(select 1 from public.orbit_trips where id=p_id and key_hash=extensions.digest(p_key,''sha256'') and trusted)';`);
 await db.exec(await readFile(new URL('../supabase/research.sql',import.meta.url),'utf8'));
 // Safe to rerun on every deploy.
 for(let i=0;i<2;i++)await db.exec(await readFile(new URL('../supabase/google.sql',import.meta.url),'utf8'));
@@ -30,7 +32,7 @@ for(const role of ['anon','authenticated']){
 }
 // Orbit chat: only real trip links, 40 questions per trip per day; the nearby-search scope is allowed.
 for(let i=0;i<2;i++)await db.exec(await readFile(new URL('../supabase/chat.sql',import.meta.url),'utf8'));
-const trip='00000000-0000-0000-0000-000000000009',key='b'.repeat(64);await db.query(`insert into orbit_trips values($1,extensions.digest($2,'sha256'))`,[trip,key]);
+const trip='00000000-0000-0000-0000-000000000009',key='b'.repeat(64);await db.query(`insert into orbit_trips values($1,extensions.digest($2,'sha256'),true)`,[trip,key]);
 const chat=async k=>(await db.query('select public.orbit_claim_chat($1,$2) as r',[trip,k])).rows[0].r;
 assert.equal((await chat('c'.repeat(64))).status,401);
 for(let i=0;i<40;i++)assert.equal((await chat(key)).ok,true);

@@ -11,15 +11,15 @@ with sync_playwright() as p:
  slot=lambda title,d=0:page.evaluate("([t,d])=>{const day=state.days[d];let s=day.start;for(const c of day.cards){if(c.title.includes(t))return [s,c.duration];s+=c.duration}return null}",[title,d])
  flight_before=slot('EVA Air BR 216')
  tidy=page.locator('#travelTidy');expect(tidy).to_be_visible();expect(tidy).to_contain_text('Travel tidy-up: 5 changes ready')
- expect(tidy).to_contain_text('Monterey Park Condo');expect(tidy).to_contain_text('Drive to Schokolake Country House')
+ expect(tidy).to_contain_text('🏠 Home (10 min)');expect(tidy).to_contain_text('Drive to Schokolake Country House')
  # Untick the Taoyuan evening drives; apply the rest.
  tidy.locator('.tidy-list>summary').click();tidy.locator('[data-tidy="taoyuan"]').uncheck();tidy.locator('#applyTidy').click();expect(tidy).to_be_hidden()
  rows=page.evaluate("state.days[0].cards.map(c=>[c.title,c.category,c.duration,c.leg||false,c.mode||''])")
- assert [r[0] for r in rows[:6]]==['Home · Monterey Park Condo','Drive to Changi Airport T3','Changi Airport T3 · drop-off','Walk to T3 Departure Hall','Airport check-in & playtime with the kids','EVA Air BR 216 · Singapore → Taipei'],rows
+ assert [r[0] for r in rows[:6]]==['Home','Drive to Changi Airport T3','Changi Airport T3 · drop-off','Walk to T3 Departure Hall','Airport check-in & playtime with the kids','EVA Air BR 216 · Singapore → Taipei'],rows
  assert rows[1][3:]==[True,'drive'] and rows[3][3:]==[True,'walk'] and rows[5][3:]==[True,'flight'],rows
  assert slot('EVA Air BR 216')==flight_before,'the flight keeps its time';assert slot('Airport check-in & playtime')[1]==155-35
  assert not any('7-Eleven' in r[0] for r in rows),'unticked change is not applied'
- assert page.evaluate("state.days[0].cards[0].place.name")=='Monterey Park Condominium' and page.evaluate("state.days[0].cards[2].place.name")=='Changi Airport Terminal 3'
+ assert page.evaluate("state.days[0].cards[0].place") is None and page.evaluate("state.days[0].cards[2].place.name")=='Changi Airport Terminal 3'
  last=page.evaluate("Object.fromEntries(state.days[6].cards.map(c=>[c.title,[c.category,c.leg||false]]))")
  assert last['Wake up & final bag checks'][0]=='hotel' and last['Private airport transfer']==['travel',True] and last['Airport check-in · EVA Air BR 215'][0]=='travel',last
  renamed=page.evaluate("state.days[1].cards.find(c=>c.id==='my-from-x')");assert renamed['title']=='Drive to Schokolake Country House' and renamed['leg'] is True,renamed
